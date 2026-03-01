@@ -17,12 +17,12 @@ node_modules/
 Thumbs.db
 
 # --- Backend Specific (Safety Net) ---
-backend/node_modules/
-backend/dist/
-backend/logs/
-backend/uploads/
-backend/backups/
-backend/temp/
+node_modules/
+dist/
+logs/
+uploads/
+backups/
+temp/
 
 # --- Playwright ---
 playwright-report/
