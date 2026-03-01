@@ -1,7 +1,7 @@
 # --- Root Level ---
 node_modules/
-.dist/
 .env
+.env.docker
 .env.*
 !.env.example
 !.env.docker.example
@@ -17,24 +17,11 @@ node_modules/
 Thumbs.db
 
 # --- Backend Specific (Safety Net) ---
-node_modules/
 dist/
 logs/
 uploads/
 backups/
 temp/
-
-# --- Playwright ---
-playwright-report/
-test-results/
-blob-report/
-
-# --- Frontend Specific (Safety Net) ---
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.next/
-frontend/coverage/
 
 # --- OS Мусор ---
 desktop.ini
