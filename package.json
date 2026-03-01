@@ -91,7 +91,7 @@
     "hono": "^4.11.8",
     "ioredis": "^5.9.2",
     "lodash": "^4.17.23",
-    "multer": "^2.0.2",
+    "multer": "^2.1.0",
     "multer-s3": "^3.0.1",
     "nest-winston": "^1.10.2",
     "nodemailer": "^8.0.0",
