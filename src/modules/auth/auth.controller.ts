@@ -64,7 +64,7 @@ export class AuthController {
 
   @Get('early-bird-status')
   @ApiOperation({ summary: 'Get early bird offer status' })
-  async getEarlyBirdStatus() {
+  getEarlyBirdStatus() {
     return this.authService.getEarlyBirdStatus();
   }
 
