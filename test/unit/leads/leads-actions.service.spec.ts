@@ -1,0 +1,143 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
+import { LeadsActionsService } from '../../../src/modules/leads/services/leads-actions.service';
+import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
+import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
+import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
+import type { MastersAvailabilityService } from '../../../src/modules/masters/services/masters-availability.service';
+import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';
+
+type PrismaLeadsActionsMock = {
+  lead: { findUnique: jest.Mock; update: jest.Mock };
+  master: { findUnique: jest.Mock };
+  masterAvailabilitySubscription: { findMany: jest.Mock; update: jest.Mock };
+};
+
+describe('LeadsActionsService', () => {
+  const prisma: PrismaLeadsActionsMock = {
+    lead: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    master: {
+      findUnique: jest.fn(),
+    },
+    masterAvailabilitySubscription: {
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+
+  const cache = {
+    invalidate: jest.fn(),
+    del: jest.fn(),
+    keys: {
+      masterStats: jest.fn(
+        (masterId: string) => `cache:master:${masterId}:stats`,
+      ),
+    },
+  } as unknown as jest.Mocked<CacheService>;
+
+  const inAppNotifications = {
+    notifyMasterAvailable: jest.fn(),
+  } as unknown as jest.Mocked<InAppNotificationService>;
+
+  const availabilityService = {
+    decrementActiveLeads: jest.fn(),
+  } as unknown as jest.Mocked<MastersAvailabilityService>;
+
+  let service: LeadsActionsService;
+
+  const masterUser: JwtUser = {
+    id: 'u1',
+    role: 'MASTER',
+    phoneVerified: true,
+    isVerified: true,
+    masterProfile: { id: 'm1' } as never,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new LeadsActionsService(
+      prisma as unknown as PrismaService,
+      cache,
+      inAppNotifications,
+      availabilityService,
+    );
+  });
+
+  it('throws NotFoundException when lead does not exist', async () => {
+    prisma.lead.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.updateStatus('lead-1', masterUser, { status: 'CLOSED' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('throws ForbiddenException when master tries to update non-owned lead', async () => {
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-1',
+      masterId: 'another-master',
+      status: 'NEW',
+    } as never);
+
+    await expect(
+      service.updateStatus('lead-1', masterUser, { status: 'CLOSED' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('throws BadRequestException for invalid status transition', async () => {
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-1',
+      masterId: 'm1',
+      status: 'NEW',
+    } as never);
+
+    await expect(
+      service.updateStatus('lead-1', masterUser, { status: 'NEW' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+  });
+
+  it('updates status, updates availability and invalidates cache on NEW to CLOSED', async () => {
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-1',
+      masterId: 'm1',
+      status: 'NEW',
+    } as never);
+    prisma.lead.update.mockResolvedValue({
+      id: 'lead-1',
+      masterId: 'm1',
+      status: 'CLOSED',
+    } as never);
+    availabilityService.decrementActiveLeads.mockResolvedValue({
+      id: 'm1',
+      availabilityStatus: 'AVAILABLE',
+    } as never);
+    prisma.master.findUnique.mockResolvedValue({
+      id: 'm1',
+      user: { firstName: 'John', lastName: 'Doe' },
+    } as never);
+    prisma.masterAvailabilitySubscription.findMany.mockResolvedValue([
+      { id: 's1', clientId: 'c1' },
+    ] as never);
+    inAppNotifications.notifyMasterAvailable.mockResolvedValue({} as never);
+    prisma.masterAvailabilitySubscription.update.mockResolvedValue({} as never);
+
+    await service.updateStatus('lead-1', masterUser, { status: 'CLOSED' });
+
+    expect(availabilityService.decrementActiveLeads).toHaveBeenCalledWith('m1');
+    expect(cache.invalidate).toHaveBeenCalledWith('cache:master:m1:leads:*');
+    expect(cache.del).toHaveBeenCalledWith('cache:master:m1:stats');
+    expect(inAppNotifications.notifyMasterAvailable).toHaveBeenCalledWith(
+      'c1',
+      {
+        masterId: 'm1',
+        masterName: 'John Doe',
+      },
+    );
+  });
+});

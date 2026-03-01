@@ -1,0 +1,334 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
+import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { CacheService } from '../../shared/cache/cache.service';
+import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
+import { CreateReviewDto } from '../dto/create-review.dto';
+import type { ReviewCriteriaDto } from '../dto/review-criteria.dto';
+import { LeadStatus, ReviewStatus } from '../../../common/constants';
+
+@Injectable()
+export class ReviewsActionService {
+  private readonly logger = new Logger(ReviewsActionService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+    private readonly inAppNotifications: InAppNotificationService,
+  ) {}
+
+  /**
+   * Создать новый отзыв
+   * @param createReviewDto Данные отзыва
+   * @param clientId ID клиента
+   * @param authUser Объект авторизованного пользователя
+   */
+  async create(
+    createReviewDto: CreateReviewDto,
+    clientId: string,
+    authUser?: JwtUser | null,
+  ) {
+    const { masterId, rating, criteria, fileIds } = createReviewDto;
+
+    const user = await this.prisma.user.findUnique({ where: { id: clientId } });
+    if (!user || !user.phone) {
+      throw new BadRequestException(
+        'Пользователь или телефон не найдены. Пожалуйста, заполните профиль.',
+      );
+    }
+
+    if (authUser?.role === 'CLIENT' && !authUser.phoneVerified) {
+      throw new ForbiddenException(
+        'Для написания отзывов необходимо подтвердить номер телефона.',
+      );
+    }
+
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+    });
+    if (!master) throw new NotFoundException('Мастер не найден');
+
+    // Проверка на дубликат
+    const existingReview = await this.prisma.review.findFirst({
+      where: { masterId, clientId },
+    });
+    if (existingReview) {
+      throw new BadRequestException('Вы уже оставили отзыв об этом мастере');
+    }
+
+    // Проверка наличия завершенного лида
+    const closedLead = await this.prisma.lead.findFirst({
+      where: { masterId, clientId, status: LeadStatus.CLOSED },
+    });
+    if (!closedLead) {
+      throw new BadRequestException(
+        'Отзыв можно оставить только после того, как заказ будет выполнен (статус CLOSED).',
+      );
+    }
+
+    // Валидация критериев
+    this.validateCriteria(criteria);
+
+    const safeFileIds =
+      fileIds && fileIds.length ? fileIds.slice(0, 5).filter(Boolean) : [];
+    let displayName =
+      createReviewDto.clientName?.trim() ||
+      closedLead.clientName?.trim() ||
+      null;
+    if (!displayName && user) {
+      const full = [user.firstName, user.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (full) displayName = full;
+    }
+
+    const review = await this.prisma.review.create({
+      data: {
+        masterId,
+        clientId,
+        clientPhone: user.phone,
+        clientName: displayName,
+        rating,
+        comment: createReviewDto.comment,
+        status: ReviewStatus.PENDING,
+        reviewCriteria:
+          criteria && criteria.length > 0
+            ? {
+                createMany: {
+                  data: criteria.map((c) => ({
+                    criteria: c.criteria,
+                    rating: c.rating,
+                  })),
+                },
+              }
+            : undefined,
+        reviewFiles:
+          safeFileIds.length > 0
+            ? { create: safeFileIds.map((fileId) => ({ fileId })) }
+            : undefined,
+      },
+      include: {
+        reviewCriteria: true,
+        reviewFiles: {
+          include: {
+            file: {
+              select: { id: true, path: true, mimetype: true, filename: true },
+            },
+          },
+        },
+      },
+    });
+
+    await this.updateMasterRating(masterId);
+    await this.invalidateMasterCache(masterId);
+
+    // In-app уведомление мастеру о новом отзыве
+    await this.inAppNotifications
+      .notifyNewReview(master.userId, {
+        reviewId: review.id,
+        rating,
+        authorName: displayName || undefined,
+        masterId,
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        this.logger.warn(`Failed to send in-app review notification: ${msg}`);
+      });
+
+    return review;
+  }
+
+  /**
+   * Обновить статус отзыва (Модерация)
+   * @param id ID отзыва
+   * @param status Новый статус
+   * @param moderatedBy ID администратора
+   */
+  async updateStatus(id: string, status: ReviewStatus, moderatedBy?: string) {
+    const review = await this.prisma.review.findUnique({ where: { id } });
+    if (!review) throw new NotFoundException('Отзыв не найден');
+
+    const updatedReview = await this.prisma.review.update({
+      where: { id },
+      data: {
+        status,
+        moderatedBy,
+        moderatedAt: new Date(),
+      },
+    });
+
+    if (status === ReviewStatus.VISIBLE) {
+      await this.updateMasterRating(review.masterId);
+    }
+
+    await this.invalidateMasterCache(review.masterId);
+    return updatedReview;
+  }
+
+  /**
+   * Рассчитать и обновить средний рейтинг мастера
+   * @param masterId ID мастера
+   */
+  async updateMasterRating(masterId: string) {
+    const reviews = await this.prisma.review.findMany({
+      where: { masterId, status: ReviewStatus.VISIBLE },
+    });
+
+    if (reviews.length === 0) {
+      await this.prisma.master.update({
+        where: { id: masterId },
+        data: { rating: 0, totalReviews: 0 },
+      });
+      return;
+    }
+
+    const avgRating =
+      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+
+    await this.prisma.master.update({
+      where: { id: masterId },
+      data: {
+        rating: avgRating,
+        totalReviews: reviews.length,
+      },
+    });
+  }
+
+  /**
+   * Проверить валидность переданных критериев оценки
+   * @param criteria Массив критериев
+   */
+  private validateCriteria(criteria?: ReviewCriteriaDto[]) {
+    if (!criteria || criteria.length === 0) return;
+    const validCriteria = ['quality', 'speed', 'price', 'politeness'];
+    for (const crit of criteria) {
+      if (!validCriteria.includes(crit.criteria)) {
+        throw new BadRequestException(
+          `Некорректный критерий: ${crit.criteria}`,
+        );
+      }
+      if (crit.rating < 1 || crit.rating > 5) {
+        throw new BadRequestException(
+          `Рейтинг критерия ${crit.criteria} должен быть от 1 до 5`,
+        );
+      }
+    }
+  }
+
+  // ============================================
+  // REVIEW REPLIES
+  // ============================================
+
+  /**
+   * Ответить на отзыв (мастер)
+   */
+  async replyToReview(reviewId: string, masterId: string, content: string) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+    if (!review) throw new NotFoundException('Отзыв не найден');
+    if (review.masterId !== masterId) {
+      throw new ForbiddenException('Вы не можете ответить на этот отзыв');
+    }
+
+    // Check if reply already exists
+    const existingReply = await this.prisma.reviewReply.findUnique({
+      where: { reviewId },
+    });
+    if (existingReply) {
+      // Update existing reply
+      return this.prisma.reviewReply.update({
+        where: { reviewId },
+        data: { content },
+      });
+    }
+
+    return this.prisma.reviewReply.create({
+      data: {
+        reviewId,
+        masterId,
+        content,
+      },
+    });
+  }
+
+  /**
+   * Удалить ответ на отзыв
+   */
+  async deleteReply(reviewId: string, masterId: string) {
+    const reply = await this.prisma.reviewReply.findUnique({
+      where: { reviewId },
+    });
+    if (!reply) throw new NotFoundException('Ответ не найден');
+    if (reply.masterId !== masterId) {
+      throw new ForbiddenException('Нет доступа');
+    }
+
+    await this.prisma.reviewReply.delete({ where: { reviewId } });
+    return { deleted: true };
+  }
+
+  // ============================================
+  // REVIEW VOTES
+  // ============================================
+
+  /**
+   * Голосование "полезный отзыв"
+   */
+  async voteHelpful(reviewId: string, userId: string) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+    if (!review) throw new NotFoundException('Отзыв не найден');
+
+    const existingVote = await this.prisma.reviewVote.findUnique({
+      where: { reviewId_userId: { reviewId, userId } },
+    });
+    if (existingVote) {
+      throw new BadRequestException('Вы уже голосовали за этот отзыв');
+    }
+
+    const vote = await this.prisma.reviewVote.create({
+      data: { reviewId, userId },
+    });
+
+    const votesCount = await this.prisma.reviewVote.count({
+      where: { reviewId },
+    });
+    return { ...vote, votesCount };
+  }
+
+  /**
+   * Убрать голос
+   */
+  async removeVote(reviewId: string, userId: string) {
+    const vote = await this.prisma.reviewVote.findUnique({
+      where: { reviewId_userId: { reviewId, userId } },
+    });
+    if (!vote) throw new NotFoundException('Голос не найден');
+
+    await this.prisma.reviewVote.delete({
+      where: { reviewId_userId: { reviewId, userId } },
+    });
+
+    const votesCount = await this.prisma.reviewVote.count({
+      where: { reviewId },
+    });
+    return { deleted: true, votesCount };
+  }
+
+  private async invalidateMasterCache(masterId: string) {
+    await this.cache.invalidate(`cache:master:${masterId}:*`);
+    await this.cache.del(this.cache.keys.masterStats(masterId));
+    await this.cache.invalidate('cache:search:masters:*');
+    await this.cache.invalidate('cache:masters:top:*');
+    await this.cache.invalidate(`cache:master:${masterId}:reviews:*`);
+  }
+}

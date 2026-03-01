@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+npm-debug.log
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+
+# Environment files
+.env
+.env.*
+
+# Application data
+logs/
+uploads/
+backups/
+temp/
+coverage/
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+
+# Tests
+test/
+*.spec.ts
+jest.config.ts

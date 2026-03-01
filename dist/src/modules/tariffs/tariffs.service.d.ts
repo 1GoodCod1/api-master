@@ -1,0 +1,117 @@
+import { TariffsQueryService } from './services/tariffs-query.service';
+import { TariffsActionService } from './services/tariffs-action.service';
+import { CreateTariffDto } from './dto/create-tariff.dto';
+import { UpdateTariffDto } from './dto/update-tariff.dto';
+import { TariffType } from '@prisma/client';
+export declare class TariffsService {
+    private readonly queryService;
+    private readonly actionService;
+    constructor(queryService: TariffsQueryService, actionService: TariffsActionService);
+    findAll(filters?: {
+        isActive?: boolean;
+    }): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }[]>;
+    findOne(id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }>;
+    findByType(type: TariffType): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }>;
+    create(createTariffDto: CreateTariffDto): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }>;
+    update(id: string, updateTariffDto: UpdateTariffDto): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }>;
+    remove(id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }>;
+    getActiveTariffs(): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        description: string | null;
+        isActive: boolean;
+        sortOrder: number;
+        type: import("@prisma/client").$Enums.TariffType;
+        price: string;
+        amount: import("@prisma/client-runtime-utils").Decimal;
+        days: number;
+        stripePriceId: string | null;
+        features: import(".prisma/client/runtime/client").JsonValue;
+    }[]>;
+}

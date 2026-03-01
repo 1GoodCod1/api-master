@@ -1,0 +1,44 @@
+# --- Root Level ---
+node_modules/
+.dist/
+.env
+.env.*
+!.env.example
+!.env.docker.example
+*.log
+
+# --- IDE & Editors ---
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Backend Specific (Safety Net) ---
+backend/node_modules/
+backend/dist/
+backend/logs/
+backend/uploads/
+backend/backups/
+backend/temp/
+
+# --- Playwright ---
+playwright-report/
+test-results/
+blob-report/
+
+# --- Frontend Specific (Safety Net) ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/coverage/
+
+# --- OS Мусор ---
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Документация и Планы ---
+*.tmp

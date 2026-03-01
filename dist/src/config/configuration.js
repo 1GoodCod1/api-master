@@ -1,0 +1,95 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = () => ({
+    nodeEnv: process.env.NODE_ENV || 'development',
+    port: parseInt(process.env.PORT || '4000', 10),
+    apiUrl: process.env.API_URL || 'http://localhost:4000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000', 10),
+    database: {
+        url: process.env.DATABASE_URL ||
+            'postgresql://postgres:password@localhost:5432/moldmasters',
+    },
+    redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD || '',
+    },
+    jwt: {
+        accessSecret: process.env.JWT_ACCESS_SECRET || '',
+        refreshSecret: process.env.JWT_REFRESH_SECRET || '',
+        accessExpiry: process.env.JWT_ACCESS_EXPIRY || '3d',
+    },
+    auth: {
+        useHttpOnlyCookie: process.env.NODE_ENV !== 'production' ||
+            process.env.USE_HTTPONLY_COOKIE === 'true',
+        refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'rt',
+        refreshCookieMaxAgeDays: Math.max(1, parseInt(process.env.REFRESH_COOKIE_MAX_AGE_DAYS || '7', 10) || 7),
+    },
+    idEncryption: {
+        secret: process.env.ID_ENCRYPTION_SECRET || '',
+    },
+    mia: {
+        clientId: process.env.MIA_CLIENT_ID || '',
+        clientSecret: process.env.MIA_CLIENT_SECRET || '',
+        baseUrl: process.env.MIA_BASE_URL || 'https://api.maib.md',
+        authPath: process.env.MIA_AUTH_PATH || '/v1/auth',
+        createQrPath: process.env.MIA_CREATE_QR_PATH || '/v1/qr/create',
+        terminalId: process.env.MIA_TERMINAL_ID || '',
+        sandbox: process.env.MIA_SANDBOX === 'true',
+        testPayPath: process.env.MIA_TEST_PAY_PATH || '/v2/mia/test-pay',
+    },
+    twilio: {
+        accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+        authToken: process.env.TWILIO_AUTH_TOKEN || '',
+        phoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+    },
+    telegram: {
+        botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+        chatId: process.env.TELEGRAM_CHAT_ID || '',
+    },
+    whatsapp: {
+        enabled: process.env.WHATSAPP_ENABLED !== 'false',
+        senderId: process.env.TWILIO_WHATSAPP_SENDER_ID ||
+            process.env.TWILIO_WHATSAPP_FROM ||
+            'whatsapp:+14155238886',
+    },
+    b2: {
+        applicationKeyId: process.env.B2_APPLICATION_KEY_ID || '',
+        applicationKey: process.env.B2_APPLICATION_KEY || '',
+        bucket: process.env.B2_BUCKET || '',
+        region: process.env.B2_REGION || 'eu-central-003',
+        endpoint: process.env.B2_ENDPOINT || '',
+    },
+    sms: {
+        enabled: process.env.SMS_ENABLED !== 'false',
+        provider: process.env.SMS_PROVIDER || 'twilio',
+        httpProvider: {
+            url: process.env.SMS_HTTP_PROVIDER_URL,
+            apiKey: process.env.SMS_HTTP_PROVIDER_API_KEY,
+            apiId: process.env.SMS_HTTP_PROVIDER_API_ID,
+        },
+    },
+    notifications: {
+        telegramEnabled: 'true',
+        smsEnabled: 'true',
+        quietHoursStart: 23,
+        quietHoursEnd: 8,
+    },
+    email: {
+        enabled: process.env.EMAIL_ENABLED !== 'false',
+        from: process.env.EMAIL_FROM || 'noreply@moldmasters.md',
+        smtp: {
+            host: process.env.SMTP_HOST || '',
+            port: parseInt(process.env.SMTP_PORT || '587', 10),
+            secure: process.env.SMTP_SECURE === 'true',
+            user: process.env.SMTP_USER || '',
+            pass: process.env.SMTP_PASS || '',
+        },
+    },
+    rateLimit: {
+        ttl: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10),
+        limit: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    },
+});
+//# sourceMappingURL=configuration.js.map

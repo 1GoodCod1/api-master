@@ -1,0 +1,7 @@
+-- AlterEnum
+ALTER TYPE "NotificationCategory" ADD VALUE 'MASTER_AVAILABLE';
+
+-- AlterTable
+ALTER TABLE "masters" ADD COLUMN     "slotDurationMinutes" INTEGER NOT NULL DEFAULT 60,
+ADD COLUMN     "workEndHour" INTEGER NOT NULL DEFAULT 18,
+ADD COLUMN     "workStartHour" INTEGER NOT NULL DEFAULT 9;

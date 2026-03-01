@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'moldmasters-monitor'
+
+scrape_configs:
+  # API метрики (внутри Docker сети)
+  - job_name: 'moldmasters-api'
+    static_configs:
+      - targets: ['api:4000']
+        labels:
+          service: 'moldmasters-api'
+          environment: 'development'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Prometheus само-мониторинг
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'

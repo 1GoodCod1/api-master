@@ -1,0 +1,72 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
+
+@Injectable()
+export class RefreshCookieService {
+  constructor(private readonly configService: ConfigService) {}
+
+  get isEnabled(): boolean {
+    return !!this.configService.get<boolean>('auth.useHttpOnlyCookie');
+  }
+
+  private get cookieName(): string {
+    return this.configService.get<string>('auth.refreshCookieName') || 'rt';
+  }
+
+  private get maxAgeSec(): number {
+    const days =
+      this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
+    return Math.max(86400, days * 24 * 60 * 60);
+  }
+
+  /**
+   * Возвращает refresh-токен из куки (если режим httpOnly) или из переданного body.
+   */
+  getToken(req: Request, bodyToken?: string): string | undefined {
+    const fromBody = bodyToken?.trim();
+    if (fromBody) return fromBody;
+    if (this.isEnabled && req.cookies?.[this.cookieName]) {
+      const value = req.cookies[this.cookieName] as string | undefined;
+      return typeof value === 'string' ? value : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Устанавливает refresh-куку в ответ, если режим httpOnly включён.
+   */
+  attachIfEnabled(res: Response, token: string): void {
+    if (!this.isEnabled || !token) return;
+    const isProd = this.configService.get<string>('nodeEnv') === 'production';
+    const maxAgeMs = this.maxAgeSec * 1000;
+    res.cookie(this.cookieName, token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: maxAgeMs,
+      expires: new Date(Date.now() + maxAgeMs),
+    });
+  }
+
+  /**
+   * Удаляет refresh-куку из ответа, если режим httpOnly включён.
+   */
+  clearIfEnabled(res: Response): void {
+    if (!this.isEnabled) return;
+    res.clearCookie(this.cookieName, { path: '/', httpOnly: true });
+  }
+
+  /**
+   * Убирает refreshToken из тела ответа и возвращает остальное (для httpOnly, чтобы не слать токен в JSON).
+   */
+  stripRefreshFromPayload<T extends { refreshToken?: string }>(
+    payload: T,
+  ): Omit<T, 'refreshToken'> {
+    if (!this.isEnabled || !payload.refreshToken) return payload;
+    const { refreshToken: _rt, ...rest } = payload;
+    void _rt;
+    return rest;
+  }
+}
