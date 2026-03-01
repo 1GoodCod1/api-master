@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # ⚒️ MasterHub API
 
@@ -513,4 +513,3 @@ npm run docker:seed:prod
 © 2026 MasterHub Team · Все права защищены
 
 </div>
-]]>
