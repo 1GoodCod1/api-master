@@ -60,14 +60,10 @@ let PaymentsUpgradeService = class PaymentsUpgradeService {
                 id: true,
                 tariffType: true,
                 tariffExpiresAt: true,
-                lifetimePremium: true,
             },
         });
         if (!master)
             throw new common_1.NotFoundException('Master not found');
-        if (master.lifetimePremium) {
-            throw new common_1.BadRequestException('Lifetime premium cannot be cancelled.');
-        }
         if (master.tariffType === 'BASIC' || !master.tariffExpiresAt) {
             throw new common_1.BadRequestException('No active paid tariff to cancel.');
         }

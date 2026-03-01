@@ -4,7 +4,6 @@ export type GetTariffResult = {
     tariffType: TariffType;
     tariffExpiresAt: Date | null;
     tariffCancelAtPeriodEnd: boolean;
-    lifetimePremium: boolean;
     isExpired: boolean;
     pendingUpgrade: {
         to: TariffType;
@@ -19,7 +18,50 @@ export declare class MastersTariffService {
     constructor(prisma: PrismaService);
     getTariff(userId: string): Promise<GetTariffResult>;
     updateTariff(masterId: string, tariffTypeStr: string, days: number, onCacheInvalidate?: (masterId: string, slug: string | null) => Promise<void>): Promise<{
+        id: string;
+        avatarFileId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         slug: string | null;
+        description: string | null;
+        userId: string;
+        services: import(".prisma/client/runtime/client").JsonValue | null;
+        rating: number;
+        totalReviews: number;
+        experienceYears: number;
+        cityId: string;
+        categoryId: string;
+        tariffExpiresAt: Date | null;
+        tariffCancelAtPeriodEnd: boolean;
+        pendingUpgradeTo: import("@prisma/client").$Enums.TariffType | null;
+        pendingUpgradeCreatedAt: Date | null;
+        isFeatured: boolean;
+        views: number;
+        leadsCount: number;
+        extraPhotosCount: number;
+        profileLastEditedAt: Date | null;
+        pendingVerification: boolean;
+        verificationSubmittedAt: Date | null;
         lifetimePremium: boolean;
+        isOnline: boolean;
+        lastActivityAt: Date | null;
+        isBusy: boolean;
+        maxLeadsPerDay: number;
+        leadsReceivedToday: number;
+        leadsResetAt: Date | null;
+        availabilityStatus: import("@prisma/client").$Enums.AvailabilityStatus;
+        maxActiveLeads: number;
+        currentActiveLeads: number;
+        telegramChatId: string | null;
+        whatsappPhone: string | null;
+        workStartHour: number;
+        workEndHour: number;
+        autoresponderEnabled: boolean;
+        autoresponderMessage: string | null;
+        slotDurationMinutes: number;
+        latitude: number | null;
+        longitude: number | null;
+        googleCalendarId: string | null;
+        tariffType: import("@prisma/client").$Enums.TariffType;
     }>;
 }

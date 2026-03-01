@@ -44,6 +44,9 @@ let LeadsValidationService = class LeadsValidationService {
         if (!master) {
             throw new common_1.NotFoundException('Master not found');
         }
+        if (!master.user?.isVerified) {
+            throw new common_1.ForbiddenException('This master has not verified their profile yet. Leads are not accepted until verification.');
+        }
         if (authUser?.id && master.userId === authUser.id) {
             throw new common_1.BadRequestException('You cannot send a lead to yourself');
         }

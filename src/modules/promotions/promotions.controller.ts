@@ -23,7 +23,9 @@ import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { VerifiedGuard } from '../../common/guards/verified.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Verified } from '../../common/decorators/verified.decorator';
 
 @ApiTags('Promotions')
 @Controller('promotions')
@@ -46,8 +48,9 @@ export class PromotionsController {
   }
 
   @Get('my')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
   @Roles('MASTER')
+  @Verified(true)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my promotions' })
   async getMyPromotions(@Req() req: RequestWithUser) {
@@ -57,8 +60,9 @@ export class PromotionsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
   @Roles('MASTER')
+  @Verified(true)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a promotion' })
   async create(@Body() dto: CreatePromotionDto, @Req() req: RequestWithUser) {
@@ -68,8 +72,9 @@ export class PromotionsController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
   @Roles('MASTER')
+  @Verified(true)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a promotion' })
   async update(
@@ -83,8 +88,9 @@ export class PromotionsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
   @Roles('MASTER')
+  @Verified(true)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a promotion' })
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {

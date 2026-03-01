@@ -76,7 +76,6 @@ let AdminUsersService = class AdminUsersService {
                     id: true,
                     tariffType: true,
                     tariffExpiresAt: true,
-                    lifetimePremium: true,
                     views: true,
                     rating: true,
                     experienceYears: true,

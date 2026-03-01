@@ -21,9 +21,6 @@ const PLAN_RANK = {
 };
 function getEffectivePlan(user) {
     const mp = user?.masterProfile;
-    if (mp?.lifetimePremium === true) {
-        return client_1.TariffType.PREMIUM;
-    }
     const type = mp?.tariffType ?? client_1.TariffType.BASIC;
     const exp = mp?.tariffExpiresAt ? new Date(mp.tariffExpiresAt) : null;
     if (type === client_1.TariffType.BASIC)

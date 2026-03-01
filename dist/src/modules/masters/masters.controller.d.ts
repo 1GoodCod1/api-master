@@ -36,7 +36,6 @@ export declare class MastersController {
                 email?: string | null;
                 [key: string]: unknown;
             };
-            lifetimePremium?: boolean;
             tariffExpiresAt?: Date | string | null;
         }[];
         meta: {
@@ -89,7 +88,6 @@ export declare class MastersController {
             email?: string | null;
             [key: string]: unknown;
         };
-        lifetimePremium?: boolean;
         tariffType?: "BASIC" | "VIP" | "PREMIUM";
         tariffExpiresAt?: Date | string | null;
     }[]>;
@@ -107,7 +105,6 @@ export declare class MastersController {
             email?: string | null;
             [key: string]: unknown;
         };
-        lifetimePremium?: boolean;
         tariffType?: "BASIC" | "VIP" | "PREMIUM";
         tariffExpiresAt?: Date | string | null;
     }[]>;
@@ -284,8 +281,51 @@ export declare class MastersController {
     }>;
     getTariff(user: JwtUser): Promise<import("./services/masters-tariff.service").GetTariffResult>;
     claimFreePlan(user: JwtUser, dto: ClaimFreePlanDto): Promise<{
+        id: string;
+        avatarFileId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
         slug: string | null;
+        description: string | null;
+        userId: string;
+        services: import(".prisma/client/runtime/client").JsonValue | null;
+        rating: number;
+        totalReviews: number;
+        experienceYears: number;
+        cityId: string;
+        categoryId: string;
+        tariffExpiresAt: Date | null;
+        tariffCancelAtPeriodEnd: boolean;
+        pendingUpgradeTo: import("@prisma/client").$Enums.TariffType | null;
+        pendingUpgradeCreatedAt: Date | null;
+        isFeatured: boolean;
+        views: number;
+        leadsCount: number;
+        extraPhotosCount: number;
+        profileLastEditedAt: Date | null;
+        pendingVerification: boolean;
+        verificationSubmittedAt: Date | null;
         lifetimePremium: boolean;
+        isOnline: boolean;
+        lastActivityAt: Date | null;
+        isBusy: boolean;
+        maxLeadsPerDay: number;
+        leadsReceivedToday: number;
+        leadsResetAt: Date | null;
+        availabilityStatus: import("@prisma/client").$Enums.AvailabilityStatus;
+        maxActiveLeads: number;
+        currentActiveLeads: number;
+        telegramChatId: string | null;
+        whatsappPhone: string | null;
+        workStartHour: number;
+        workEndHour: number;
+        autoresponderEnabled: boolean;
+        autoresponderMessage: string | null;
+        slotDurationMinutes: number;
+        latitude: number | null;
+        longitude: number | null;
+        googleCalendarId: string | null;
+        tariffType: import("@prisma/client").$Enums.TariffType;
     }>;
     getStats(user: JwtUser): Promise<{
         leadsToday: number;

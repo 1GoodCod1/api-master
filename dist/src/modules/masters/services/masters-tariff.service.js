@@ -26,7 +26,6 @@ let MastersTariffService = class MastersTariffService {
                 tariffType: true,
                 tariffExpiresAt: true,
                 tariffCancelAtPeriodEnd: true,
-                lifetimePremium: true,
                 pendingUpgradeTo: true,
                 pendingUpgradeCreatedAt: true,
                 payments: {
@@ -54,29 +53,19 @@ let MastersTariffService = class MastersTariffService {
             }
         }
         const tariffCancelAtPeriodEnd = Boolean(master.tariffCancelAtPeriodEnd);
-        const isExpiredResult = master.lifetimePremium
-            ? false
-            : Boolean(isExpired);
+        const isExpiredResult = Boolean(isExpired);
         const payments = master.payments;
         const lastPayment = payments.at(0) ?? null;
         return {
             tariffType: master.tariffType,
             tariffExpiresAt: master.tariffExpiresAt,
             tariffCancelAtPeriodEnd,
-            lifetimePremium: master.lifetimePremium,
             isExpired: isExpiredResult,
             pendingUpgrade,
             lastPayment,
         };
     }
     async updateTariff(masterId, tariffTypeStr, days, onCacheInvalidate) {
-        const existingMaster = await this.prisma.master.findUnique({
-            where: { id: masterId },
-            select: { lifetimePremium: true, slug: true },
-        });
-        if (existingMaster?.lifetimePremium) {
-            return existingMaster;
-        }
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);
         let tariffType;

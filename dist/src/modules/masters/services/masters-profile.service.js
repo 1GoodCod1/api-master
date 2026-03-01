@@ -131,10 +131,12 @@ let MastersProfileService = class MastersProfileService {
         const sanitized = (0, plans_1.sanitizePublicMaster)(master);
         const photos = (master.photos ?? []);
         const avatarFile = master.avatarFile;
+        const isVerified = master.user?.isVerified;
         const result = {
             ...sanitized,
             avatarUrl: avatarFile?.path ?? null,
             photos: photos.map((p) => p.file),
+            ...(!isVerified && { services: [] }),
         };
         await this.cache.set(cacheKey, result, this.cache.ttl.masterProfile);
         if (master.slug && master.slug !== idOrSlug) {
@@ -171,7 +173,12 @@ let MastersProfileService = class MastersProfileService {
         return master;
     }
     PROFILE_EDIT_COOLDOWN_DAYS = 15;
-    async updateProfile(userId, updateDto) {
+    async updateProfile(userId, updateDto, isVerified = true) {
+        if (!isVerified &&
+            updateDto.services !== undefined &&
+            Array.isArray(updateDto.services)) {
+            throw new common_1.ForbiddenException('Account verification required to add or update services. Please complete verification first.');
+        }
         const master = await this.prisma.master.findUnique({
             where: { userId },
             include: { user: { select: { firstName: true, lastName: true } } },

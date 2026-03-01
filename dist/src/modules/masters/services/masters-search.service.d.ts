@@ -31,7 +31,6 @@ export declare class MastersSearchService {
                 email?: string | null;
                 [key: string]: unknown;
             };
-            lifetimePremium?: boolean;
             tariffExpiresAt?: Date | string | null;
         }[];
         meta: {
@@ -85,7 +84,6 @@ export declare class MastersSearchService {
             email?: string | null;
             [key: string]: unknown;
         };
-        lifetimePremium?: boolean;
         tariffType?: "BASIC" | "VIP" | "PREMIUM";
         tariffExpiresAt?: Date | string | null;
     }[]>;
@@ -97,7 +95,6 @@ export declare class MastersSearchService {
             email?: string | null;
             [key: string]: unknown;
         };
-        lifetimePremium?: boolean;
         tariffType?: "BASIC" | "VIP" | "PREMIUM";
         tariffExpiresAt?: Date | string | null;
     }[]>;

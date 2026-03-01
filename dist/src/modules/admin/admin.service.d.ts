@@ -205,7 +205,6 @@ export declare class AdminService {
                 experienceYears: number;
                 tariffExpiresAt: Date | null;
                 views: number;
-                lifetimePremium: boolean;
                 tariffType: import("@prisma/client").$Enums.TariffType;
             } | null;
             avatarFile: {
@@ -260,8 +259,7 @@ export declare class AdminService {
         limit?: number;
         cursor?: string;
     }): Promise<{
-        masters: {
-            lifetimePremium: boolean;
+        masters: ({
             user: {
                 email: string;
                 phone: string;
@@ -290,6 +288,7 @@ export declare class AdminService {
                 reviews: number;
                 leads: number;
             };
+        } & {
             id: string;
             avatarFileId: string | null;
             createdAt: Date;
@@ -314,6 +313,7 @@ export declare class AdminService {
             profileLastEditedAt: Date | null;
             pendingVerification: boolean;
             verificationSubmittedAt: Date | null;
+            lifetimePremium: boolean;
             isOnline: boolean;
             lastActivityAt: Date | null;
             isBusy: boolean;
@@ -334,7 +334,7 @@ export declare class AdminService {
             longitude: number | null;
             googleCalendarId: string | null;
             tariffType: import("@prisma/client").$Enums.TariffType;
-        }[];
+        })[];
         pagination: {
             total: number;
             page: number;

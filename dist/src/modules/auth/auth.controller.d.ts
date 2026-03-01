@@ -59,11 +59,11 @@ export declare class AuthController {
             value: string;
         }[];
     }>;
-    getEarlyBirdStatus(): Promise<{
+    getEarlyBirdStatus(): {
         isActive: boolean;
         remainingSlots: number;
         totalSlots: number;
-    }>;
+    };
     login(loginDto: LoginDto, req: Request, res: Response): Promise<Omit<{
         accessToken: string;
         refreshToken: string;
@@ -150,7 +150,6 @@ export declare class AuthController {
                     filename: string;
                 } | null;
                 tariffExpiresAt: Date | null;
-                lifetimePremium: boolean;
                 tariffType: import("@prisma/client").$Enums.TariffType;
             } | null;
             avatarFile: {

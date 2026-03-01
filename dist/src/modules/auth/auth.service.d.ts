@@ -182,7 +182,6 @@ export declare class AuthService {
                     filename: string;
                 } | null;
                 tariffExpiresAt: Date | null;
-                lifetimePremium: boolean;
                 tariffType: import("@prisma/client").$Enums.TariffType;
             } | null;
             avatarFile: {

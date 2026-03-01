@@ -20,7 +20,9 @@ const create_promotion_dto_1 = require("./dto/create-promotion.dto");
 const update_promotion_dto_1 = require("./dto/update-promotion.dto");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
+const verified_guard_1 = require("../../common/guards/verified.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
+const verified_decorator_1 = require("../../common/decorators/verified.decorator");
 let PromotionsController = class PromotionsController {
     promotionsService;
     constructor(promotionsService) {
@@ -77,8 +79,9 @@ __decorate([
 ], PromotionsController.prototype, "getActivePromotionsForMaster", null);
 __decorate([
     (0, common_1.Get)('my'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard, verified_guard_1.VerifiedGuard),
     (0, roles_decorator_1.Roles)('MASTER'),
+    (0, verified_decorator_1.Verified)(true),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get my promotions' }),
     __param(0, (0, common_1.Req)()),
@@ -88,8 +91,9 @@ __decorate([
 ], PromotionsController.prototype, "getMyPromotions", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard, verified_guard_1.VerifiedGuard),
     (0, roles_decorator_1.Roles)('MASTER'),
+    (0, verified_decorator_1.Verified)(true),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create a promotion' }),
     __param(0, (0, common_1.Body)()),
@@ -100,8 +104,9 @@ __decorate([
 ], PromotionsController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard, verified_guard_1.VerifiedGuard),
     (0, roles_decorator_1.Roles)('MASTER'),
+    (0, verified_decorator_1.Verified)(true),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Update a promotion' }),
     __param(0, (0, common_1.Param)('id')),
@@ -113,8 +118,9 @@ __decorate([
 ], PromotionsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard, verified_guard_1.VerifiedGuard),
     (0, roles_decorator_1.Roles)('MASTER'),
+    (0, verified_decorator_1.Verified)(true),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a promotion' }),
     __param(0, (0, common_1.Param)('id')),

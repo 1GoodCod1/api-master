@@ -113,8 +113,9 @@ export class MastersService {
   async updateProfile(
     userId: string,
     updateDto: import('./dto/update-master.dto').UpdateMasterDto,
+    isVerified = true,
   ) {
-    return this.profileService.updateProfile(userId, updateDto);
+    return this.profileService.updateProfile(userId, updateDto, isVerified);
   }
 
   async getNotificationSettings(userId: string) {

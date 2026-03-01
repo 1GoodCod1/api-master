@@ -1,6 +1,5 @@
 type TariffType = 'BASIC' | 'VIP' | 'PREMIUM';
 interface MasterTariffFields {
-    lifetimePremium?: boolean;
     tariffType?: TariffType;
     tariffExpiresAt?: Date | string | null;
 }
@@ -20,7 +19,6 @@ export declare function sanitizePublicMaster(master: MasterWithUser): {
         email?: string | null;
         [key: string]: unknown;
     };
-    lifetimePremium?: boolean;
     tariffType?: TariffType;
     tariffExpiresAt?: Date | string | null;
 };

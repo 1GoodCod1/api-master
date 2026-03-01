@@ -24,7 +24,6 @@ export declare class SearchController {
                 email?: string | null;
                 [key: string]: unknown;
             };
-            lifetimePremium?: boolean;
             tariffExpiresAt?: Date | string | null;
         }[];
         meta: {

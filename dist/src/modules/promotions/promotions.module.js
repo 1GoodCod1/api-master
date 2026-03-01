@@ -14,6 +14,7 @@ const prisma_module_1 = require("../shared/database/prisma.module");
 const redis_module_1 = require("../shared/redis/redis.module");
 const cache_module_1 = require("../shared/cache/cache.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const verified_guard_1 = require("../../common/guards/verified.guard");
 let PromotionsModule = class PromotionsModule {
 };
 exports.PromotionsModule = PromotionsModule;
@@ -21,7 +22,7 @@ exports.PromotionsModule = PromotionsModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule, redis_module_1.RedisModule, cache_module_1.CacheModule, notifications_module_1.NotificationsModule],
         controllers: [promotions_controller_1.PromotionsController],
-        providers: [promotions_service_1.PromotionsService],
+        providers: [promotions_service_1.PromotionsService, verified_guard_1.VerifiedGuard],
         exports: [promotions_service_1.PromotionsService],
     })
 ], PromotionsModule);

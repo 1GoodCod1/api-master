@@ -172,10 +172,12 @@ export class MastersProfileService {
       | { path?: string }
       | null
       | undefined;
+    const isVerified = (master.user as { isVerified?: boolean })?.isVerified;
     const result = {
       ...sanitized,
       avatarUrl: avatarFile?.path ?? null,
       photos: photos.map((p) => p.file),
+      ...(!isVerified && { services: [] }),
     };
 
     // Сохраняем в кеш (используем оба ключа: по id и по slug если они разные)
@@ -241,7 +243,18 @@ export class MastersProfileService {
   async updateProfile(
     userId: string,
     updateDto: UpdateMasterDto & { firstName?: string; lastName?: string },
+    isVerified = true,
   ) {
+    if (
+      !isVerified &&
+      updateDto.services !== undefined &&
+      Array.isArray(updateDto.services)
+    ) {
+      throw new ForbiddenException(
+        'Account verification required to add or update services. Please complete verification first.',
+      );
+    }
+
     const master = await this.prisma.master.findUnique({
       where: { userId },
       include: { user: { select: { firstName: true, lastName: true } } },

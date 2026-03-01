@@ -90,7 +90,6 @@ let AuthService = AuthService_1 = class AuthService {
                             id: true,
                             tariffType: true,
                             tariffExpiresAt: true,
-                            lifetimePremium: true,
                             avatarFile: {
                                 select: {
                                     id: true,

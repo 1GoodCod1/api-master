@@ -185,6 +185,7 @@ let PromotionsService = PromotionsService_1 = class PromotionsService {
                     isActive: true,
                     validFrom: { lte: now },
                     validUntil: { gte: now },
+                    master: { user: { isVerified: true } },
                 },
                 include: {
                     master: {
@@ -211,6 +212,13 @@ let PromotionsService = PromotionsService_1 = class PromotionsService {
         }, 300);
     }
     async findActivePromotionsForMaster(masterId) {
+        const master = await this.prisma.master.findUnique({
+            where: { id: masterId },
+            include: { user: { select: { isVerified: true } } },
+        });
+        if (!master || !master.user?.isVerified) {
+            return [];
+        }
         const now = new Date();
         return this.prisma.promotion.findMany({
             where: {

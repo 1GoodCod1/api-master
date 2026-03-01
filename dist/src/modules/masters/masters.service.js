@@ -22,6 +22,7 @@ const masters_photos_service_1 = require("./services/masters-photos.service");
 const masters_stats_service_1 = require("./services/masters-stats.service");
 const masters_tariff_service_1 = require("./services/masters-tariff.service");
 const id_encoder_1 = require("../shared/utils/id-encoder");
+const plans_1 = require("../../common/helpers/plans");
 let MastersService = class MastersService {
     prisma;
     cache;
@@ -70,8 +71,8 @@ let MastersService = class MastersService {
     async getProfile(userId) {
         return this.profileService.getProfile(userId);
     }
-    async updateProfile(userId, updateDto) {
-        return this.profileService.updateProfile(userId, updateDto);
+    async updateProfile(userId, updateDto, isVerified = true) {
+        return this.profileService.updateProfile(userId, updateDto, isVerified);
     }
     async getNotificationSettings(userId) {
         const master = await this.prisma.master.findUnique({
@@ -308,7 +309,7 @@ let MastersService = class MastersService {
     }
     async updateAvailabilityStatus(userId, dto) {
         const master = await this.profileService.getProfile(userId);
-        const isPremium = master.lifetimePremium === true || master.tariffType === 'PREMIUM';
+        const isPremium = (0, plans_1.getEffectiveTariff)(master) === 'PREMIUM';
         if (!isPremium) {
             throw new common_1.ForbiddenException('Availability status (Available/Busy) and max leads limit are PREMIUM features.');
         }
@@ -400,7 +401,12 @@ let MastersService = class MastersService {
         if (!user.masterProfile)
             throw new common_1.NotFoundException('Master profile not found');
         const DAYS_FREE = 30;
-        return this.updateTariff(user.masterProfile.id, tariffType, DAYS_FREE);
+        const result = await this.updateTariff(user.masterProfile.id, tariffType, DAYS_FREE);
+        await Promise.all([
+            this.cache.del(this.cache.keys.userProfile(userId)),
+            this.cache.del(this.cache.keys.userMasterProfile(userId)),
+        ]);
+        return result;
     }
     async handleViewIncrement(masterId, userId, sessionId, ipAddress, userAgent, categoryId, cityId) {
         const todayStart = new Date(new Date().setHours(0, 0, 0, 0));

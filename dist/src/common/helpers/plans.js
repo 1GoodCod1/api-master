@@ -5,9 +5,6 @@ exports.sanitizePublicMaster = sanitizePublicMaster;
 exports.maskPhone = maskPhone;
 function getEffectiveTariff(master) {
     const type = master?.tariffType ?? 'BASIC';
-    if (master?.lifetimePremium === true) {
-        return 'PREMIUM';
-    }
     if (type === 'BASIC')
         return 'BASIC';
     const expRaw = master?.tariffExpiresAt ?? null;

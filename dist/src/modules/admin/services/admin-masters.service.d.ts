@@ -1,8 +1,10 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { CacheService } from '../../shared/cache/cache.service';
 export declare class AdminMastersService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly cache;
+    constructor(prisma: PrismaService, cache: CacheService);
     getMasters(filters?: {
         verified?: boolean;
         featured?: boolean;
@@ -11,8 +13,7 @@ export declare class AdminMastersService {
         limit?: number;
         cursor?: string;
     }): Promise<{
-        masters: {
-            lifetimePremium: boolean;
+        masters: ({
             user: {
                 email: string;
                 phone: string;
@@ -41,6 +42,7 @@ export declare class AdminMastersService {
                 reviews: number;
                 leads: number;
             };
+        } & {
             id: string;
             avatarFileId: string | null;
             createdAt: Date;
@@ -65,6 +67,7 @@ export declare class AdminMastersService {
             profileLastEditedAt: Date | null;
             pendingVerification: boolean;
             verificationSubmittedAt: Date | null;
+            lifetimePremium: boolean;
             isOnline: boolean;
             lastActivityAt: Date | null;
             isBusy: boolean;
@@ -85,7 +88,7 @@ export declare class AdminMastersService {
             longitude: number | null;
             googleCalendarId: string | null;
             tariffType: import("@prisma/client").$Enums.TariffType;
-        }[];
+        })[];
         pagination: {
             total: number;
             page: number;

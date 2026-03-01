@@ -266,6 +266,7 @@ export class PromotionsService {
             isActive: true,
             validFrom: { lte: now },
             validUntil: { gte: now },
+            master: { user: { isVerified: true } },
           },
           include: {
             master: {
@@ -295,9 +296,18 @@ export class PromotionsService {
   }
 
   /**
-   * Получить все активные акции мастера (для страницы мастера: своя акция на услугу или единая «на все»)
+   * Получить все активные акции мастера (для страницы мастера: своя акция на услугу или единая «на все»).
+   * Для неверифицированных мастеров возвращаем пустой массив.
    */
   async findActivePromotionsForMaster(masterId: string) {
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      include: { user: { select: { isVerified: true } } },
+    });
+    if (!master || !(master.user as { isVerified?: boolean })?.isVerified) {
+      return [];
+    }
+
     const now = new Date();
     return this.prisma.promotion.findMany({
       where: {

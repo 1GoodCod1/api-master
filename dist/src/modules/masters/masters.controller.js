@@ -60,7 +60,8 @@ let MastersController = class MastersController {
         return this.mastersService.getProfile(user.id);
     }
     async updateProfile(user, updateDto) {
-        return this.mastersService.updateProfile(user.id, updateDto);
+        const allowServices = user.role === 'ADMIN' || user.isVerified;
+        return this.mastersService.updateProfile(user.id, updateDto, allowServices);
     }
     async setAvatar(dto, user) {
         return this.mastersService.setMyAvatar(user.id, dto.fileId);

@@ -13,11 +13,14 @@ exports.AdminMastersService = void 0;
 const common_1 = require("@nestjs/common");
 const constants_1 = require("../../../common/constants");
 const prisma_service_1 = require("../../shared/database/prisma.service");
+const cache_service_1 = require("../../shared/cache/cache.service");
 const createdAtIdCursor_1 = require("../../shared/pagination/createdAtIdCursor");
 let AdminMastersService = class AdminMastersService {
     prisma;
-    constructor(prisma) {
+    cache;
+    constructor(prisma, cache) {
         this.prisma = prisma;
+        this.cache = cache;
     }
     async getMasters(filters) {
         const { verified, featured, tariff, page = 1, limit = 20, cursor, } = filters || {};
@@ -74,12 +77,8 @@ let AdminMastersService = class AdminMastersService {
         const nextCursor = useCursor && rawMasters.length > limitNumber
             ? (0, createdAtIdCursor_1.nextCursorFromLastCreatedAtId)(masters)
             : null;
-        const mastersWithLifetime = masters.map((master) => ({
-            ...master,
-            lifetimePremium: master.lifetimePremium,
-        }));
         return {
-            masters: mastersWithLifetime,
+            masters,
             pagination: {
                 total,
                 page: useCursor ? 1 : page,
@@ -100,12 +99,30 @@ let AdminMastersService = class AdminMastersService {
         if (data.isFeatured !== undefined)
             updateData.isFeatured = data.isFeatured;
         if (data.tariffType !== undefined) {
-            updateData.tariffType = data.tariffType;
+            const type = data.tariffType;
+            updateData.tariffType = type;
+            if (type === 'VIP' || type === 'PREMIUM') {
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + 30);
+                updateData.tariffExpiresAt = expiresAt;
+            }
+            else {
+                updateData.tariffExpiresAt = null;
+            }
         }
-        return this.prisma.master.update({
+        const updated = await this.prisma.master.update({
             where: { id: masterId },
             data: updateData,
         });
+        if (data.tariffType !== undefined && updated.userId) {
+            await Promise.all([
+                this.cache.del(this.cache.keys.userProfile(updated.userId)),
+                this.cache.del(this.cache.keys.userMasterProfile(updated.userId)),
+                this.cache.invalidate(`cache:master:${masterId}:*`),
+                this.cache.invalidate('cache:search:masters:*'),
+            ]);
+        }
+        return updated;
     }
     async getRecentMasters(limit = 10) {
         return this.prisma.master.findMany({
@@ -127,6 +144,7 @@ let AdminMastersService = class AdminMastersService {
 exports.AdminMastersService = AdminMastersService;
 exports.AdminMastersService = AdminMastersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        cache_service_1.CacheService])
 ], AdminMastersService);
 //# sourceMappingURL=admin-masters.service.js.map

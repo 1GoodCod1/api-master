@@ -13,6 +13,7 @@ export declare class MastersProfileService {
     private readonly cache;
     constructor(prisma: PrismaService, cache: CacheService);
     findOne(idOrSlug: string, incrementViews?: boolean, userId?: string, sessionId?: string, ipAddress?: string, userAgent?: string, categoryId?: string, cityId?: string, onViewIncrement?: (masterId: string, userId?: string, sessionId?: string, ipAddress?: string, userAgent?: string, categoryId?: string, cityId?: string) => Promise<void>): Promise<CachedMaster | {
+        services?: never[] | undefined;
         avatarUrl: string | null;
         photos: {
             id: string;
@@ -23,7 +24,6 @@ export declare class MastersProfileService {
             email?: string | null;
             [key: string]: unknown;
         };
-        lifetimePremium?: boolean;
         tariffType?: "BASIC" | "VIP" | "PREMIUM";
         tariffExpiresAt?: Date | string | null;
     }>;
@@ -129,7 +129,7 @@ export declare class MastersProfileService {
     updateProfile(userId: string, updateDto: UpdateMasterDto & {
         firstName?: string;
         lastName?: string;
-    }): Promise<{
+    }, isVerified?: boolean): Promise<{
         id: string;
         avatarFileId: string | null;
         createdAt: Date;

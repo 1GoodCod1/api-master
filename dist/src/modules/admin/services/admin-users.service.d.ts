@@ -38,7 +38,6 @@ export declare class AdminUsersService {
                 experienceYears: number;
                 tariffExpiresAt: Date | null;
                 views: number;
-                lifetimePremium: boolean;
                 tariffType: import("@prisma/client").$Enums.TariffType;
             } | null;
             avatarFile: {

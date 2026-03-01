@@ -108,7 +108,8 @@ export class MastersController {
     @GetUser() user: JwtUser,
     @Body() updateDto: UpdateMasterDto,
   ) {
-    return this.mastersService.updateProfile(user.id, updateDto);
+    const allowServices = user.role === 'ADMIN' || user.isVerified;
+    return this.mastersService.updateProfile(user.id, updateDto, allowServices);
   }
 
   @Patch('avatar/me')

@@ -42,7 +42,7 @@ let AuthController = class AuthController {
     async getRegistrationOptions() {
         return this.authService.getRegistrationOptions();
     }
-    async getEarlyBirdStatus() {
+    getEarlyBirdStatus() {
         return this.authService.getEarlyBirdStatus();
     }
     async login(loginDto, req, res) {
@@ -115,7 +115,7 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Get early bird offer status' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "getEarlyBirdStatus", null);
 __decorate([
     (0, common_1.Post)('login'),

@@ -61,6 +61,12 @@ export class LeadsValidationService {
       throw new NotFoundException('Master not found');
     }
 
+    if (!(master.user as { isVerified?: boolean })?.isVerified) {
+      throw new ForbiddenException(
+        'This master has not verified their profile yet. Leads are not accepted until verification.',
+      );
+    }
+
     if (authUser?.id && master.userId === authUser.id) {
       throw new BadRequestException('You cannot send a lead to yourself');
     }
