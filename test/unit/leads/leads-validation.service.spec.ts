@@ -28,7 +28,7 @@ describe('LeadsValidationService', () => {
     leadsReceivedToday: 1,
     maxLeadsPerDay: 10,
     leadsResetAt: new Date(),
-    user: { id: 'u-master' },
+    user: { id: 'u-master', isVerified: true },
   };
 
   beforeEach(() => {
