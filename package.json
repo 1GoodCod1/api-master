@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "prepare": "husky",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -133,6 +134,7 @@
     "@typescript-eslint/parser": "^8.54.0",
     "chai": "^6.2.2",
     "eslint": "^9.39.2",
+    "husky": "^9.1.7",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.3.0",
