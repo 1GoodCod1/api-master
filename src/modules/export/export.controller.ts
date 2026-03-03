@@ -35,7 +35,7 @@ export class ExportController {
   constructor(
     private readonly exportService: ExportService,
     private readonly exportQueue: ExportQueueService,
-  ) { }
+  ) {}
 
   // ============================================================================
   // LEGACY SYNC ENDPOINTS (kept for backward-compat, CSV is fine synchronously)
@@ -67,8 +67,14 @@ export class ExportController {
   @Post('queue/:type/:masterId')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 export requests per minute per IP
   @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ summary: 'Enqueue an export job (csv|excel|pdf). Returns jobId immediately.' })
-  @ApiResponse({ status: 202, description: 'Job queued. Poll /export/status/:jobId' })
+  @ApiOperation({
+    summary:
+      'Enqueue an export job (csv|excel|pdf). Returns jobId immediately.',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Job queued. Poll /export/status/:jobId',
+  })
   @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
   enqueueExport(
     @Param('type') type: string,
@@ -76,9 +82,15 @@ export class ExportController {
     @Req() req: RequestWithUser,
   ) {
     if (!['csv', 'excel', 'pdf'].includes(type)) {
-      throw new BadRequestException('Invalid export type. Use: csv, excel, pdf');
+      throw new BadRequestException(
+        'Invalid export type. Use: csv, excel, pdf',
+      );
     }
-    const job = this.exportQueue.enqueue(type as 'csv' | 'excel' | 'pdf', masterId, req.user);
+    const job = this.exportQueue.enqueue(
+      type as 'csv' | 'excel' | 'pdf',
+      masterId,
+      req.user,
+    );
     return {
       jobId: job.id,
       status: job.status,
@@ -128,10 +140,15 @@ export class ExportController {
       throw new NotFoundException('Job not found'); // Don't leak job existence to other users
     }
     if (job.status !== 'done' || !job.result) {
-      throw new BadRequestException(`Export not ready yet. Status: ${job.status}`);
+      throw new BadRequestException(
+        `Export not ready yet. Status: ${job.status}`,
+      );
     }
     res.setHeader('Content-Type', job.contentType!);
-    res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${job.filename}"`,
+    );
     res.setHeader('Content-Length', job.result.length);
     res.end(job.result);
   }
@@ -141,7 +158,10 @@ export class ExportController {
   // ============================================================================
 
   @Get('analytics/pdf/:masterId')
-  @ApiOperation({ summary: '[Legacy] Export analytics to PDF synchronously (PREMIUM only). Use /queue/pdf/:masterId instead.' })
+  @ApiOperation({
+    summary:
+      '[Legacy] Export analytics to PDF synchronously (PREMIUM only). Use /queue/pdf/:masterId instead.',
+  })
   @ApiResponse({ status: 200, description: 'PDF file' })
   @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
   async exportAnalyticsPDF(

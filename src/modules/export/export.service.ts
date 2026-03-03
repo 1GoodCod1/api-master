@@ -45,7 +45,7 @@ const LEADS_EXPORT_COLUMNS = [
 
 @Injectable()
 export class ExportService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Проверка прав доступа и наличия тарифа PREMIUM
@@ -429,7 +429,11 @@ export class ExportService {
       }),
       this.prisma.master.findUnique({
         where: { id: masterId },
-        include: { user: true, category: { select: { name: true } }, city: { select: { name: true } } },
+        include: {
+          user: true,
+          category: { select: { name: true } },
+          city: { select: { name: true } },
+        },
       }),
     ]);
 
@@ -447,13 +451,20 @@ export class ExportService {
             : '';
         rows.push(
           [
-            (idx + 1).toString(), lead.id,
-            lead.createdAt.toISOString(), lead.updatedAt.toISOString(),
-            lead.status, lead.clientName ?? '', lead.clientPhone,
-            clientEmail, lead.message,
+            (idx + 1).toString(),
+            lead.id,
+            lead.createdAt.toISOString(),
+            lead.updatedAt.toISOString(),
+            lead.status,
+            lead.clientName ?? '',
+            lead.clientPhone,
+            clientEmail,
+            lead.message,
             lead.isPremium ? 'Yes' : 'No',
-            lead.spamScore.toString(), lead.files.length.toString(),
-            categoryName, cityName,
+            lead.spamScore.toString(),
+            lead.files.length.toString(),
+            categoryName,
+            cityName,
           ]
             .map(csvEscape)
             .join(','),
@@ -466,36 +477,76 @@ export class ExportService {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'MoldMasters';
     workbook.created = new Date();
-    const infoSheet = workbook.addWorksheet('Report Info', { properties: { tabColor: { argb: 'FFB45309' } } });
-    const masterName = `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() || 'Master';
-    infoSheet.columns = [{ key: 'label', width: 22 }, { key: 'value', width: 50 }];
+    const infoSheet = workbook.addWorksheet('Report Info', {
+      properties: { tabColor: { argb: 'FFB45309' } },
+    });
+    const masterName =
+      `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() ||
+      'Master';
+    infoSheet.columns = [
+      { key: 'label', width: 22 },
+      { key: 'value', width: 50 },
+    ];
     infoSheet.addRow({ label: 'Report Type', value: 'Leads Export' });
     infoSheet.addRow({ label: 'Master', value: masterName });
-    infoSheet.addRow({ label: 'Category', value: master.category?.name ?? '-' });
+    infoSheet.addRow({
+      label: 'Category',
+      value: master.category?.name ?? '-',
+    });
     infoSheet.addRow({ label: 'City', value: master.city?.name ?? '-' });
     infoSheet.addRow({ label: 'Export Date', value: new Date().toISOString() });
     infoSheet.addRow({ label: 'Total Leads', value: leads.length });
-    const leadsSheet = workbook.addWorksheet('Leads', { properties: { tabColor: { argb: 'FF217346' } }, views: [{ state: 'frozen', ySplit: 1 }] });
+    const leadsSheet = workbook.addWorksheet('Leads', {
+      properties: { tabColor: { argb: 'FF217346' } },
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
     const colDefs = [
-      { header: '\u2116', key: 'rowNum', width: 6 }, { header: 'Lead ID', key: 'id', width: 38 },
-      { header: 'Created At', key: 'createdAt', width: 22 }, { header: 'Updated At', key: 'updatedAt', width: 22 },
-      { header: 'Status', key: 'status', width: 14 }, { header: 'Client Name', key: 'clientName', width: 20 },
-      { header: 'Client Phone', key: 'clientPhone', width: 16 }, { header: 'Client Email', key: 'clientEmail', width: 26 },
-      { header: 'Message', key: 'message', width: 45 }, { header: 'Is Premium', key: 'isPremium', width: 12 },
-      { header: 'Spam Score', key: 'spamScore', width: 12 }, { header: 'Attachments Count', key: 'filesCount', width: 18 },
-      { header: 'Master Category', key: 'categoryName', width: 20 }, { header: 'Master City', key: 'cityName', width: 18 },
+      { header: '\u2116', key: 'rowNum', width: 6 },
+      { header: 'Lead ID', key: 'id', width: 38 },
+      { header: 'Created At', key: 'createdAt', width: 22 },
+      { header: 'Updated At', key: 'updatedAt', width: 22 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Client Name', key: 'clientName', width: 20 },
+      { header: 'Client Phone', key: 'clientPhone', width: 16 },
+      { header: 'Client Email', key: 'clientEmail', width: 26 },
+      { header: 'Message', key: 'message', width: 45 },
+      { header: 'Is Premium', key: 'isPremium', width: 12 },
+      { header: 'Spam Score', key: 'spamScore', width: 12 },
+      { header: 'Attachments Count', key: 'filesCount', width: 18 },
+      { header: 'Master Category', key: 'categoryName', width: 20 },
+      { header: 'Master City', key: 'cityName', width: 18 },
     ];
     leadsSheet.columns = colDefs;
     leadsSheet.getRow(1).font = { bold: true };
-    leadsSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
-    leadsSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: colDefs.length } };
+    leadsSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8E8E8' },
+    };
+    leadsSheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: colDefs.length },
+    };
     leads.forEach((lead, idx) => {
-      const clientEmail = lead.client && 'email' in lead.client ? (lead.client as { email: string }).email : '';
+      const clientEmail =
+        lead.client && 'email' in lead.client
+          ? (lead.client as { email: string }).email
+          : '';
       leadsSheet.addRow({
-        rowNum: idx + 1, id: lead.id, createdAt: lead.createdAt, updatedAt: lead.updatedAt,
-        status: lead.status, clientName: lead.clientName ?? '', clientPhone: lead.clientPhone,
-        clientEmail, message: lead.message, isPremium: lead.isPremium ? 'Yes' : 'No',
-        spamScore: lead.spamScore, filesCount: lead.files.length, categoryName, cityName,
+        rowNum: idx + 1,
+        id: lead.id,
+        createdAt: lead.createdAt,
+        updatedAt: lead.updatedAt,
+        status: lead.status,
+        clientName: lead.clientName ?? '',
+        clientPhone: lead.clientPhone,
+        clientEmail,
+        message: lead.message,
+        isPremium: lead.isPremium ? 'Yes' : 'No',
+        spamScore: lead.spamScore,
+        filesCount: lead.files.length,
+        categoryName,
+        cityName,
       });
     });
     leadsSheet.getColumn(3).numFmt = 'yyyy-mm-dd hh:mm:ss';
@@ -508,7 +559,10 @@ export class ExportService {
    * Generate analytics PDF as an in-memory Buffer.
    * Does NOT write to HTTP response — safe to call from a background job.
    */
-  async exportAnalyticsToBuffer(masterId: string, user: JwtUser): Promise<Buffer> {
+  async exportAnalyticsToBuffer(
+    masterId: string,
+    user: JwtUser,
+  ): Promise<Buffer> {
     await this.validateExportAccess(masterId, user);
 
     const master = await this.prisma.master.findUnique({
@@ -517,12 +571,29 @@ export class ExportService {
     });
     if (!master) throw new BadRequestException('Master not found');
 
-    const [leadsStats, reviewsStats, bookingsStats, analytics] = await Promise.all([
-      this.prisma.lead.groupBy({ by: ['status'], where: { masterId }, _count: true }),
-      this.prisma.review.groupBy({ by: ['status'], where: { masterId }, _count: true }),
-      this.prisma.booking.groupBy({ by: ['status'], where: { masterId }, _count: true }),
-      this.prisma.masterAnalytics.findMany({ where: { masterId }, orderBy: { date: 'desc' }, take: 30 }),
-    ]);
+    const [leadsStats, reviewsStats, bookingsStats, analytics] =
+      await Promise.all([
+        this.prisma.lead.groupBy({
+          by: ['status'],
+          where: { masterId },
+          _count: true,
+        }),
+        this.prisma.review.groupBy({
+          by: ['status'],
+          where: { masterId },
+          _count: true,
+        }),
+        this.prisma.booking.groupBy({
+          by: ['status'],
+          where: { masterId },
+          _count: true,
+        }),
+        this.prisma.masterAnalytics.findMany({
+          where: { masterId },
+          orderBy: { date: 'desc' },
+          take: 30,
+        }),
+      ]);
 
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
@@ -533,8 +604,15 @@ export class ExportService {
 
       doc.fontSize(20).text('Analytics Report', { align: 'center' });
       doc.moveDown();
-      doc.fontSize(12).text(`Master: ${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim(), { align: 'center' });
-      doc.text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+      doc
+        .fontSize(12)
+        .text(
+          `Master: ${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim(),
+          { align: 'center' },
+        );
+      doc.text(`Generated: ${new Date().toLocaleString()}`, {
+        align: 'center',
+      });
       doc.moveDown(2);
       doc.fontSize(16).text('Profile Information', { underline: true });
       doc.moveDown();
@@ -558,11 +636,15 @@ export class ExportService {
       bookingsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
       doc.moveDown();
       if (analytics.length > 0) {
-        doc.fontSize(16).text('Recent Analytics (Last 30 Days)', { underline: true });
+        doc
+          .fontSize(16)
+          .text('Recent Analytics (Last 30 Days)', { underline: true });
         doc.moveDown();
         doc.fontSize(10);
         analytics.forEach((day) => {
-          doc.text(`${day.date.toLocaleDateString()}: ${day.leadsCount || 0} leads, ${day.viewsCount || 0} views`);
+          doc.text(
+            `${day.date.toLocaleDateString()}: ${day.leadsCount || 0} leads, ${day.viewsCount || 0} views`,
+          );
         });
       }
       doc.end();

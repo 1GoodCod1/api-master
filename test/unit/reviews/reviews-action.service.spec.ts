@@ -11,10 +11,11 @@ import type { InAppNotificationService } from '../../../src/modules/notification
 
 type PrismaReviewsActionMock = {
   user: { findUnique: jest.Mock };
-  master: { findUnique: jest.Mock };
+  master: { findUnique: jest.Mock; update: jest.Mock };
   review: {
     findFirst: jest.Mock;
     findUnique: jest.Mock;
+    findMany: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
   };

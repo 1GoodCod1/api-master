@@ -152,7 +152,7 @@ import { AppModule as AppRootModule } from './app/app.module';
     WebSocketModule,
     FavoritesModule,
     BookingsModule,
-    // ExportModule,
+    ExportModule,
     ReportsModule,
     SecurityModule,
     PhoneVerificationModule,
