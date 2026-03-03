@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { LeadStatus, VerificationStatus } from '../../common/constants';
 import type { RequestWithOptionalUser } from '../../common/decorators/get-user.decorator';
@@ -22,6 +23,8 @@ import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dt
 import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
 import type { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
 import type { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
+import type { UpdateMasterDto } from './dto/update-master.dto';
+import type { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 
 /**
  * Главный сервис мастеров - координатор для специализированных сервисов.
@@ -29,6 +32,8 @@ import type { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-
  */
 @Injectable()
 export class MastersService {
+  private readonly logger = new Logger(MastersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
@@ -38,7 +43,7 @@ export class MastersService {
     private readonly statsService: MastersStatsService,
     private readonly tariffService: MastersTariffService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   // ==================== ПОИСК И ФИЛЬТРАЦИЯ ====================
 
@@ -112,7 +117,7 @@ export class MastersService {
 
   async updateProfile(
     userId: string,
-    updateDto: import('./dto/update-master.dto').UpdateMasterDto,
+    updateDto: UpdateMasterDto,
     isVerified = true,
   ) {
     return this.profileService.updateProfile(userId, updateDto, isVerified);
@@ -132,7 +137,7 @@ export class MastersService {
 
   async updateNotificationSettings(
     userId: string,
-    dto: import('./dto/update-notification-settings.dto').UpdateNotificationSettingsDto,
+    dto: UpdateNotificationSettingsDto,
   ) {
     const master = await this.prisma.master.findUnique({
       where: { userId },
@@ -606,18 +611,28 @@ export class MastersService {
     const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
 
     if (userId) {
-      const [profileMaster, viewerMaster] = await Promise.all([
-        this.prisma.master.findUnique({
-          where: { id: masterId },
-          select: { userId: true },
-        }),
-        this.prisma.master.findUnique({
-          where: { userId },
-          select: { id: true },
-        }),
-      ]);
-      if (profileMaster?.userId === userId) return;
-      if (viewerMaster) return;
+      // Cache 'is viewer a master?' for 60s to avoid 2 DB queries on every profile view
+      const viewerCacheKey = `cache:viewer:${userId}:is-master`;
+      let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
+
+      if (viewerIsMaster === null) {
+        const [profileMaster, viewerMaster] = await Promise.all([
+          this.prisma.master.findUnique({
+            where: { id: masterId },
+            select: { userId: true },
+          }),
+          this.prisma.master.findUnique({
+            where: { userId },
+            select: { id: true },
+          }),
+        ]);
+        // If the viewer is the profile owner or another master — skip
+        if (profileMaster?.userId === userId) return;
+        viewerIsMaster = !!viewerMaster;
+        await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
+      }
+
+      if (viewerIsMaster) return;
     }
 
     const viewerIdent = userId

@@ -243,6 +243,11 @@ model Master {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  // Full-text search vector (populated by migration + trigger)
+  // Run: ALTER TABLE masters ADD COLUMN search_vector tsvector;
+  // Then: CREATE INDEX idx_masters_search_vector ON masters USING GIN(search_vector);
+  search_vector  Unsupported("tsvector")?
+
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarFile     File?       @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
   city           City        @relation(fields: [cityId], references: [id])

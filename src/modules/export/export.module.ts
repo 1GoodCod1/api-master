@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ExportService } from './export.service';
+import { ExportQueueService } from './export-queue.service';
 import { ExportController } from './export.controller';
-import { PrismaModule } from '../shared/database/prisma.module';
 
 @Module({
-  imports: [PrismaModule],
   controllers: [ExportController],
-  providers: [ExportService],
-  exports: [ExportService],
+  providers: [ExportService, ExportQueueService],
+  exports: [ExportService, ExportQueueService],
 })
-export class ExportModule {}
+export class ExportModule { }

@@ -45,7 +45,7 @@ const LEADS_EXPORT_COLUMNS = [
 
 @Injectable()
 export class ExportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Проверка прав доступа и наличия тарифа PREMIUM
@@ -404,5 +404,168 @@ export class ExportService {
     }
 
     doc.end();
+  }
+
+  // ============================================================================
+  // BUFFER METHODS — used by ExportQueueService for off-request async processing
+  // ============================================================================
+
+  /**
+   * Generate leads export as an in-memory Buffer (CSV or Excel).
+   * Does NOT write to HTTP response — safe to call from a background job.
+   */
+  async exportLeadsToBuffer(
+    masterId: string,
+    user: JwtUser,
+    format: 'csv' | 'excel',
+  ): Promise<Buffer> {
+    await this.validateExportAccess(masterId, user);
+
+    const [leads, master] = await Promise.all([
+      this.prisma.lead.findMany({
+        where: { masterId },
+        orderBy: { createdAt: 'desc' },
+        include: { files: true, client: { select: { email: true } } },
+      }),
+      this.prisma.master.findUnique({
+        where: { id: masterId },
+        include: { user: true, category: { select: { name: true } }, city: { select: { name: true } } },
+      }),
+    ]);
+
+    if (!master) throw new BadRequestException('Master not found');
+    const categoryName = master.category?.name ?? '';
+    const cityName = master.city?.name ?? '';
+
+    if (format === 'csv') {
+      const rows: string[] = [];
+      rows.push('\uFEFF' + LEADS_EXPORT_COLUMNS.map(csvEscape).join(','));
+      leads.forEach((lead, idx) => {
+        const clientEmail =
+          lead.client && 'email' in lead.client
+            ? (lead.client as { email: string }).email
+            : '';
+        rows.push(
+          [
+            (idx + 1).toString(), lead.id,
+            lead.createdAt.toISOString(), lead.updatedAt.toISOString(),
+            lead.status, lead.clientName ?? '', lead.clientPhone,
+            clientEmail, lead.message,
+            lead.isPremium ? 'Yes' : 'No',
+            lead.spamScore.toString(), lead.files.length.toString(),
+            categoryName, cityName,
+          ]
+            .map(csvEscape)
+            .join(','),
+        );
+      });
+      return Buffer.from(rows.join('\r\n'), 'utf-8');
+    }
+
+    // Excel
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'MoldMasters';
+    workbook.created = new Date();
+    const infoSheet = workbook.addWorksheet('Report Info', { properties: { tabColor: { argb: 'FFB45309' } } });
+    const masterName = `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() || 'Master';
+    infoSheet.columns = [{ key: 'label', width: 22 }, { key: 'value', width: 50 }];
+    infoSheet.addRow({ label: 'Report Type', value: 'Leads Export' });
+    infoSheet.addRow({ label: 'Master', value: masterName });
+    infoSheet.addRow({ label: 'Category', value: master.category?.name ?? '-' });
+    infoSheet.addRow({ label: 'City', value: master.city?.name ?? '-' });
+    infoSheet.addRow({ label: 'Export Date', value: new Date().toISOString() });
+    infoSheet.addRow({ label: 'Total Leads', value: leads.length });
+    const leadsSheet = workbook.addWorksheet('Leads', { properties: { tabColor: { argb: 'FF217346' } }, views: [{ state: 'frozen', ySplit: 1 }] });
+    const colDefs = [
+      { header: '\u2116', key: 'rowNum', width: 6 }, { header: 'Lead ID', key: 'id', width: 38 },
+      { header: 'Created At', key: 'createdAt', width: 22 }, { header: 'Updated At', key: 'updatedAt', width: 22 },
+      { header: 'Status', key: 'status', width: 14 }, { header: 'Client Name', key: 'clientName', width: 20 },
+      { header: 'Client Phone', key: 'clientPhone', width: 16 }, { header: 'Client Email', key: 'clientEmail', width: 26 },
+      { header: 'Message', key: 'message', width: 45 }, { header: 'Is Premium', key: 'isPremium', width: 12 },
+      { header: 'Spam Score', key: 'spamScore', width: 12 }, { header: 'Attachments Count', key: 'filesCount', width: 18 },
+      { header: 'Master Category', key: 'categoryName', width: 20 }, { header: 'Master City', key: 'cityName', width: 18 },
+    ];
+    leadsSheet.columns = colDefs;
+    leadsSheet.getRow(1).font = { bold: true };
+    leadsSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+    leadsSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: colDefs.length } };
+    leads.forEach((lead, idx) => {
+      const clientEmail = lead.client && 'email' in lead.client ? (lead.client as { email: string }).email : '';
+      leadsSheet.addRow({
+        rowNum: idx + 1, id: lead.id, createdAt: lead.createdAt, updatedAt: lead.updatedAt,
+        status: lead.status, clientName: lead.clientName ?? '', clientPhone: lead.clientPhone,
+        clientEmail, message: lead.message, isPremium: lead.isPremium ? 'Yes' : 'No',
+        spamScore: lead.spamScore, filesCount: lead.files.length, categoryName, cityName,
+      });
+    });
+    leadsSheet.getColumn(3).numFmt = 'yyyy-mm-dd hh:mm:ss';
+    leadsSheet.getColumn(4).numFmt = 'yyyy-mm-dd hh:mm:ss';
+    const buf = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buf);
+  }
+
+  /**
+   * Generate analytics PDF as an in-memory Buffer.
+   * Does NOT write to HTTP response — safe to call from a background job.
+   */
+  async exportAnalyticsToBuffer(masterId: string, user: JwtUser): Promise<Buffer> {
+    await this.validateExportAccess(masterId, user);
+
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      include: { user: true, category: true, city: true },
+    });
+    if (!master) throw new BadRequestException('Master not found');
+
+    const [leadsStats, reviewsStats, bookingsStats, analytics] = await Promise.all([
+      this.prisma.lead.groupBy({ by: ['status'], where: { masterId }, _count: true }),
+      this.prisma.review.groupBy({ by: ['status'], where: { masterId }, _count: true }),
+      this.prisma.booking.groupBy({ by: ['status'], where: { masterId }, _count: true }),
+      this.prisma.masterAnalytics.findMany({ where: { masterId }, orderBy: { date: 'desc' }, take: 30 }),
+    ]);
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(20).text('Analytics Report', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Master: ${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim(), { align: 'center' });
+      doc.text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+      doc.moveDown(2);
+      doc.fontSize(16).text('Profile Information', { underline: true });
+      doc.moveDown();
+      doc.fontSize(12);
+      doc.text(`Category: ${master.category?.name || 'N/A'}`);
+      doc.text(`City: ${master.city?.name || 'N/A'}`);
+      doc.text(`Rating: ${master.rating?.toFixed(2) || 'N/A'}`);
+      doc.text(`Total Reviews: ${master.totalReviews || 0}`);
+      doc.text(`Total Leads: ${master.leadsCount || 0}`);
+      doc.moveDown();
+      doc.fontSize(16).text('Leads Statistics', { underline: true });
+      doc.moveDown();
+      leadsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
+      doc.moveDown();
+      doc.fontSize(16).text('Reviews Statistics', { underline: true });
+      doc.moveDown();
+      reviewsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
+      doc.moveDown();
+      doc.fontSize(16).text('Bookings Statistics', { underline: true });
+      doc.moveDown();
+      bookingsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
+      doc.moveDown();
+      if (analytics.length > 0) {
+        doc.fontSize(16).text('Recent Analytics (Last 30 Days)', { underline: true });
+        doc.moveDown();
+        doc.fontSize(10);
+        analytics.forEach((day) => {
+          doc.text(`${day.date.toLocaleDateString()}: ${day.leadsCount || 0} leads, ${day.viewsCount || 0} views`);
+        });
+      }
+      doc.end();
+    });
   }
 }

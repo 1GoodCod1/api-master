@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PaymentStatus } from '../../common/constants';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../shared/database/prisma.service';
@@ -15,6 +15,8 @@ import { MastersAvailabilityService } from '../masters/services/masters-availabi
 
 @Injectable()
 export class LeadsService {
+  private readonly logger = new Logger(LeadsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
@@ -25,7 +27,7 @@ export class LeadsService {
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly availabilityService: MastersAvailabilityService,
-  ) {}
+  ) { }
 
   /**
    * Главный метод создания лида (Координатор)
@@ -132,11 +134,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-              createMany: {
-                data: fileIds.map((id) => ({ fileId: id })),
-                skipDuplicates: true,
-              },
-            }
+            createMany: {
+              data: fileIds.map((id) => ({ fileId: id })),
+              skipDuplicates: true,
+            },
+          }
           : undefined,
       },
       include: {
@@ -161,10 +163,9 @@ export class LeadsService {
         },
       });
     } catch (error) {
-      // Conversation creation is not critical - log and continue
-      console.error(
-        'Failed to auto-create conversation for lead:',
-        lead.id,
+      // Conversation creation is not critical
+      this.logger.error(
+        `Failed to auto-create conversation for lead: ${lead.id}`,
         error,
       );
     }
@@ -201,9 +202,9 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => {});
+          .catch(() => { });
       } catch (err) {
-        console.error('Failed to send lead-sent notification to client:', err);
+        this.logger.error('Failed to send lead-sent notification to client', err);
       }
     }
 
@@ -216,7 +217,7 @@ export class LeadsService {
         masterId,
       });
     } catch (err) {
-      console.error('Failed to save in-app notification for lead:', err);
+      this.logger.error('Failed to save in-app notification for lead', err);
     }
 
     return lead;
@@ -224,6 +225,11 @@ export class LeadsService {
 
   /**
    * Проверка платежа за премиум-выделение лида
+   *
+   * TODO: After Stripe removal, stripeSession field is repurposed for MIA order IDs.
+   * This query currently uses stripeSession to find the payment by MIA order ID.
+   * For a clean fix: run migration to rename stripeSession -> miaOrderId in schema,
+   * and update all create/query references accordingly.
    */
   private async checkPremiumPayment(sessionId?: string): Promise<boolean> {
     if (!sessionId) return false;

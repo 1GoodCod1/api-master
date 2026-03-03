@@ -18,14 +18,13 @@ export class PaymentsService {
     private readonly webhookService: PaymentsWebhookService,
     private readonly queryService: PaymentsQueryService,
     private readonly upgradeService: PaymentsUpgradeService,
-  ) {}
+  ) { }
 
   // ==================== СОЗДАНИЕ ПЛАТЕЖЕЙ ====================
 
-  async createCheckoutSession(dto: CreatePaymentDto, userId: string) {
-    return this.miaService.createTariffQrPayment(dto, userId);
-  }
-
+  /**
+   * Создать QR-платёж через MIA (MAIB)
+   */
   async createMiaCheckout(dto: CreatePaymentDto, userId: string) {
     return this.miaService.createTariffQrPayment(dto, userId);
   }

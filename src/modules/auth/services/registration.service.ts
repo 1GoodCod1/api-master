@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { User, Master } from '@prisma/client';
@@ -17,12 +18,14 @@ type PrismaTransactionClient = Parameters<
 
 @Injectable()
 export class RegistrationService {
+  private readonly logger = new Logger(RegistrationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokenService: TokenService,
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
-  ) {}
+  ) { }
 
   /**
    * Главный метод регистрации (оркестратор)
@@ -123,7 +126,7 @@ export class RegistrationService {
         name: name || undefined,
       });
     } catch (err) {
-      console.error('Failed to send new registration notification:', err);
+      this.logger.error('Failed to send new registration notification', err);
     }
 
     // 8. Генерация токенов и финальный ответ

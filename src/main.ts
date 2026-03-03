@@ -72,7 +72,12 @@ async function bootstrap() {
   try {
     console.log('[2] Creating NestFactory...');
     const startTime = Date.now();
-    const useHttpOnlyCookie = process.env.NODE_ENV !== 'production';
+    // USE_HTTPONLY_COOKIE=true  → refresh token stored in httpOnly cookie (most secure, default in prod)
+    // USE_HTTPONLY_COOKIE=false → refresh token sent in response body (fallback for dev/mobile apps)
+    const isProd = process.env.NODE_ENV === 'production';
+    const useHttpOnlyCookie =
+      process.env.USE_HTTPONLY_COOKIE === 'true' ||
+      (process.env.USE_HTTPONLY_COOKIE === undefined && isProd);
     const app = await NestFactory.create(AppModule, {
       logger: false,
       bufferLogs: true,
@@ -93,8 +98,6 @@ async function bootstrap() {
 
     const configService = app.get(ConfigService);
     validateProductionSecrets(configService);
-
-    const isProd = process.env.NODE_ENV === 'production';
     app.use(
       helmet({
         crossOriginResourcePolicy: { policy: 'cross-origin' },

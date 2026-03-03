@@ -12,6 +12,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -31,7 +32,7 @@ import { ReviewStatus } from '@prisma/client';
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(private readonly reviewsService: ReviewsService) { }
 
   @Get('can-create/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -46,6 +47,7 @@ export class ReviewsController {
   }
 
   @Post()
+  @Throttle({ default: { limit: 2, ttl: 300000 } }) // 2 reviews per 5 minutes
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('CLIENT')
   @ApiBearerAuth()
@@ -146,6 +148,7 @@ export class ReviewsController {
   // ============================================
 
   @Post(':id/reply')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 replies per minute
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('MASTER')
   @ApiBearerAuth()
@@ -176,6 +179,7 @@ export class ReviewsController {
   // ============================================
 
   @Post(':id/vote')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 votes per minute
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('CLIENT')
   @ApiBearerAuth()

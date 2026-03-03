@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import type { UpdateMasterDto } from '../dto/update-master.dto';
 import { ReviewStatus } from '../../../common/constants';
@@ -19,10 +20,12 @@ interface CachedMaster {
 
 @Injectable()
 export class MastersProfileService {
+  private readonly logger = new Logger(MastersProfileService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-  ) {}
+  ) { }
 
   async findOne(
     idOrSlug: string,
@@ -59,7 +62,7 @@ export class MastersProfileService {
           userAgent,
           cachedResult.categoryId ?? undefined,
           cachedResult.cityId ?? undefined,
-        ).catch((err) => console.error('Failed to increment views', err));
+        ).catch((err) => this.logger.error('Failed to increment views', err));
       }
       return cachedResult;
     }
@@ -207,7 +210,7 @@ export class MastersProfileService {
         userAgent,
         master.categoryId,
         master.cityId,
-      ).catch((err) => console.error('Failed to increment views', err));
+      ).catch((err) => this.logger.error('Failed to increment views', err));
     }
 
     return result;
@@ -264,7 +267,7 @@ export class MastersProfileService {
     if (master.profileLastEditedAt) {
       const daysSince = Math.floor(
         (Date.now() - master.profileLastEditedAt.getTime()) /
-          (1000 * 60 * 60 * 24),
+        (1000 * 60 * 60 * 24),
       );
       if (daysSince < this.PROFILE_EDIT_COOLDOWN_DAYS) {
         const daysLeft = this.PROFILE_EDIT_COOLDOWN_DAYS - daysSince;

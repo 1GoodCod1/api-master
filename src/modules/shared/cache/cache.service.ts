@@ -11,7 +11,7 @@ export class CacheService {
   private readonly logger = new Logger(CacheService.name);
   private readonly defaultTTL = 300; // 5 minutes
 
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly redis: RedisService) { }
 
   /**
    * Get value from cache
@@ -31,6 +31,8 @@ export class CacheService {
   async set(key: string, value: any, ttl?: number): Promise<void> {
     try {
       await this.redis.set(key, value, ttl || this.defaultTTL);
+      // Register key in pattern set for O(members) invalidation (no SCAN needed)
+      void this.registerKeyInSet(key);
     } catch (error) {
       this.logger.error(`Cache set error for key ${key}:`, error);
       // Fail silently, don't break the application
@@ -49,40 +51,77 @@ export class CacheService {
   }
 
   /**
-   * Delete multiple keys by pattern
-   * WARNING: Использует SCAN вместо KEYS для избежания блокировки Redis в продакшене
+   * Register a cache key in a Redis Set for fast pattern-based invalidation.
+   * The set name is derived by stripping the last segment of the key.
+   *
+   * Example:
+   *   key = 'cache:master:abc123:full'
+   *   set = 'keyset:cache:master:abc123:*'
+   *
+   * This replaces SCAN (which blocks at 1M+ keys in production) with O(members) DEL.
+   */
+  private async registerKeyInSet(key: string): Promise<void> {
+    try {
+      const client = this.redis.getClient();
+      // Build tracking set name from key prefix (strip last ':segment')
+      const lastColon = key.lastIndexOf(':');
+      if (lastColon < 0) return;
+      const prefix = key.slice(0, lastColon);
+      const setName = `keyset:${prefix}:*`;
+      // SADD + expire the set to avoid unbounded growth (24h TTL on the registry)
+      await client.sadd(setName, key);
+      await client.expire(setName, 86400); // 24 hours
+    } catch {
+      // Non-critical: if this fails, invalidation falls back to SCAN
+    }
+  }
+
+  /**
+   * Delete multiple keys by pattern.
+   *
+   * Strategy (in priority order):
+   * 1) Read from the Redis Set registered during set() — O(members), non-blocking
+   * 2) Fall back to SCAN if the set is empty or missing (e.g., cold start)
+   *
+   * NOTE: SCAN fallback is kept but scoped to COUNT=100 batches to minimise blocking.
    */
   async delByPattern(pattern: string): Promise<number> {
     try {
       const client = this.redis.getClient();
-      const keys: string[] = [];
-      let cursor = '0';
+      const setName = `keyset:${pattern}`;
 
-      // Используем SCAN вместо KEYS для неблокирующей операции
-      do {
-        const [nextCursor, foundKeys] = await client.scan(
-          cursor,
-          'MATCH',
-          pattern,
-          'COUNT',
-          100,
-        );
-        cursor = nextCursor;
-        keys.push(...foundKeys);
-      } while (cursor !== '0');
+      // 1) Fast path: read from key-set registry
+      let keys: string[] = await client.smembers(setName);
+
+      // 2) Fallback SCAN for keys not yet in the registry (e.g., pre-upgrade keys)
+      if (keys.length === 0) {
+        let cursor = '0';
+        do {
+          const [nextCursor, foundKeys] = await client.scan(
+            cursor,
+            'MATCH',
+            pattern,
+            'COUNT',
+            100,
+          );
+          cursor = nextCursor;
+          keys.push(...foundKeys);
+        } while (cursor !== '0');
+      }
 
       if (keys.length === 0) return 0;
 
-      // Delete in batches of 100 to avoid blocking Redis
+      // Delete keys + the tracking set itself in batches of 100
       const batchSize = 100;
       let deleted = 0;
-
       for (let i = 0; i < keys.length; i += batchSize) {
         const batch = keys.slice(i, i + batchSize);
-        await Promise.all(batch.map((key) => this.redis.del(key)));
+        await client.del(...batch);
         deleted += batch.length;
       }
 
+      // Remove the exhausted tracking set
+      await client.del(setName);
       return deleted;
     } catch (error) {
       this.logger.error(
@@ -122,7 +161,8 @@ export class CacheService {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const value = await fetchFn();
-        await this.set(key, value, ttl);
+        await this.redis.set(key, value, ttl || this.defaultTTL);
+        void this.registerKeyInSet(key); // track for set-based invalidation
         return value;
       } catch (error) {
         lastError = error;

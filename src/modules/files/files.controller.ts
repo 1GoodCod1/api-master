@@ -8,6 +8,7 @@ import {
   Req,
   UploadedFiles,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -27,9 +28,10 @@ import type {
 @ApiTags('Files')
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(private readonly filesService: FilesService) { }
 
   @Post('upload')
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 uploads per minute per user
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiBearerAuth()
@@ -43,6 +45,7 @@ export class FilesController {
   }
 
   @Post('upload-many')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 batch uploads per minute
   @UseGuards(OptionalJwtAuthGuard)
   @UseInterceptors(FilesInterceptor('files', 10))
   @ApiConsumes('multipart/form-data')

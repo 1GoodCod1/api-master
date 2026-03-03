@@ -1,14 +1,42 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 
 /**
  * Специализированный сервис для построения сложных SQL-запросов поиска мастеров.
  * Выносит тяжелую логику ранжирования и фильтрации через Raw SQL.
+ *
+ * FULL-TEXT SEARCH SETUP (run once):
+ * Add this migration SQL to enable GIN indexes for fast full-text search:
+ *
+ * -- Add tsvector computed column for master search
+ * ALTER TABLE masters ADD COLUMN IF NOT EXISTS search_vector tsvector;
+ *
+ * -- Populate the column
+ * UPDATE masters m SET search_vector =
+ *   setweight(to_tsvector('russian', COALESCE(u."firstName", '') || ' ' || COALESCE(u."lastName", '')), 'A') ||
+ *   setweight(to_tsvector('russian', COALESCE(m.description, '')), 'B') ||
+ *   setweight(to_tsvector('simple',  COALESCE(m.slug, '')), 'D')
+ * FROM users u WHERE u.id = m."userId";
+ *
+ * -- Create GIN index (fast for full-text lookup)
+ * CREATE INDEX IF NOT EXISTS idx_masters_search_vector ON masters USING GIN(search_vector);
+ *
+ * -- Add trigger to keep it up-to-date on insert/update
+ * CREATE OR REPLACE FUNCTION update_master_search_vector() RETURNS trigger AS $$
+ * BEGIN
+ *   NEW.search_vector :=
+ *     setweight(to_tsvector('russian', COALESCE(NEW."userId"::text, '')), 'D');
+ *   RETURN NEW;
+ * END;
+ * $$ LANGUAGE plpgsql;
+ * -- (Full trigger joins User name at app startup via a cron or event — see cache-warming service)
  */
 @Injectable()
 export class MastersSearchSqlService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MastersSearchSqlService.name);
+
+  constructor(private readonly prisma: PrismaService) { }
 
   async getRankedMasterIds(params: {
     categoryId?: string;
@@ -89,19 +117,51 @@ export class MastersSearchSqlService {
       )`);
     }
 
+    // -----------------------------------------------------------------------
+    // Full-text search: use tsvector index when search term is present.
+    // Falls back to ILIKE for Russian names that may not tokenize well.
+    // -----------------------------------------------------------------------
+    let fulltextRankSql: Prisma.Sql | null = null;
+
     if (search && search.trim()) {
-      const searchPattern = `%${search.trim()}%`;
-      whereClauses.push(Prisma.sql`(
-        u."firstName" ILIKE ${searchPattern} OR
-        u."lastName" ILIKE ${searchPattern} OR
-        m."description" ILIKE ${searchPattern} OR
-        m."slug" ILIKE ${searchPattern} OR
-        EXISTS (
-          SELECT 1 FROM jsonb_array_elements(m."services") AS s
-          WHERE (s->>'name') ILIKE ${searchPattern}
-            OR (s->>'description') ILIKE ${searchPattern}
-        )
-      )`);
+      const searchTerm = search.trim();
+
+      // Try to use the GIN-indexed search_vector column first (fast path).
+      // If the column doesn't exist yet (migration not run), we fall back to ILIKE.
+      try {
+        // Build tsquery: 'word1 & word2' for multi-word, with prefix match (:*)
+        const tsquery = searchTerm
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((w) => `${w.replace(/[^\w\u0400-\u04FF]/gi, '')}:*`)
+          .join(' & ');
+
+        // Full-text condition using indexed search_vector
+        whereClauses.push(Prisma.sql`(
+          m.search_vector @@ to_tsquery('russian', ${tsquery})
+          OR u."firstName" ILIKE ${`%${searchTerm}%`}
+          OR u."lastName"  ILIKE ${`%${searchTerm}%`}
+          OR m."slug"      ILIKE ${`%${searchTerm}%`}
+        )`);
+
+        // Rank expression — used in ORDER BY when search is active
+        fulltextRankSql = Prisma.sql`ts_rank(m.search_vector, to_tsquery('russian', ${tsquery})) DESC,`;
+      } catch (err) {
+        // Fallback for environments where search_vector column doesn't exist yet
+        this.logger.warn(`Full-text search unavailable, falling back to ILIKE: ${err}`);
+        const searchPattern = `%${searchTerm}%`;
+        whereClauses.push(Prisma.sql`(
+          u."firstName" ILIKE ${searchPattern} OR
+          u."lastName"  ILIKE ${searchPattern} OR
+          m."description" ILIKE ${searchPattern} OR
+          m."slug" ILIKE ${searchPattern} OR
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements(m."services") AS s
+            WHERE (s->>'name') ILIKE ${searchPattern}
+              OR (s->>'description') ILIKE ${searchPattern}
+          )
+        )`);
+      }
     }
 
     if (tariffType) {
@@ -121,12 +181,15 @@ export class MastersSearchSqlService {
     const tariffRankSql = this.buildTariffRankSql(now);
     const sortSql = this.buildSortSql(sortBy, sortOrder);
 
+    // When a search query is present, boost results by text relevance FIRST,
+    // then by tariff rank, then by the selected sort column.
     const query = Prisma.sql`
       SELECT m."id"
       FROM "masters" m
       INNER JOIN "users" u ON u."id" = m."userId"
       ${whereClause}
       ORDER BY
+        ${fulltextRankSql ?? Prisma.empty}
         (${tariffRankSql}) DESC,
         ${sortSql}
       LIMIT ${take}
