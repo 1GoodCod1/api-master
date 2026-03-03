@@ -242,21 +242,21 @@ export class ReviewsActionService {
     const existingReply = await this.prisma.reviewReply.findUnique({
       where: { reviewId },
     });
-    if (existingReply) {
-      // Update existing reply
-      return this.prisma.reviewReply.update({
-        where: { reviewId },
-        data: { content },
-      });
-    }
+    const result = existingReply
+      ? await this.prisma.reviewReply.update({
+          where: { reviewId },
+          data: { content },
+        })
+      : await this.prisma.reviewReply.create({
+          data: {
+            reviewId,
+            masterId,
+            content,
+          },
+        });
 
-    return this.prisma.reviewReply.create({
-      data: {
-        reviewId,
-        masterId,
-        content,
-      },
-    });
+    await this.invalidateMasterCache(review.masterId);
+    return result;
   }
 
   /**
@@ -272,6 +272,7 @@ export class ReviewsActionService {
     }
 
     await this.prisma.reviewReply.delete({ where: { reviewId } });
+    await this.invalidateMasterCache(masterId);
     return { deleted: true };
   }
 

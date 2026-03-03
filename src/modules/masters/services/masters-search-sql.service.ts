@@ -103,17 +103,27 @@ export class MastersSearchSqlService {
       )`);
     }
 
-    // Фильтр по цене из services JSON
+    // Фильтр по цене из services JSON.
+    // Мастера без услуг (services = null/[]) включаются — иначе они исчезают из поиска.
+    // Regex для безопасного cast, чтобы не падать на "100 MDL" и т.п.
     if (minPrice !== undefined) {
-      whereClauses.push(Prisma.sql`EXISTS (
-        SELECT 1 FROM jsonb_array_elements(m."services") AS s
-        WHERE (s->>'price')::numeric >= ${minPrice}
+      whereClauses.push(Prisma.sql`(
+        COALESCE(m."services", '[]'::jsonb) = '[]'::jsonb
+        OR jsonb_array_length(COALESCE(m."services", '[]'::jsonb)) = 0
+        OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements(COALESCE(m."services", '[]'::jsonb)) AS s
+          WHERE (s->>'price') IS NOT NULL AND (s->>'price') ~ '^[0-9.]+$' AND (s->>'price')::numeric >= ${minPrice}
+        )
       )`);
     }
     if (maxPrice !== undefined) {
-      whereClauses.push(Prisma.sql`EXISTS (
-        SELECT 1 FROM jsonb_array_elements(m."services") AS s
-        WHERE (s->>'price')::numeric <= ${maxPrice}
+      whereClauses.push(Prisma.sql`(
+        COALESCE(m."services", '[]'::jsonb) = '[]'::jsonb
+        OR jsonb_array_length(COALESCE(m."services", '[]'::jsonb)) = 0
+        OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements(COALESCE(m."services", '[]'::jsonb)) AS s
+          WHERE (s->>'price') IS NOT NULL AND (s->>'price') ~ '^[0-9.]+$' AND (s->>'price')::numeric <= ${maxPrice}
+        )
       )`);
     }
 

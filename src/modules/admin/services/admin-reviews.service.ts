@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ReviewStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { CacheService } from '../../shared/cache/cache.service';
 import {
   buildCreatedAtIdCursorWhereDesc,
   decodeCreatedAtIdCursor,
@@ -12,7 +13,10 @@ import {
  */
 @Injectable()
 export class AdminReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async getReviews(filters?: {
     status?: string;
@@ -88,7 +92,7 @@ export class AdminReviewsService {
     };
   }
 
-  async moderateReview(reviewId: string, status: string, _reason?: string) {
+  async moderateReview(reviewId: string, status?: string, _reason?: string) {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
     });
@@ -97,12 +101,49 @@ export class AdminReviewsService {
       throw new NotFoundException('Review not found');
     }
 
-    return this.prisma.review.update({
+    // Default to VISIBLE when approving via "Moderate" (status not sent from frontend)
+    const resolvedStatus = (status || 'VISIBLE') as ReviewStatus;
+
+    const updated = await this.prisma.review.update({
       where: { id: reviewId },
       data: {
-        status: status as ReviewStatus,
+        status: resolvedStatus,
         moderatedBy: 'admin',
         moderatedAt: new Date(),
+      },
+    });
+
+    // Invalidate reviews cache so master page shows updated data
+    await this.cache.invalidate(`cache:master:${review.masterId}:reviews:*`);
+    await this.cache.invalidate(`cache:master:${review.masterId}:*`);
+
+    if (resolvedStatus === ReviewStatus.VISIBLE) {
+      await this.updateMasterRating(review.masterId);
+    }
+
+    return updated;
+  }
+
+  private async updateMasterRating(masterId: string) {
+    const reviews = await this.prisma.review.findMany({
+      where: { masterId, status: ReviewStatus.VISIBLE },
+    });
+
+    if (reviews.length === 0) {
+      await this.prisma.master.update({
+        where: { id: masterId },
+        data: { rating: 0, totalReviews: 0 },
+      });
+      return;
+    }
+
+    const avgRating =
+      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    await this.prisma.master.update({
+      where: { id: masterId },
+      data: {
+        rating: avgRating,
+        totalReviews: reviews.length,
       },
     });
   }

@@ -791,6 +791,7 @@ export class ChatService {
         await this.cache.del(
           this.cache.keys.masterStats(conversation.masterId),
         );
+        await this.cache.invalidate(`cache:master:${conversation.masterId}:*`);
       }
     } catch (error) {
       this.logger.error(

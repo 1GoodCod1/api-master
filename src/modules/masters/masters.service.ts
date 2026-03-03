@@ -123,6 +123,18 @@ export class MastersService {
     return this.profileService.updateProfile(userId, updateDto, isVerified);
   }
 
+  async updateServices(
+    userId: string,
+    services: Array<{
+      title: string;
+      priceType: string;
+      price?: number;
+      currency?: string;
+    }>,
+  ) {
+    return this.profileService.updateServices(userId, services);
+  }
+
   async getNotificationSettings(userId: string) {
     const master = await this.prisma.master.findUnique({
       where: { userId },

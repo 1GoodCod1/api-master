@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { MastersService } from './masters.service';
 import { UpdateMasterDto } from './dto/update-master.dto';
+import { UpdateMasterServicesDto } from './dto/update-services.dto';
 import { SearchMastersDto } from './dto/search-masters.dto';
 import { SetMasterAvatarDto } from './dto/set-avatar.dto';
 import { UpdateOnlineStatusDto } from './dto/update-online-status.dto';
@@ -110,6 +111,18 @@ export class MastersController {
   ) {
     const allowServices = user.role === 'ADMIN' || user.isVerified;
     return this.mastersService.updateProfile(user.id, updateDto, allowServices);
+  }
+
+  @Patch('profile/me/services')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MASTER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update master services only' })
+  async updateServices(
+    @GetUser() user: JwtUser,
+    @Body() dto: UpdateMasterServicesDto,
+  ) {
+    return this.mastersService.updateServices(user.id, dto.services);
   }
 
   @Patch('avatar/me')

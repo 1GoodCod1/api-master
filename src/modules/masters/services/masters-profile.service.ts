@@ -169,6 +169,19 @@ export class MastersProfileService {
       throw new NotFoundException('Master not found');
     }
 
+    // Response rate: % of leads that master responded to (IN_PROGRESS or CLOSED vs NEW)
+    const [respondedCount, totalLeads] = await Promise.all([
+      this.prisma.lead.count({
+        where: {
+          masterId: master.id,
+          status: { in: ['IN_PROGRESS', 'CLOSED'] },
+        },
+      }),
+      this.prisma.lead.count({ where: { masterId: master.id } }),
+    ]);
+    const responseRate =
+      totalLeads > 0 ? Math.round((respondedCount / totalLeads) * 100) : 100;
+
     const sanitized = sanitizePublicMaster(master);
     const photos = (master.photos ?? []) as Array<{ file: { id: string } }>;
     const avatarFile = master.avatarFile as
@@ -180,6 +193,7 @@ export class MastersProfileService {
       ...sanitized,
       avatarUrl: avatarFile?.path ?? null,
       photos: photos.map((p) => p.file),
+      responseRate,
       ...(!isVerified && { services: [] }),
     };
 
@@ -279,10 +293,32 @@ export class MastersProfileService {
 
     const oldSlug = master.slug;
     const { firstName, lastName, ...masterFields } = updateDto;
+    // Build update data: only include fields that exist on Master model.
+    // Explicitly handle services to ensure they are persisted (Prisma Json type).
     const data: Prisma.MasterUncheckedUpdateInput = {
-      ...(masterFields as Prisma.MasterUncheckedUpdateInput),
       profileLastEditedAt: new Date(),
     };
+    const allowedKeys = [
+      'description',
+      'cityId',
+      'categoryId',
+      'experienceYears',
+      'latitude',
+      'longitude',
+      'telegramChatId',
+      'whatsappPhone',
+      'services', // JSONB — array of { title, priceType, price?, currency? }
+    ] as const;
+    for (const key of allowedKeys) {
+      if (
+        key in masterFields &&
+        (masterFields as Record<string, unknown>)[key] !== undefined
+      ) {
+        (data as Record<string, unknown>)[key] = (
+          masterFields as Record<string, unknown>
+        )[key];
+      }
+    }
 
     // Если обновляется имя, обновляем User и генерируем новый slug
     if (firstName || lastName) {
@@ -318,6 +354,33 @@ export class MastersProfileService {
     // Инвалидируем кеш
     await this.invalidateMasterCache(master.id, oldSlug, updated.slug);
 
+    return updated;
+  }
+
+  /**
+   * Update only services — dedicated endpoint to avoid issues with full profile update.
+   */
+  async updateServices(
+    userId: string,
+    services: Array<{
+      title: string;
+      priceType: string;
+      price?: number;
+      currency?: string;
+    }>,
+  ) {
+    const master = await this.prisma.master.findUnique({
+      where: { userId },
+      select: { id: true, slug: true },
+    });
+    if (!master) throw new NotFoundException('Master profile not found');
+
+    const updated = await this.prisma.master.update({
+      where: { userId },
+      data: { services: services as unknown as Prisma.InputJsonValue },
+    });
+
+    await this.invalidateMasterCache(master.id, master.slug, master.slug);
     return updated;
   }
 
