@@ -23,6 +23,8 @@ logs/
 uploads/
 backups/
 temp/
+coverage/
+test-results/
 
 # --- OS Мусор ---
 desktop.ini
