@@ -43,7 +43,7 @@ export class MastersService {
     private readonly statsService: MastersStatsService,
     private readonly tariffService: MastersTariffService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   // ==================== ПОИСК И ФИЛЬТРАЦИЯ ====================
 

@@ -25,16 +25,18 @@ export default () => ({
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '3d',
   },
 
-  // httpOnly cookie for refresh token: only when USE_HTTPONLY_COOKIE=true (must match frontend VITE_USE_HTTPONLY)
+  // httpOnly cookie for refresh token (must match frontend VITE_USE_HTTPONLY).
+  // Defaults to true. Set USE_HTTPONLY_COOKIE=false to disable (e.g. mobile API clients).
   auth: {
-    useHttpOnlyCookie:
-      process.env.NODE_ENV !== 'production' ||
-      process.env.USE_HTTPONLY_COOKIE === 'true',
+    useHttpOnlyCookie: process.env.USE_HTTPONLY_COOKIE !== 'false',
     refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'rt',
     refreshCookieMaxAgeDays: Math.max(
       1,
       parseInt(process.env.REFRESH_COOKIE_MAX_AGE_DAYS || '7', 10) || 7,
     ),
+    // Cookie domain for cross-subdomain support (e.g. '.master-hub.md').
+    // Leave empty in dev; set in production so cookie works across api.* and www.*
+    cookieDomain: process.env.COOKIE_DOMAIN || '',
   },
 
   idEncryption: {

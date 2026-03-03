@@ -25,7 +25,7 @@ export class MastersProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-  ) { }
+  ) {}
 
   async findOne(
     idOrSlug: string,
@@ -267,7 +267,7 @@ export class MastersProfileService {
     if (master.profileLastEditedAt) {
       const daysSince = Math.floor(
         (Date.now() - master.profileLastEditedAt.getTime()) /
-        (1000 * 60 * 60 * 24),
+          (1000 * 60 * 60 * 24),
       );
       if (daysSince < this.PROFILE_EDIT_COOLDOWN_DAYS) {
         const daysLeft = this.PROFILE_EDIT_COOLDOWN_DAYS - daysSince;

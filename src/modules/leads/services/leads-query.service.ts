@@ -8,7 +8,7 @@ import { LeadStatus, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { CacheService } from '../../shared/cache/cache.service';
-import { decodeId } from '../../shared/utils/id-encoder';
+import { decodeId, encodeId } from '../../shared/utils/id-encoder';
 import {
   buildCursorQuery,
   buildPaginatedResponse,
@@ -117,8 +117,9 @@ export class LeadsQueryService {
           this.prisma.lead.count({ where: baseWhere }),
         ]);
 
+        const items = this.mapLeadsWithEncodedId(rawLeads);
         return buildPaginatedResponse(
-          rawLeads as Array<{ id: string; createdAt: Date }>,
+          items as unknown as Array<{ id: string; createdAt: Date }>,
           total,
           limit,
           queryParams.usedCursor,
@@ -126,6 +127,18 @@ export class LeadsQueryService {
       },
       this.cache.ttl.leads,
     );
+  }
+
+  private mapLeadsWithEncodedId(
+    leads: Array<{ id: string; master?: { id: string } | null }>,
+  ) {
+    return leads.map((lead) => ({
+      ...lead,
+      encodedId: encodeId(lead.id),
+      master: lead.master
+        ? { ...lead.master, encodedId: encodeId(lead.master.id) }
+        : lead.master,
+    }));
   }
 
   private async findAllForClient(
@@ -194,8 +207,9 @@ export class LeadsQueryService {
       this.prisma.lead.count({ where: baseWhere }),
     ]);
 
+    const items = this.mapLeadsWithEncodedId(rawLeads);
     return buildPaginatedResponse(
-      rawLeads as Array<{ id: string; createdAt: Date }>,
+      items as unknown as Array<{ id: string; createdAt: Date }>,
       total,
       limit,
       queryParams.usedCursor,
@@ -236,12 +250,13 @@ export class LeadsQueryService {
 
     if (!lead) throw new NotFoundException('Lead not found');
 
-    if (authUser.role === 'ADMIN') return lead;
+    const withEncoded = this.mapLeadsWithEncodedId([lead])[0];
+    if (authUser.role === 'ADMIN') return withEncoded;
     if (authUser.role === 'CLIENT') {
       if (lead.clientId !== authUser.id) {
         throw new ForbiddenException('Access denied');
       }
-      return lead;
+      return withEncoded;
     }
     if (authUser.role === 'MASTER') {
       if (!masterId) {
@@ -250,7 +265,7 @@ export class LeadsQueryService {
       if (lead.masterId !== masterId) {
         throw new ForbiddenException('Access denied');
       }
-      return lead;
+      return withEncoded;
     }
 
     throw new ForbiddenException('Access denied');

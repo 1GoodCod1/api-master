@@ -11,7 +11,7 @@ export class CacheService {
   private readonly logger = new Logger(CacheService.name);
   private readonly defaultTTL = 300; // 5 minutes
 
-  constructor(private readonly redis: RedisService) { }
+  constructor(private readonly redis: RedisService) {}
 
   /**
    * Get value from cache
@@ -91,7 +91,7 @@ export class CacheService {
       const setName = `keyset:${pattern}`;
 
       // 1) Fast path: read from key-set registry
-      let keys: string[] = await client.smembers(setName);
+      const keys: string[] = await client.smembers(setName);
 
       // 2) Fallback SCAN for keys not yet in the registry (e.g., pre-upgrade keys)
       if (keys.length === 0) {

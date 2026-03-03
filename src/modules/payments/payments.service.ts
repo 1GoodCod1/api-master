@@ -18,7 +18,7 @@ export class PaymentsService {
     private readonly webhookService: PaymentsWebhookService,
     private readonly queryService: PaymentsQueryService,
     private readonly upgradeService: PaymentsUpgradeService,
-  ) { }
+  ) {}
 
   // ==================== СОЗДАНИЕ ПЛАТЕЖЕЙ ====================
 

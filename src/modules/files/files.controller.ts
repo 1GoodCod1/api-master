@@ -28,7 +28,7 @@ import type {
 @ApiTags('Files')
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) { }
+  constructor(private readonly filesService: FilesService) {}
 
   @Post('upload')
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 uploads per minute per user

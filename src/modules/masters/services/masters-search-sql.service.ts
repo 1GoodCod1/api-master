@@ -36,7 +36,7 @@ import { PrismaService } from '../../shared/database/prisma.service';
 export class MastersSearchSqlService {
   private readonly logger = new Logger(MastersSearchSqlService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getRankedMasterIds(params: {
     categoryId?: string;
@@ -148,7 +148,9 @@ export class MastersSearchSqlService {
         fulltextRankSql = Prisma.sql`ts_rank(m.search_vector, to_tsquery('russian', ${tsquery})) DESC,`;
       } catch (err) {
         // Fallback for environments where search_vector column doesn't exist yet
-        this.logger.warn(`Full-text search unavailable, falling back to ILIKE: ${err}`);
+        this.logger.warn(
+          `Full-text search unavailable, falling back to ILIKE: ${err}`,
+        );
         const searchPattern = `%${searchTerm}%`;
         whereClauses.push(Prisma.sql`(
           u."firstName" ILIKE ${searchPattern} OR

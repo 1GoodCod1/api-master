@@ -13,6 +13,7 @@ import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { isOutOfHours } from './utils/is-out-of-hours.util';
 import { CacheService } from '../shared/cache/cache.service';
 import { sanitizeStrict } from '../shared/utils/sanitize-html.util';
+import { decodeId } from '../shared/utils/id-encoder';
 
 /** Minimal user for chat - HTTP has full JwtUser, WebSocket has { id, role } */
 type ChatUser = Pick<JwtUser, 'id' | 'role'>;
@@ -311,8 +312,9 @@ export class ChatService {
    * Create a new conversation for a lead
    */
   async createConversation(dto: CreateConversationDto, user: ChatUser) {
+    const leadId = decodeId(dto.leadId) || dto.leadId;
     const existing = await this.prisma.conversation.findUnique({
-      where: { leadId: dto.leadId },
+      where: { leadId },
     });
 
     if (existing) {
@@ -321,7 +323,7 @@ export class ChatService {
 
     // Get the lead
     const lead = await this.prisma.lead.findUnique({
-      where: { id: dto.leadId },
+      where: { id: leadId },
       include: {
         master: { select: { id: true, userId: true } },
       },
@@ -341,7 +343,7 @@ export class ChatService {
 
     const conversation = await this.prisma.conversation.create({
       data: {
-        leadId: dto.leadId,
+        leadId,
         masterId: lead.masterId,
         clientId: lead.clientId,
         clientPhone: lead.clientPhone,
@@ -598,7 +600,8 @@ export class ChatService {
   /**
    * Get conversation by lead ID
    */
-  async getConversationByLeadId(leadId: string, user: ChatUser) {
+  async getConversationByLeadId(leadIdOrEncoded: string, user: ChatUser) {
+    const leadId = decodeId(leadIdOrEncoded) || leadIdOrEncoded;
     const conversation = await this.prisma.conversation.findUnique({
       where: { leadId },
       include: {

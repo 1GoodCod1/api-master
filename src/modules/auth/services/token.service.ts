@@ -29,8 +29,10 @@ export class TokenService {
 
   async generateRefreshToken(userId: string): Promise<string> {
     const token = randomBytes(40).toString('hex');
+    const days =
+      this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + days);
 
     await this.prisma.refreshToken.create({
       data: {

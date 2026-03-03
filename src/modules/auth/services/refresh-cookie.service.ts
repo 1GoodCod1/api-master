@@ -39,12 +39,15 @@ export class RefreshCookieService {
   attachIfEnabled(res: Response, token: string): void {
     if (!this.isEnabled || !token) return;
     const isProd = this.configService.get<string>('nodeEnv') === 'production';
+    const domain =
+      this.configService.get<string>('auth.cookieDomain') || undefined;
     const maxAgeMs = this.maxAgeSec * 1000;
     res.cookie(this.cookieName, token, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
       path: '/',
+      ...(domain ? { domain } : {}),
       maxAge: maxAgeMs,
       expires: new Date(Date.now() + maxAgeMs),
     });
@@ -55,7 +58,16 @@ export class RefreshCookieService {
    */
   clearIfEnabled(res: Response): void {
     if (!this.isEnabled) return;
-    res.clearCookie(this.cookieName, { path: '/', httpOnly: true });
+    const isProd = this.configService.get<string>('nodeEnv') === 'production';
+    const domain =
+      this.configService.get<string>('auth.cookieDomain') || undefined;
+    res.clearCookie(this.cookieName, {
+      path: '/',
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      ...(domain ? { domain } : {}),
+    });
   }
 
   /**

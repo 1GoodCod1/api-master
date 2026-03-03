@@ -268,29 +268,22 @@ model Master {
   conversations  Conversation[]
   promotions     Promotion[]
   quickReplies   QuickReply[]
-
   @@index([cityId])
   @@index([categoryId])
   @@index([rating])
-  @@index([avatarFileId])
   @@index([tariffType])
   @@index([isFeatured])
   @@index([createdAt])
-  @@index([slug])
-  @@index([pendingVerification])
-  @@index([lifetimePremium])
-  @@index([isOnline])
-  @@index([lastActivityAt])
+
+
   @@index([categoryId, cityId, isFeatured, tariffType])
   @@index([categoryId, cityId, rating])
   @@index([tariffType, isFeatured, rating])
   @@index([categoryId, tariffType, isFeatured])
   @@index([isOnline, lastActivityAt])
-  @@index([isBusy])
   @@index([isBusy, isOnline])
-  @@index([availabilityStatus])
   @@index([availabilityStatus, currentActiveLeads])
-  @@index([latitude, longitude])
+
   @@map("masters")
 }
 

@@ -25,7 +25,7 @@ export class RegistrationService {
     private readonly tokenService: TokenService,
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
-  ) { }
+  ) {}
 
   /**
    * Главный метод регистрации (оркестратор)

@@ -32,7 +32,7 @@ import { ReviewStatus } from '@prisma/client';
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) { }
+  constructor(private readonly reviewsService: ReviewsService) {}
 
   @Get('can-create/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)

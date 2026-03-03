@@ -54,7 +54,11 @@
     "restore": "bash scripts/restore.sh",
     "generate:secrets": "node scripts/generate-secrets.js",
     "local:recreate:db": "npm run prisma:reset && npm run prisma:migrate && npm run prisma:generate && npm run seed",
-    "docker:dev:recreate": "npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed"
+    "docker:dev:recreate": "npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed",
+    "docker:db:reset": "bash scripts/docker-db-reset.sh",
+    "docker:db:reset:full": "bash scripts/docker-db-reset.sh --full",
+    "docker:db:reset:win": "powershell -ExecutionPolicy Bypass -File scripts/docker-db-reset.ps1",
+    "docker:db:reset:full:win": "powershell -ExecutionPolicy Bypass -File scripts/docker-db-reset.ps1 -Full"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.994.0",

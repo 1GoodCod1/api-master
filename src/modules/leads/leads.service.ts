@@ -12,6 +12,7 @@ import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
 import { MastersAvailabilityService } from '../masters/services/masters-availability.service';
+import { encodeId } from '../shared/utils/id-encoder';
 
 @Injectable()
 export class LeadsService {
@@ -27,7 +28,7 @@ export class LeadsService {
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly availabilityService: MastersAvailabilityService,
-  ) { }
+  ) {}
 
   /**
    * Главный метод создания лида (Координатор)
@@ -134,11 +135,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-            createMany: {
-              data: fileIds.map((id) => ({ fileId: id })),
-              skipDuplicates: true,
-            },
-          }
+              createMany: {
+                data: fileIds.map((id) => ({ fileId: id })),
+                skipDuplicates: true,
+              },
+            }
           : undefined,
       },
       include: {
@@ -202,9 +203,12 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => { });
+          .catch(() => {});
       } catch (err) {
-        this.logger.error('Failed to send lead-sent notification to client', err);
+        this.logger.error(
+          'Failed to send lead-sent notification to client',
+          err,
+        );
       }
     }
 
@@ -220,7 +224,7 @@ export class LeadsService {
       this.logger.error('Failed to save in-app notification for lead', err);
     }
 
-    return lead;
+    return { ...lead, encodedId: encodeId(lead.id) };
   }
 
   /**
