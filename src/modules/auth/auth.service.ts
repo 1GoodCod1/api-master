@@ -80,6 +80,8 @@ export class AuthService {
             id: true,
             email: true,
             phone: true,
+            firstName: true,
+            lastName: true,
             role: true,
             isVerified: true,
             phoneVerified: true,
