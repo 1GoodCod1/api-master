@@ -13,6 +13,7 @@ import { winstonConfig } from './config/winston.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor';
 
 function getCorsOrigins(): string | string[] {
   const isProd = process.env.NODE_ENV === 'production';
@@ -135,6 +136,7 @@ async function bootstrap() {
     );
 
     app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new CacheControlInterceptor());
     app.useGlobalInterceptors(new TransformInterceptor());
     app.useGlobalInterceptors(
       new TimeoutInterceptor(

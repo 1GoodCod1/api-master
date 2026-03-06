@@ -298,26 +298,34 @@ export class PromotionsService {
   /**
    * Получить все активные акции мастера (для страницы мастера: своя акция на услугу или единая «на все»).
    * Для неверифицированных мастеров возвращаем пустой массив.
+   * Кэшируется на 5 мин; инвалидируется при create/update/remove через invalidatePromotionCache.
    */
   async findActivePromotionsForMaster(masterId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { id: masterId },
-      include: { user: { select: { isVerified: true } } },
-    });
-    if (!master || !(master.user as { isVerified?: boolean })?.isVerified) {
-      return [];
-    }
+    const cacheKey = `cache:promotions:master:${masterId}`;
+    return this.cache.getOrSet(
+      cacheKey,
+      async () => {
+        const master = await this.prisma.master.findUnique({
+          where: { id: masterId },
+          include: { user: { select: { isVerified: true } } },
+        });
+        if (!master || !(master.user as { isVerified?: boolean })?.isVerified) {
+          return [];
+        }
 
-    const now = new Date();
-    return this.prisma.promotion.findMany({
-      where: {
-        masterId,
-        isActive: true,
-        validFrom: { lte: now },
-        validUntil: { gte: now },
+        const now = new Date();
+        return this.prisma.promotion.findMany({
+          where: {
+            masterId,
+            isActive: true,
+            validFrom: { lte: now },
+            validUntil: { gte: now },
+          },
+          orderBy: { discount: 'desc' },
+        });
       },
-      orderBy: { discount: 'desc' },
-    });
+      300, // 5 min TTL
+    );
   }
 
   private async invalidatePromotionCache() {

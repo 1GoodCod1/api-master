@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { join } from 'path';
+import type { Response } from 'express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -69,6 +70,12 @@ import { AppModule as AppRootModule } from './app/app.module';
       serveRoot: '/uploads',
       serveStaticOptions: {
         fallthrough: true,
+        setHeaders: (res: Response) => {
+          res.setHeader(
+            'Cache-Control',
+            'public, max-age=86400, stale-while-revalidate=3600',
+          );
+        },
       },
     }),
 

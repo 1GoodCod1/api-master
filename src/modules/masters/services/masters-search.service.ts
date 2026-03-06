@@ -122,7 +122,7 @@ export class MastersSearchService {
           };
         }
 
-        // Поиск по имени и описанию
+        // Поиск по имени, описанию, категории (умный поиск)
         if (search && search.trim()) {
           const searchTerm = search.trim();
           where.OR = [
@@ -138,6 +138,14 @@ export class MastersSearchService {
             },
             { description: { contains: searchTerm, mode: 'insensitive' } },
             { slug: { contains: searchTerm, mode: 'insensitive' } },
+            {
+              category: { name: { contains: searchTerm, mode: 'insensitive' } },
+            },
+            {
+              category: {
+                description: { contains: searchTerm, mode: 'insensitive' },
+              },
+            },
           ];
         }
 
@@ -149,22 +157,55 @@ export class MastersSearchService {
         const total = await this.prisma.master.count({ where });
 
         // ✅ Используем специализированный SQL сервис для ранжирования
-        const ids = await this.sqlService.getRankedMasterIds({
-          categoryId,
-          cityId,
-          tariffType,
-          isFeatured,
-          minRating,
-          minPrice,
-          maxPrice,
-          availableNow,
-          hasPromotion,
-          search,
-          skip,
-          take,
-          sortBy,
-          sortOrder,
-        });
+        let ids: string[];
+        try {
+          ids = await this.sqlService.getRankedMasterIds({
+            categoryId,
+            cityId,
+            tariffType,
+            isFeatured,
+            minRating,
+            minPrice,
+            maxPrice,
+            availableNow,
+            hasPromotion,
+            search,
+            skip,
+            take,
+            sortBy,
+            sortOrder,
+            useFuzzy: true,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (
+            search &&
+            (msg.includes('word_similarity') || msg.includes('pg_trgm'))
+          ) {
+            this.logger.warn(
+              `pg_trgm unavailable, falling back to exact search: ${msg}`,
+            );
+            ids = await this.sqlService.getRankedMasterIds({
+              categoryId,
+              cityId,
+              tariffType,
+              isFeatured,
+              minRating,
+              minPrice,
+              maxPrice,
+              availableNow,
+              hasPromotion,
+              search,
+              skip,
+              take,
+              sortBy,
+              sortOrder,
+              useFuzzy: false,
+            });
+          } else {
+            throw err;
+          }
+        }
 
         if (!ids.length) {
           return {

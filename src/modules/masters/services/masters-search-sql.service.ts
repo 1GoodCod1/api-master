@@ -53,6 +53,8 @@ export class MastersSearchSqlService {
     take: number;
     sortBy: string;
     sortOrder: string;
+    /** Use pg_trgm fuzzy search for typo tolerance. Fallback to exact if extension unavailable. */
+    useFuzzy?: boolean;
   }) {
     const {
       categoryId,
@@ -69,6 +71,7 @@ export class MastersSearchSqlService {
       take,
       sortBy,
       sortOrder,
+      useFuzzy = true,
     } = params;
 
     const now = new Date();
@@ -135,44 +138,72 @@ export class MastersSearchSqlService {
 
     if (search && search.trim()) {
       const searchTerm = search.trim();
+      const searchPattern = `%${searchTerm}%`;
+      const words = searchTerm.split(/\s+/).filter((w) => w.length >= 2);
 
-      // Try to use the GIN-indexed search_vector column first (fast path).
-      // If the column doesn't exist yet (migration not run), we fall back to ILIKE.
+      const buildSearchCondition = (useFuzzy: boolean) => {
+        const exactConditions = Prisma.sql`(
+          u."firstName" ILIKE ${searchPattern} OR
+          u."lastName"  ILIKE ${searchPattern} OR
+          m."description" ILIKE ${searchPattern} OR
+          m."slug" ILIKE ${searchPattern} OR
+          c."name" ILIKE ${searchPattern} OR
+          c."description" ILIKE ${searchPattern} OR
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements(COALESCE(m."services", '[]'::jsonb)) AS s
+            WHERE (s->>'title') ILIKE ${searchPattern}
+              OR (s->>'name') ILIKE ${searchPattern}
+              OR (s->>'description') ILIKE ${searchPattern}
+          )
+        )`;
+
+        if (!useFuzzy || words.length === 0) {
+          return exactConditions;
+        }
+
+        const fuzzyParts: Prisma.Sql[] = [];
+        for (const word of words) {
+          const w = word.replace(/[^\w\u0400-\u04FF]/gi, '');
+          if (w.length < 2) continue;
+          fuzzyParts.push(Prisma.sql`(
+            word_similarity(${w}, COALESCE(u."firstName", '')) > 0.2 OR
+            word_similarity(${w}, COALESCE(u."lastName", '')) > 0.2 OR
+            word_similarity(${w}, COALESCE(m."description", '')) > 0.2 OR
+            word_similarity(${w}, COALESCE(m."slug", '')) > 0.2 OR
+            word_similarity(${w}, COALESCE(c."name", '')) > 0.2 OR
+            word_similarity(${w}, COALESCE(c."description", '')) > 0.2 OR
+            EXISTS (
+              SELECT 1 FROM jsonb_array_elements(COALESCE(m."services", '[]'::jsonb)) AS s
+              WHERE word_similarity(${w}, COALESCE(s->>'title', '')) > 0.2
+                OR word_similarity(${w}, COALESCE(s->>'name', '')) > 0.2
+                OR word_similarity(${w}, COALESCE(s->>'description', '')) > 0.2
+            )
+          )`);
+        }
+
+        return fuzzyParts.length > 0
+          ? Prisma.sql`(${exactConditions} OR ${Prisma.join(fuzzyParts, ' OR ')})`
+          : exactConditions;
+      };
+
       try {
-        // Build tsquery: 'word1 & word2' for multi-word, with prefix match (:*)
         const tsquery = searchTerm
           .split(/\s+/)
           .filter(Boolean)
           .map((w) => `${w.replace(/[^\w\u0400-\u04FF]/gi, '')}:*`)
           .join(' & ');
 
-        // Full-text condition using indexed search_vector
         whereClauses.push(Prisma.sql`(
           m.search_vector @@ to_tsquery('russian', ${tsquery})
-          OR u."firstName" ILIKE ${`%${searchTerm}%`}
-          OR u."lastName"  ILIKE ${`%${searchTerm}%`}
-          OR m."slug"      ILIKE ${`%${searchTerm}%`}
+          OR ${buildSearchCondition(useFuzzy)}
         )`);
 
-        // Rank expression — used in ORDER BY when search is active
         fulltextRankSql = Prisma.sql`ts_rank(m.search_vector, to_tsquery('russian', ${tsquery})) DESC,`;
       } catch (err) {
-        // Fallback for environments where search_vector column doesn't exist yet
         this.logger.warn(
-          `Full-text search unavailable, falling back to ILIKE: ${err}`,
+          `Full-text search unavailable, falling back to ILIKE+fuzzy: ${err}`,
         );
-        const searchPattern = `%${searchTerm}%`;
-        whereClauses.push(Prisma.sql`(
-          u."firstName" ILIKE ${searchPattern} OR
-          u."lastName"  ILIKE ${searchPattern} OR
-          m."description" ILIKE ${searchPattern} OR
-          m."slug" ILIKE ${searchPattern} OR
-          EXISTS (
-            SELECT 1 FROM jsonb_array_elements(m."services") AS s
-            WHERE (s->>'name') ILIKE ${searchPattern}
-              OR (s->>'description') ILIKE ${searchPattern}
-          )
-        )`);
+        whereClauses.push(buildSearchCondition(useFuzzy));
       }
     }
 
@@ -199,6 +230,7 @@ export class MastersSearchSqlService {
       SELECT m."id"
       FROM "masters" m
       INNER JOIN "users" u ON u."id" = m."userId"
+      LEFT JOIN "categories" c ON c."id" = m."categoryId"
       ${whereClause}
       ORDER BY
         ${fulltextRankSql ?? Prisma.empty}

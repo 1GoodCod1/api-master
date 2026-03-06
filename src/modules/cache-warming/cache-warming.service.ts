@@ -5,6 +5,7 @@ import { MastersService } from '../masters/masters.service';
 import { CategoriesService } from '../categories/categories.service';
 import { CitiesService } from '../cities/cities.service';
 import { TariffsService } from '../tariffs/tariffs.service';
+import { PromotionsService } from '../promotions/promotions.service';
 import { SearchMastersDto } from '../masters/dto/search-masters.dto';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class CacheWarmingService implements OnModuleInit {
     private readonly categoriesService: CategoriesService,
     private readonly citiesService: CitiesService,
     private readonly tariffsService: TariffsService,
+    private readonly promotionsService: PromotionsService,
   ) {}
 
   /**
@@ -43,6 +45,8 @@ export class CacheWarmingService implements OnModuleInit {
       this.warmSearchFilters(),
       // Популярные мастера - главная страница
       this.warmPopularMasters(),
+      // Активные акции - HomePage, MastersPage, PromotionsSection
+      this.warmPromotions(),
       // Категории и города - используются везде
       this.warmCategoriesAndCities(),
       // Тарифы - страница планов
@@ -67,6 +71,7 @@ export class CacheWarmingService implements OnModuleInit {
         // Основные данные
         this.warmPopularMasters(),
         this.warmNewMasters(),
+        this.warmPromotions(),
         this.warmSearchFilters(),
         this.warmCategoriesAndCities(),
         this.warmTariffs(),
@@ -88,6 +93,8 @@ export class CacheWarmingService implements OnModuleInit {
     try {
       // Предзагружаем разные лимиты для разных страниц
       await Promise.all([
+        this.mastersService.getPopularMasters(3), // HeroSection
+        this.mastersService.getPopularMasters(5), // HomePage
         this.mastersService.getPopularMasters(10), // Главная страница
         this.mastersService.getPopularMasters(20), // Страница мастеров
         this.mastersService.getPopularMasters(50), // Для пагинации
@@ -96,6 +103,22 @@ export class CacheWarmingService implements OnModuleInit {
       this.logger.debug('Popular masters cache warmed');
     } catch (error) {
       this.logger.error('Failed to warm popular masters cache', error);
+    }
+  }
+
+  /**
+   * Предзагрузка активных акций
+   */
+  private async warmPromotions() {
+    try {
+      await Promise.all([
+        this.promotionsService.findActivePromotions(6), // PromotionsSection
+        this.promotionsService.findActivePromotions(50), // HomePage
+        this.promotionsService.findActivePromotions(100), // MastersPage
+      ]);
+      this.logger.debug('Promotions cache warmed');
+    } catch (error) {
+      this.logger.error('Failed to warm promotions cache', error);
     }
   }
 

@@ -6,6 +6,7 @@ import { MastersModule } from '../masters/masters.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { CitiesModule } from '../cities/cities.module';
 import { TariffsModule } from '../tariffs/tariffs.module';
+import { PromotionsModule } from '../promotions/promotions.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
     CategoriesModule,
     CitiesModule,
     TariffsModule,
+    PromotionsModule,
     AuthModule,
   ],
   controllers: [CacheWarmingController],
