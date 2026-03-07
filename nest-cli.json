@@ -6,5 +6,27 @@
     "builder": "swc",
     "typeCheck": true,
     "deleteOutDir": true
+  },
+  "projects": {
+    "api": {
+      "type": "application",
+      "root": "src",
+      "entryFile": "main",
+      "sourceRoot": "src",
+      "compilerOptions": {
+        "builder": "swc",
+        "typeCheck": true
+      }
+    },
+    "worker": {
+      "type": "application",
+      "root": "src",
+      "entryFile": "worker",
+      "sourceRoot": "src",
+      "compilerOptions": {
+        "builder": "swc",
+        "typeCheck": true
+      }
+    }
   }
 }

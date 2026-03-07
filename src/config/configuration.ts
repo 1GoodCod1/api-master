@@ -17,12 +17,19 @@ export default () => ({
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
+    sentinels: process.env.REDIS_SENTINELS
+      ? process.env.REDIS_SENTINELS.split(',').map((s) => {
+        const parts = s.split(':');
+        return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
+      })
+      : null,
+    sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
   },
 
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || '',
     refreshSecret: process.env.JWT_REFRESH_SECRET || '',
-    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '3d',
+    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1h',
   },
 
   // httpOnly cookie for refresh token (must match frontend VITE_USE_HTTPONLY).
@@ -53,6 +60,12 @@ export default () => ({
     terminalId: process.env.MIA_TERMINAL_ID || '',
     sandbox: process.env.MIA_SANDBOX === 'true',
     testPayPath: process.env.MIA_TEST_PAY_PATH || '/v2/mia/test-pay',
+    /**
+     * Shared secret для защиты вебхука от неавторизованных вызовов.
+     * MIA должен слать callback на: /payments/mia-callback?token=<MIA_WEBHOOK_SECRET>
+     * В продакшне — обязательно задать длинную случайную строку.
+     */
+    webhookSecret: process.env.MIA_WEBHOOK_SECRET || '',
   },
 
   twilio: {

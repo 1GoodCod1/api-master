@@ -11,7 +11,10 @@ export class CacheService {
   private readonly logger = new Logger(CacheService.name);
   private readonly defaultTTL = 300; // 5 minutes
 
-  constructor(private readonly redis: RedisService) {}
+  // Защита от Cache Stampede: хранит текущие выполняющиеся запросы
+  private readonly inFlightRequests = new Map<string, Promise<any>>();
+
+  constructor(private readonly redis: RedisService) { }
 
   /**
    * Get value from cache
@@ -157,25 +160,44 @@ export class CacheService {
       return cached;
     }
 
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const value = await fetchFn();
-        await this.redis.set(key, value, ttl || this.defaultTTL);
-        void this.registerKeyInSet(key); // track for set-based invalidation
-        return value;
-      } catch (error) {
-        lastError = error;
-        if (attempt === 0 && this.isRetryableConnectionError(error)) {
-          this.logger.warn(
-            `Cache getOrSet retry after connection error: ${error instanceof Error ? error.message : error}`,
-          );
-          continue;
-        }
-        throw error;
-      }
+    // Cache Stampede Protection (Singleflight pattern)
+    // Если другой запрос уже вычисляет значение для этого ключа — ждём его
+    if (this.inFlightRequests.has(key)) {
+      this.logger.debug(`Cache Stampede blocked for key: ${key} (awaiting in-flight promise)`);
+      return this.inFlightRequests.get(key);
     }
-    throw lastError;
+
+    const promise = (async () => {
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const value = await fetchFn();
+          await this.redis.set(key, value, ttl || this.defaultTTL);
+          void this.registerKeyInSet(key); // track for set-based invalidation
+          return value;
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0 && this.isRetryableConnectionError(error)) {
+            this.logger.warn(
+              `Cache getOrSet retry after connection error: ${error instanceof Error ? error.message : error}`,
+            );
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw lastError;
+    })();
+
+    // Сохраняем промис ДО его завершения
+    this.inFlightRequests.set(key, promise);
+
+    try {
+      return await promise;
+    } finally {
+      // Всегда удаляем промис из карты после завершения (успех или ошибка)
+      this.inFlightRequests.delete(key);
+    }
   }
 
   /**

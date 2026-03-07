@@ -19,18 +19,33 @@ import { PrismaService } from '../shared/database/prisma.service';
 import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
 import type { SocketData } from './services/websocket-connection.service';
 
+/**
+ * Парсит FRONTEND_URL так же как getCorsOrigins() в main.ts.
+ * Поддерживает несколько origins через запятую:
+ *   FRONTEND_URL=https://moldmasters.md,https://www.moldmasters.md
+ * Вызывается один раз при загрузке модуля (декораторы вычисляются при старте).
+ */
+function resolveWsCorsOrigins(): string | string[] {
+  const raw = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const origins = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (origins.length === 0) return 'http://localhost:3000';
+  return origins.length === 1 ? origins[0] : origins;
+}
+
 @NestWebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: resolveWsCorsOrigins(),
     credentials: true,
   },
   namespace: 'notifications',
-  transports: ['websocket', 'polling'], // Явно указываем транспорты
-  allowEIO3: true, // Поддержка старых клиентов
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
 })
 export class WebsocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 

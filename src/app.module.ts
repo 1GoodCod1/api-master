@@ -10,6 +10,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TerminusModule } from '@nestjs/terminus';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
+import type { RedisOptions } from 'ioredis';
 import configuration from './config/configuration';
 import { ActivityTrackerMiddleware } from './middleware/activity-tracker.middleware';
 
@@ -45,7 +46,6 @@ import { TariffsModule } from './modules/tariffs/tariffs.module';
 import { VerificationModule } from './modules/verification/verification.module';
 import { CacheWarmingModule } from './modules/cache-warming/cache-warming.module';
 import { EmailModule } from './modules/email/email.module';
-import { IdeasModule } from './modules/ideas/ideas.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
 import { AppModule as AppRootModule } from './app/app.module';
@@ -104,29 +104,51 @@ import { AppModule as AppRootModule } from './app/app.module';
 
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get<string>('redis.host', 'localhost'),
-          port: configService.get<number>('redis.port', 6379),
-          password: configService.get<string>('redis.password', ''),
+      useFactory: (configService: ConfigService) => {
+        const sentinels =
+          configService.get<{ host: string; port: number }[]>(
+            'redis.sentinels',
+          );
+        const name = configService.get<string>(
+          'redis.sentinelName',
+          'mymaster',
+        );
+        const password = configService.get<string>('redis.password', '');
+
+        const redisOptions: RedisOptions = {
+          password,
           connectTimeout: 10000,
           lazyConnect: true,
           retryStrategy: (times: number) => {
-            if (times > 10) {
-              return null;
-            }
+            if (times > 10) return null;
             return Math.min(times * 50, 2000);
           },
-        },
-        defaultJobOptions: {
-          removeOnComplete: true,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 1000,
+        };
+
+        if (sentinels && sentinels.length > 0) {
+          redisOptions.sentinels = sentinels;
+          redisOptions.name = name;
+          redisOptions.sentinelPassword = password;
+        } else {
+          redisOptions.host = configService.get<string>(
+            'redis.host',
+            'localhost',
+          );
+          redisOptions.port = configService.get<number>('redis.port', 6379);
+        }
+
+        return {
+          redis: redisOptions,
+          defaultJobOptions: {
+            removeOnComplete: true,
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
           },
-        },
-      }),
+        };
+      },
       inject: [ConfigService],
     }),
 
@@ -167,7 +189,6 @@ import { AppModule as AppRootModule } from './app/app.module';
     TariffsModule,
     VerificationModule,
     CacheWarmingModule,
-    IdeasModule,
     ChatModule,
     PromotionsModule,
   ],

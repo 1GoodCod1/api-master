@@ -4,9 +4,13 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -19,7 +23,12 @@ import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  private readonly logger = new Logger(PaymentsController.name);
+
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly configService: ConfigService,
+  ) { }
 
   // ==================== MIA PAYMENTS ====================
 
@@ -49,7 +58,32 @@ export class PaymentsController {
 
   @Post('mia-callback')
   @ApiOperation({ summary: 'MIA payment callback (webhook)' })
-  async miaCallback(@Body() body: { orderId?: string }) {
+  async miaCallback(
+    @Body() body: { orderId?: string },
+    @Query('token') token: string,
+  ) {
+    // --- Webhook protection ---
+    // Конфигурируй URL каллбека в MIA дашборде:
+    //   https://your-api.com/payments/mia-callback?token=<MIA_WEBHOOK_SECRET>
+    const expectedSecret = this.configService.get<string>(
+      'mia.webhookSecret',
+      '',
+    );
+    if (expectedSecret) {
+      if (token !== expectedSecret) {
+        this.logger.warn(
+          `Rejected MIA webhook call — invalid token. orderId: ${body?.orderId ?? 'none'}`,
+        );
+        throw new ForbiddenException('Invalid webhook token');
+      }
+    } else {
+      // Секрет не задан — вебхук незащищён! Опасно в продакшне, допустимо в dev.
+      this.logger.warn(
+        'MIA_WEBHOOK_SECRET is not set — mia-callback endpoint is UNPROTECTED! Set it in .env',
+      );
+    }
+    // --- End webhook protection ---
+
     const orderId = body?.orderId;
     if (!orderId) throw new BadRequestException('orderId required');
     return this.paymentsService.handleMiaCallback(orderId);

@@ -154,12 +154,11 @@ export class MastersSearchService {
           if (tariffType !== 'BASIC') where.tariffExpiresAt = { gt: now };
         }
 
-        const total = await this.prisma.master.count({ where });
-
-        // ✅ Используем специализированный SQL сервис для ранжирования
+        // ✅ Используем специализированный SQL сервис для ранжирования И подсчета (уменьшает время в 2 раза при промахе кеша)
         let ids: string[];
+        let total: number;
         try {
-          ids = await this.sqlService.getRankedMasterIds({
+          const res = await this.sqlService.getRankedMasterIds({
             categoryId,
             cityId,
             tariffType,
@@ -176,6 +175,8 @@ export class MastersSearchService {
             sortOrder,
             useFuzzy: true,
           });
+          ids = res.ids;
+          total = res.total;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (
@@ -185,7 +186,7 @@ export class MastersSearchService {
             this.logger.warn(
               `pg_trgm unavailable, falling back to exact search: ${msg}`,
             );
-            ids = await this.sqlService.getRankedMasterIds({
+            const fallbackRes = await this.sqlService.getRankedMasterIds({
               categoryId,
               cityId,
               tariffType,
@@ -202,6 +203,8 @@ export class MastersSearchService {
               sortOrder,
               useFuzzy: false,
             });
+            ids = fallbackRes.ids;
+            total = fallbackRes.total;
           } else {
             throw err;
           }

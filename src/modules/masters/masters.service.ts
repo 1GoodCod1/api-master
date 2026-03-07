@@ -17,7 +17,7 @@ import { MastersProfileService } from './services/masters-profile.service';
 import { MastersPhotosService } from './services/masters-photos.service';
 import { MastersStatsService } from './services/masters-stats.service';
 import { MastersTariffService } from './services/masters-tariff.service';
-import { decodeId } from '../shared/utils/id-encoder';
+import { decodeId, encodeId } from '../shared/utils/id-encoder';
 import { getEffectiveTariff } from '../../common/helpers/plans';
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
 import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
@@ -687,6 +687,10 @@ export class MastersService {
    * Инвалидация кеша мастера
    */
   private async invalidateMasterCache(masterId: string, slug?: string | null) {
-    await this.profileService.invalidateMasterCache(masterId, slug, slug);
+    await this.profileService.invalidateMasterCache(
+      masterId,
+      slug,
+      encodeId(masterId),
+    );
   }
 }

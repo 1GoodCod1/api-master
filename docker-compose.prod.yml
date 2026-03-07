@@ -14,28 +14,166 @@ services:
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.1
+    container_name: masterhub-pgbouncer-prod
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=5000
+      - DEFAULT_POOL_SIZE=100
+      - IGNORE_STARTUP_PARAMETERS=extra_float_digits
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-postgres} || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  redis:
-    image: redis:7
-    container_name: masterhub-redis-prod
-    ports:
-      - "6380:6379"
+  redis-master:
+    image: bitnami/redis:7.2
+    container_name: masterhub-redis-master
+    environment:
+      - REDIS_REPLICATION_MODE=master
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
     volumes:
-      - redis_prod_data:/data
-      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
+      - redis_master_data:/bitnami/redis/data
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  redis-replica-1:
+    image: bitnami/redis:7.2
+    container_name: masterhub-redis-replica-1
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-replica-2:
+    image: bitnami/redis:7.2
+    container_name: masterhub-redis-replica-2
+    environment:
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-sentinel-1:
+    image: bitnami/redis-sentinel:7.2
+    container_name: masterhub-redis-sentinel-1
+    environment:
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_QUORUM=2
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-sentinel-2:
+    image: bitnami/redis-sentinel:7.2
+    container_name: masterhub-redis-sentinel-2
+    environment:
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_QUORUM=2
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-sentinel-3:
+    image: bitnami/redis-sentinel:7.2
+    container_name: masterhub-redis-sentinel-3
+    environment:
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_SET=mymaster
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_QUORUM=2
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: masterhub-gateway-prod
+    ports:
+      - "4001:80"
+    volumes:
+      - ./docker/nginx/api.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
     restart: unless-stopped
 
   api:
@@ -44,27 +182,83 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: masterhub-api-prod
-    ports:
-      - "4001:4000"
+    # ports:
+    #   - "4001:4000" # Прямой доступ закрыт, используем gateway
     env_file:
       - .env.production
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
+      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      pgbouncer:
+        condition: service_healthy
+      redis-sentinel-1:
         condition: service_healthy
     networks:
       - masterhub-prod-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # ============================================================
+  # Worker — отдельный процесс для Bull jobs + cron-задач.
+  #
+  # Преимущества:
+  #  - Крэш воркера не роняет HTTP API
+  #  - Независимое масштабирование (scale: 2+ workers для Bull)
+  #  - Меньше памяти на каждый процесс
+  #  - Рестарт воркера без downtime API
+  #
+  # При необходимости запустить несколько воркеров:
+  #   docker compose up --scale worker=3 -d
+  # ============================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: masterhub-worker-prod
+    command: [ "node", "dist/worker.js" ]
+    env_file:
+      - .env.production
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
+      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      redis-sentinel-1:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "node", "-e", "process.exit(0)" ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   prometheus:
     image: prom/prometheus:latest
@@ -100,6 +294,6 @@ networks:
 
 volumes:
   postgres_prod_data:
-  redis_prod_data:
+  redis_master_data:
   prometheus_prod_data:
   grafana_prod_data:

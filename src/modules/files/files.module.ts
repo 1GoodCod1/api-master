@@ -117,8 +117,15 @@ const FILE_FILTER = (
           };
         }
 
+        if (process.env.NODE_ENV === 'production') {
+          logger.error(
+            '🚨 CRITICAL: B2 storage is NOT configured in PRODUCTION environment. Local diskStorage will split files across multiple pods/containers causing data loss and 404s. Set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, and B2_BUCKET.',
+          );
+          throw new Error('Storage: Local diskStorage disabled in production to prevent file fragmentation across pods.');
+        }
+
         logger.warn(
-          'Storage: LOCAL disk (./uploads). Set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, and B2_BUCKET to use Backblaze B2.',
+          'Storage: LOCAL disk (./uploads). Not recommended for distributed setups. Set B2 environment variables to use Backblaze B2.',
         );
 
         return {
@@ -142,4 +149,4 @@ const FILE_FILTER = (
   providers: [FilesService],
   exports: [FilesService],
 })
-export class FilesModule {}
+export class FilesModule { }

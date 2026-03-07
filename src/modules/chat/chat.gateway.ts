@@ -10,6 +10,8 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Logger, UseGuards, Inject, forwardRef } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { WsJwtGuard } from '../../common/guards/ws-jwt.guard';
 import { UserRole } from '@prisma/client';
 import { ChatService } from './chat.service';
@@ -52,27 +54,27 @@ function parseUserRole(value: string): UserRole | undefined {
   allowEIO3: true,
 })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
-  private userConversations: Map<string, Set<string>> = new Map(); // userId -> Set of conversationIds
 
   constructor(
     private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     @Inject(forwardRef(() => WebsocketService))
     private readonly websocketService: WebsocketService,
     @Inject(forwardRef(() => InAppNotificationService))
     private readonly inAppNotifications: InAppNotificationService,
-  ) {}
+  ) { }
 
   afterInit(_server: Server) {
     this.logger.log('Chat Gateway initialized');
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     try {
       const token: string | undefined =
         (typeof client.handshake.auth?.token === 'string'
@@ -83,31 +85,29 @@ export class ChatGateway
           : undefined);
 
       if (!token) {
-        this.logger.warn('Chat connection without token');
-        client.disconnect();
+        this.logger.warn(`Chat connection refused: No token. ID: ${client.id}`);
+        client.disconnect(true);
         return;
       }
 
-      this.logger.log(`Chat client connected: ${client.id}`);
+      // SECURITY: Verify token immediately on connection to prevent DoS by unauth users
+      // This ensures only valid users can hold a connection open.
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get('jwt.accessSecret'),
+      });
+
+      // Save user data to socket for later use in SubscribeMessages
+      client.data.userId = payload.sub;
+      client.data.userRole = payload.role;
+
+      this.logger.log(`Chat client authenticated: ${payload.sub} (${client.id})`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Chat connection error: ${message}`);
-      client.disconnect();
+      this.logger.error(`Chat auth error for ${client.id}: ${error instanceof Error ? error.message : 'Invalid token'}`);
+      client.disconnect(true);
     }
   }
 
   handleDisconnect(client: Socket) {
-    const data = client.data as { userId?: string } | undefined;
-    const userId = typeof data?.userId === 'string' ? data.userId : undefined;
-    if (userId) {
-      const userConvs = this.userConversations.get(userId);
-      if (userConvs) {
-        userConvs.forEach((convId) => {
-          void client.leave(`conversation:${convId}`);
-        });
-        this.userConversations.delete(userId);
-      }
-    }
     this.logger.log(`Chat client disconnected: ${client.id}`);
   }
 
@@ -128,17 +128,14 @@ export class ChatGateway
         return { success: false, error: 'Unauthorized' };
       }
       const user = { id: userId, role: userRole };
+
+      // Verify user has access to this conversation in DB
       await this.chatService.getConversation(data.conversationId, user);
 
       void client.join(`conversation:${data.conversationId}`);
 
-      if (!this.userConversations.has(userId)) {
-        this.userConversations.set(userId, new Set());
-      }
-      this.userConversations.get(userId)?.add(data.conversationId);
-
       this.logger.log(
-        `User ${userId} joined conversation ${data.conversationId}`,
+        `User ${userId} joined room: conversation:${data.conversationId}`,
       );
 
       return { success: true, conversationId: data.conversationId };
@@ -159,13 +156,6 @@ export class ChatGateway
     const userId =
       typeof socketData.userId === 'string' ? socketData.userId : undefined;
     void client.leave(`conversation:${data.conversationId}`);
-
-    if (userId) {
-      const userConvs = this.userConversations.get(userId);
-      if (userConvs) {
-        userConvs.delete(data.conversationId);
-      }
-    }
 
     this.logger.log(
       `User ${userId ?? 'unknown'} left conversation ${data.conversationId}`,

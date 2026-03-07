@@ -128,13 +128,6 @@ enum ReportAction {
   NO_ACTION
 }
 
-enum IdeaStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  IMPLEMENTED
-}
-
 enum AvailabilityStatus {
   AVAILABLE
   BUSY
@@ -183,8 +176,6 @@ model User {
   phoneVerifications PhoneVerification[]
   loginHistory  LoginHistory[]
   masterAvailabilitySubscriptions MasterAvailabilitySubscription[]
-  ideas         Idea[]
-  ideaVotes     IdeaVote[]
   conversations Conversation[] @relation("ClientConversations")
   reviewVotes   ReviewVote[]
   
@@ -569,8 +560,6 @@ model Payment {
   amount        Decimal
   currency      String        @default("MDL")
   tariffType    TariffType
-  stripeId      String?       @unique
-  stripeSession String?       @unique
   status        PaymentStatus @default(PENDING)
   metadata      Json?
   paidAt        DateTime?
@@ -892,7 +881,6 @@ model Tariff {
   price        String    
   amount       Decimal  
   days         Int        @default(30)
-  stripePriceId String?   
   description  String?    
   features     Json      
   isActive     Boolean    @default(true)
@@ -905,43 +893,6 @@ model Tariff {
   @@index([isActive])
   @@index([sortOrder])
   @@map("tariffs")
-}
-
-model Idea {
-  id          String     @id @default(uuid())
-  title       String
-  description String
-  status      IdeaStatus @default(PENDING)
-  authorId    String
-  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  votesCount  Int        @default(0)
-  votes       IdeaVote[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  approvedAt  DateTime?
-  rejectedAt  DateTime?
-  implementedAt DateTime?
-  adminNote   String?
-
-  @@index([status])
-  @@index([votesCount])
-  @@index([createdAt])
-  @@index([authorId])
-  @@map("ideas")
-}
-
-model IdeaVote {
-  id        String   @id @default(uuid())
-  ideaId    String
-  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([ideaId, userId])
-  @@index([ideaId])
-  @@index([userId])
-  @@map("idea_votes")
 }
 
 // ============================================

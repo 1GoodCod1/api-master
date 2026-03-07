@@ -425,6 +425,21 @@ export class ChatService {
         ? 'MASTER'
         : 'CLIENT';
 
+    // SECURITY: Validate that all fileIds belong to the current user
+    // This prevents ID-shuffling attacks where one can attach other people's private files to a message.
+    if (dto.fileIds?.length) {
+      const filesCount = await this.prisma.file.count({
+        where: {
+          id: { in: dto.fileIds },
+          uploadedById: user.id,
+        },
+      });
+
+      if (filesCount !== dto.fileIds.length) {
+        throw new ForbiddenException('Invalid file IDs provided - some files do not belong to you');
+      }
+    }
+
     const sanitizedContent = sanitizeStrict(dto.content?.trim() ?? '');
 
     const message: MessageWithFiles = await this.prisma.message.create({
@@ -435,10 +450,10 @@ export class ChatService {
         content: sanitizedContent,
         files: dto.fileIds?.length
           ? {
-              create: dto.fileIds.map((fileId) => ({
-                fileId,
-              })),
-            }
+            create: dto.fileIds.map((fileId) => ({
+              fileId,
+            })),
+          }
           : undefined,
       },
       include: {

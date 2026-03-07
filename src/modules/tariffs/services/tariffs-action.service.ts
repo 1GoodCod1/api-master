@@ -7,14 +7,14 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { CreateTariffDto } from '../dto/create-tariff.dto';
 import { UpdateTariffDto } from '../dto/update-tariff.dto';
-import { Decimal } from '@prisma/client-runtime-utils';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TariffsActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-  ) {}
+  ) { }
 
   /**
    * Создать новый тариф
@@ -33,11 +33,10 @@ export class TariffsActionService {
         name: dto.name,
         type: dto.type,
         price: dto.price,
-        amount: new Decimal(dto.amount),
+        amount: new Prisma.Decimal(dto.amount),
         days: dto.days ?? 30,
-        stripePriceId: dto.stripePriceId,
         description: dto.description,
-        features: dto.features,
+        features: dto.features as unknown as Prisma.InputJsonValue,
         isActive: dto.isActive ?? true,
         sortOrder: dto.sortOrder ?? 0,
       },
@@ -69,8 +68,15 @@ export class TariffsActionService {
     const updated = await this.prisma.tariff.update({
       where: { id },
       data: {
-        ...dto,
-        amount: dto.amount ? new Decimal(dto.amount) : undefined,
+        name: dto.name,
+        type: dto.type,
+        price: dto.price,
+        amount: dto.amount ? new Prisma.Decimal(dto.amount) : undefined,
+        days: dto.days,
+        description: dto.description,
+        features: dto.features as unknown as Prisma.InputJsonValue,
+        isActive: dto.isActive,
+        sortOrder: dto.sortOrder,
       },
     });
 

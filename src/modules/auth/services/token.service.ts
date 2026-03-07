@@ -11,9 +11,11 @@ export class TokenService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
-  generateAccessToken(user: User) {
+  generateAccessToken(
+    user: Pick<User, 'id' | 'email' | 'role' | 'isVerified'>,
+  ) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -23,7 +25,7 @@ export class TokenService {
 
     return this.jwtService.sign(payload, {
       secret: this.configService.get('jwt.accessSecret'),
-      expiresIn: this.configService.get('jwt.accessExpiry') || '3d',
+      expiresIn: this.configService.get('jwt.accessExpiry') || '1h',
     });
   }
 
@@ -48,7 +50,17 @@ export class TokenService {
   async refreshTokens(refreshToken: string) {
     const tokenRecord = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isVerified: true,
+            isBanned: true,
+          },
+        },
+      },
     });
 
     if (!tokenRecord) {

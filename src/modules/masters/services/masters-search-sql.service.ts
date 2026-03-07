@@ -36,7 +36,7 @@ import { PrismaService } from '../../shared/database/prisma.service';
 export class MastersSearchSqlService {
   private readonly logger = new Logger(MastersSearchSqlService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getRankedMasterIds(params: {
     categoryId?: string;
@@ -227,7 +227,7 @@ export class MastersSearchSqlService {
     // When a search query is present, boost results by text relevance FIRST,
     // then by tariff rank, then by the selected sort column.
     const query = Prisma.sql`
-      SELECT m."id"
+      SELECT m."id", COUNT(*) OVER() as "totalCount"
       FROM "masters" m
       INNER JOIN "users" u ON u."id" = m."userId"
       LEFT JOIN "categories" c ON c."id" = m."categoryId"
@@ -240,8 +240,18 @@ export class MastersSearchSqlService {
       OFFSET ${skip}
     `;
 
-    const result = await this.prisma.$queryRaw<Array<{ id: string }>>(query);
-    return result.map((r) => r.id);
+    const result = await this.prisma.$queryRaw<
+      Array<{ id: string; totalCount: string | number | bigint }>
+    >(query);
+
+    if (result.length === 0) {
+      return { ids: [], total: 0 };
+    }
+
+    return {
+      ids: result.map((r) => r.id),
+      total: Number(result[0].totalCount),
+    };
   }
 
   private buildTariffRankSql(now: Date) {

@@ -28,7 +28,7 @@ export class LeadsService {
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly availabilityService: MastersAvailabilityService,
-  ) {}
+  ) { }
 
   /**
    * Главный метод создания лида (Координатор)
@@ -44,7 +44,7 @@ export class LeadsService {
       clientName,
       message,
       fileIds,
-      premiumPaymentSessionId,
+      paymentSessionId,
     } = createLeadDto;
 
     const clientId: string | null =
@@ -93,7 +93,7 @@ export class LeadsService {
     );
 
     // 2. Проверка премиум статуса
-    const isPremium = await this.checkPremiumPayment(premiumPaymentSessionId);
+    const isPremium = await this.checkPremiumPayment(paymentSessionId);
 
     // 3. Защита от спама (только для обычных лидов)
     if (!isPremium) {
@@ -135,11 +135,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-              createMany: {
-                data: fileIds.map((id) => ({ fileId: id })),
-                skipDuplicates: true,
-              },
-            }
+            createMany: {
+              data: fileIds.map((id) => ({ fileId: id })),
+              skipDuplicates: true,
+            },
+          }
           : undefined,
       },
       include: {
@@ -203,7 +203,7 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => {});
+          .catch(() => { });
       } catch (err) {
         this.logger.error(
           'Failed to send lead-sent notification to client',
@@ -240,7 +240,6 @@ export class LeadsService {
 
     const payment = await this.prisma.payment.findFirst({
       where: {
-        stripeSession: sessionId,
         status: PaymentStatus.SUCCESS,
         metadata: {
           path: ['paymentType'],

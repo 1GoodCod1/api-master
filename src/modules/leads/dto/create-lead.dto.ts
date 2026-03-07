@@ -51,11 +51,11 @@ export class CreateLeadDto {
 
   @ApiProperty({
     required: false,
-    description: 'Premium lead payment session ID',
+    description: 'Payment session or order ID for premium lead validation',
   })
   @IsString()
   @IsOptional()
-  premiumPaymentSessionId?: string;
+  paymentSessionId?: string;
 
   @ApiProperty({
     required: false,

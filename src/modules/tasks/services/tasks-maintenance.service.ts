@@ -130,12 +130,22 @@ export class TasksMaintenanceService {
         },
       });
 
+    // Очищаем UserActivity старше 60 дней, так как они нужны только для недавней аналитики
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const deletedActivities = await this.prisma.userActivity.deleteMany({
+      where: {
+        createdAt: { lt: sixtyDaysAgo },
+      },
+    });
+
     if (
       deletedRefreshTokens.count > 0 ||
-      deletedPasswordResetTokens.count > 0
+      deletedPasswordResetTokens.count > 0 ||
+      deletedActivities.count > 0
     ) {
       this.logger.log(
-        `Cleaned up ${deletedRefreshTokens.count} expired refresh tokens and ${deletedPasswordResetTokens.count} expired password reset tokens`,
+        `Cleaned up ${deletedRefreshTokens.count} expired refresh tokens, ${deletedPasswordResetTokens.count} expired password reset tokens, and ${deletedActivities.count} old user activities`,
       );
     }
   }

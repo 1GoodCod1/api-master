@@ -2,13 +2,15 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { readReplicas } from '@prisma/extension-read-replicas';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+  implements OnModuleInit, OnModuleDestroy {
   private pool: Pool;
+  private replicaPools: Pool[] = [];
+  private replicaClients: PrismaClient[] = [];
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
@@ -39,7 +41,7 @@ export class PrismaService
         try {
           client.connection?.stream?.setKeepAlive?.(true, 60_000);
         } catch {
-          // ignore if stream doesn't support keepAlive
+
         }
       },
     );
@@ -56,6 +58,48 @@ export class PrismaService
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- pool from pg Pool, typed above
     this.pool = pool;
+
+    if (process.env.DATABASE_READ_URL) {
+      const poolReplica = new Pool({
+        connectionString: process.env.DATABASE_READ_URL,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+        allowExitOnIdle: true,
+      }) as Pool;
+
+      poolReplica.on('connect', (client: any) => {
+        try {
+          client.connection?.stream?.setKeepAlive?.(true, 60_000);
+        } catch {
+          // ignore
+        }
+      });
+
+      const adapterReplica = new PrismaPg(poolReplica);
+      const replicaClient = new PrismaClient({
+        adapter: adapterReplica,
+        log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+      });
+
+      this.replicaPools.push(poolReplica);
+      this.replicaClients.push(replicaClient);
+
+      // Store the extended client in a property instead of returning from constructor
+      // We will proxy calls to this if needed or just use it locally
+      (this as any)._extended = this.$extends(
+        readReplicas({
+          replicas: [replicaClient],
+        }),
+      );
+    } else {
+      (this as any)._extended = this;
+    }
+  }
+
+  // Helper to ensure we use the extended client for all operations
+  private get client(): any {
+    return (this as any)._extended || this;
   }
 
   async onModuleInit() {
@@ -87,10 +131,25 @@ export class PrismaService
     }
     if (this.pool) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Pool from pg
         await this.pool.end();
       } catch {
         // ignore pool end errors
+      }
+    }
+
+    // Close all replica pools and clients
+    for (const replicaClient of this.replicaClients) {
+      try {
+        await replicaClient.$disconnect();
+      } catch {
+        // ignore
+      }
+    }
+    for (const replicaPool of this.replicaPools) {
+      try {
+        await replicaPool.end();
+      } catch {
+        // ignore
       }
     }
   }

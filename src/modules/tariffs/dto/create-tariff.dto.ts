@@ -39,11 +39,6 @@ export class CreateTariffDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  stripePriceId?: string;
-
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsOptional()
   description?: string;
 
   @ApiProperty({ type: [String] })

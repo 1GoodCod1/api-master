@@ -410,7 +410,6 @@ api-master/
 | **notifications** | Push, SMS, Email уведомления |
 | **favorites** | Избранные мастера |
 | **files** | Загрузка файлов (S3/B2) |
-| **ideas** | Идеи и предложения |
 | **promotions** | Промо-акции |
 | **recommendations** | Рекомендательная система |
 | **reports** | Жалобы |

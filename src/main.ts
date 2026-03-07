@@ -69,10 +69,7 @@ function validateProductionSecrets(config: ConfigService): void {
 }
 
 async function bootstrap() {
-  console.log('[1] Starting application...');
   try {
-    console.log('[2] Creating NestFactory...');
-    const startTime = Date.now();
     // USE_HTTPONLY_COOKIE=true  → refresh token stored in httpOnly cookie (most secure, default in prod)
     // USE_HTTPONLY_COOKIE=false → refresh token sent in response body (fallback for dev/mobile apps)
     const isProd = process.env.NODE_ENV === 'production';
@@ -91,8 +88,6 @@ async function bootstrap() {
     if (useHttpOnlyCookie) {
       app.use(cookieParser());
     }
-    const createTime = Date.now() - startTime;
-    console.log(`[3] Application created successfully in ${createTime}ms`);
 
     const nestLogger = WinstonModule.createLogger(winstonConfig);
     app.useLogger(nestLogger);
@@ -157,7 +152,6 @@ async function bootstrap() {
     }
 
     const port = configService.get<number>('port', 4000);
-    console.log(`[4] Starting server on port ${port}...`);
     await app.listen(port);
 
     const logger = new Logger('Bootstrap');

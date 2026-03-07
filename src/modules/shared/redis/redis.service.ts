@@ -13,10 +13,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private client: Redis;
 
   constructor(private configService: ConfigService) {
+    const sentinels = this.configService.get<{ host: string; port: number }[]>('redis.sentinels');
+    const name = this.configService.get<string>('redis.sentinelName', 'mymaster');
+    const password = this.configService.get<string>('redis.password', '');
+
     const options: RedisOptions = {
-      host: this.configService.get<string>('redis.host', 'localhost'),
-      port: this.configService.get<number>('redis.port', 6379),
-      password: this.configService.get<string>('redis.password', ''),
+      password,
       connectTimeout: 10000,
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
@@ -30,6 +32,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         return delay;
       },
     };
+
+    if (sentinels && sentinels.length > 0) {
+      options.sentinels = sentinels;
+      options.name = name;
+      options.sentinelPassword = password; // Typically same as redis password in setups
+    } else {
+      options.host = this.configService.get<string>('redis.host', 'localhost');
+      options.port = this.configService.get<number>('redis.port', 6379);
+    }
 
     this.client = new Redis(options);
 
@@ -184,7 +195,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     try {
-      await this.client.quit().catch(() => {});
+      await this.client.quit().catch(() => { });
     } catch {
       this.logger.debug('Redis connection closed');
     }
