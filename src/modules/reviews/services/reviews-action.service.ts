@@ -65,7 +65,13 @@ export class ReviewsActionService {
     // Валидация leadId: лид принадлежит клиенту, имеет правильный статус, нет дубликата
     const lead = await this.prisma.lead.findUnique({
       where: { id: leadId },
-      select: { id: true, masterId: true, clientId: true, status: true, clientName: true },
+      select: {
+        id: true,
+        masterId: true,
+        clientId: true,
+        status: true,
+        clientName: true,
+      },
     });
 
     if (!lead) {
@@ -97,9 +103,7 @@ export class ReviewsActionService {
     const safeFileIds =
       fileIds && fileIds.length ? fileIds.slice(0, 5).filter(Boolean) : [];
     let displayName =
-      createReviewDto.clientName?.trim() ||
-      lead.clientName?.trim() ||
-      null;
+      createReviewDto.clientName?.trim() || lead.clientName?.trim() || null;
     if (!displayName && user) {
       const full = [user.firstName, user.lastName]
         .filter(Boolean)
@@ -121,13 +125,13 @@ export class ReviewsActionService {
         reviewCriteria:
           criteria && criteria.length > 0
             ? {
-              createMany: {
-                data: criteria.map((c) => ({
-                  criteria: c.criteria,
-                  rating: c.rating,
-                })),
-              },
-            }
+                createMany: {
+                  data: criteria.map((c) => ({
+                    criteria: c.criteria,
+                    rating: c.rating,
+                  })),
+                },
+              }
             : undefined,
         reviewFiles:
           safeFileIds.length > 0
@@ -264,16 +268,16 @@ export class ReviewsActionService {
     });
     const result = existingReply
       ? await this.prisma.reviewReply.update({
-        where: { reviewId },
-        data: { content },
-      })
+          where: { reviewId },
+          data: { content },
+        })
       : await this.prisma.reviewReply.create({
-        data: {
-          reviewId,
-          masterId,
-          content,
-        },
-      });
+          data: {
+            reviewId,
+            masterId,
+            content,
+          },
+        });
 
     await this.invalidateMasterCache(review.masterId);
     return result;

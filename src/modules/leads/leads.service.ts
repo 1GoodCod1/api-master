@@ -137,11 +137,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-            createMany: {
-              data: fileIds.map((id) => ({ fileId: id })),
-              skipDuplicates: true,
-            },
-          }
+              createMany: {
+                data: fileIds.map((id) => ({ fileId: id })),
+                skipDuplicates: true,
+              },
+            }
           : undefined,
       },
       include: {
@@ -205,7 +205,7 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => { });
+          .catch(() => {});
       } catch (err) {
         this.logger.error(
           'Failed to send lead-sent notification to client',
@@ -213,9 +213,11 @@ export class LeadsService {
         );
       }
 
-      this.emailDripService.startChain(clientId, 'lead_created').catch(err => {
-        this.logger.error('Failed to start lead_created drip chain', err);
-      });
+      this.emailDripService
+        .startChain(clientId, 'lead_created')
+        .catch((err) => {
+          this.logger.error('Failed to start lead_created drip chain', err);
+        });
     }
 
     // 11. In-app уведомление мастеру (сохраняется в БД + отправляется через WebSocket)

@@ -56,4 +56,4 @@ import { AuthLockoutService } from './services/auth-lockout.service';
   ],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

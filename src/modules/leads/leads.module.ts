@@ -17,7 +17,14 @@ import { EmailModule } from '../email/email.module';
 import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, NotificationsModule, MastersModule, EmailModule, ReferralsModule],
+  imports: [
+    PrismaModule,
+    RedisModule,
+    NotificationsModule,
+    MastersModule,
+    EmailModule,
+    ReferralsModule,
+  ],
   controllers: [LeadsController],
   providers: [
     LeadsService,
@@ -31,4 +38,4 @@ import { ReferralsModule } from '../referrals/referrals.module';
   ],
   exports: [LeadsService],
 })
-export class LeadsModule { }
+export class LeadsModule {}

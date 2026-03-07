@@ -29,7 +29,7 @@ export class RegistrationService {
     private readonly inAppNotifications: InAppNotificationService,
     private readonly emailDripService: EmailDripService,
     private readonly referralsService: ReferralsService,
-  ) { }
+  ) {}
 
   /**
    * Главный метод регистрации (оркестратор)
@@ -121,9 +121,15 @@ export class RegistrationService {
     // Обработка реферального кода, если он есть
     if (registerDto.referralCode) {
       try {
-        await this.referralsService.applyReferralCode(user.id, registerDto.referralCode);
+        await this.referralsService.applyReferralCode(
+          user.id,
+          registerDto.referralCode,
+        );
       } catch (err) {
-        this.logger.error(`Failed to apply referral code for user ${user.id}:`, err);
+        this.logger.error(
+          `Failed to apply referral code for user ${user.id}:`,
+          err,
+        );
       }
     }
 
@@ -132,7 +138,10 @@ export class RegistrationService {
       const chainType = user.role === 'MASTER' ? 'master_welcome' : 'welcome';
       await this.emailDripService.startChain(user.id, chainType);
     } catch (err) {
-      this.logger.error(`Failed to start welcome email chain for user ${user.id}:`, err);
+      this.logger.error(
+        `Failed to start welcome email chain for user ${user.id}:`,
+        err,
+      );
     }
 
     // 7.5. In-app уведомление админам о новой регистрации

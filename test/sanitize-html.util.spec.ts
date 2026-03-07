@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call -- Chai expect types not resolved in test context */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Chai expect chain types */
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- Test payloads use intentional any */
 import {
   sanitizeStrict,
@@ -7,7 +5,6 @@ import {
   sanitizeArray,
   sanitizeObject,
 } from '../src/modules/shared/utils/sanitize-html.util';
-
 
 describe('HTML Sanitization Utilities', () => {
   describe('sanitizeStrict', () => {

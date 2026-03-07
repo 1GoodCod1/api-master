@@ -86,11 +86,15 @@ describe('ReviewsActionService', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
-          id: 'c1',
-          role: 'CLIENT',
-          phoneVerified: true,
-        } as never),
+        service.create(
+          { masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] },
+          'c1',
+          {
+            id: 'c1',
+            role: 'CLIENT',
+            phoneVerified: true,
+          } as never,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -102,11 +106,15 @@ describe('ReviewsActionService', () => {
       prisma.master.findUnique.mockResolvedValue({ id: 'm1', userId: 'u1' });
 
       await expect(
-        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
-          id: 'c1',
-          role: 'CLIENT',
-          phoneVerified: false,
-        } as never),
+        service.create(
+          { masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] },
+          'c1',
+          {
+            id: 'c1',
+            role: 'CLIENT',
+            phoneVerified: false,
+          } as never,
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
@@ -118,11 +126,15 @@ describe('ReviewsActionService', () => {
       prisma.master.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
-          id: 'c1',
-          role: 'CLIENT',
-          phoneVerified: true,
-        } as never),
+        service.create(
+          { masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] },
+          'c1',
+          {
+            id: 'c1',
+            role: 'CLIENT',
+            phoneVerified: true,
+          } as never,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -135,11 +147,15 @@ describe('ReviewsActionService', () => {
       prisma.review.findFirst.mockResolvedValue({ id: 'r1' });
 
       await expect(
-        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
-          id: 'c1',
-          role: 'CLIENT',
-          phoneVerified: true,
-        } as never),
+        service.create(
+          { masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] },
+          'c1',
+          {
+            id: 'c1',
+            role: 'CLIENT',
+            phoneVerified: true,
+          } as never,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -153,11 +169,15 @@ describe('ReviewsActionService', () => {
       prisma.lead.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
-          id: 'c1',
-          role: 'CLIENT',
-          phoneVerified: true,
-        } as never),
+        service.create(
+          { masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] },
+          'c1',
+          {
+            id: 'c1',
+            role: 'CLIENT',
+            phoneVerified: true,
+          } as never,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
