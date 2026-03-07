@@ -121,7 +121,9 @@ const FILE_FILTER = (
           logger.error(
             '🚨 CRITICAL: B2 storage is NOT configured in PRODUCTION environment. Local diskStorage will split files across multiple pods/containers causing data loss and 404s. Set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, and B2_BUCKET.',
           );
-          throw new Error('Storage: Local diskStorage disabled in production to prevent file fragmentation across pods.');
+          throw new Error(
+            'Storage: Local diskStorage disabled in production to prevent file fragmentation across pods.',
+          );
         }
 
         logger.warn(
@@ -149,4 +151,4 @@ const FILE_FILTER = (
   providers: [FilesService],
   exports: [FilesService],
 })
-export class FilesModule { }
+export class FilesModule {}

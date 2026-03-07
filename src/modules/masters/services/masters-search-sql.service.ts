@@ -36,7 +36,7 @@ import { PrismaService } from '../../shared/database/prisma.service';
 export class MastersSearchSqlService {
   private readonly logger = new Logger(MastersSearchSqlService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getRankedMasterIds(params: {
     categoryId?: string;
@@ -240,9 +240,10 @@ export class MastersSearchSqlService {
       OFFSET ${skip}
     `;
 
-    const result = await this.prisma.$queryRaw<
-      Array<{ id: string; totalCount: string | number | bigint }>
-    >(query);
+    const result =
+      await this.prisma.$queryRaw<
+        Array<{ id: string; totalCount: string | number | bigint }>
+      >(query);
 
     if (result.length === 0) {
       return { ids: [], total: 0 };

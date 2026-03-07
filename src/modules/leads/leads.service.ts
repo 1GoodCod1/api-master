@@ -28,7 +28,7 @@ export class LeadsService {
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly availabilityService: MastersAvailabilityService,
-  ) { }
+  ) {}
 
   /**
    * Главный метод создания лида (Координатор)
@@ -135,11 +135,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-            createMany: {
-              data: fileIds.map((id) => ({ fileId: id })),
-              skipDuplicates: true,
-            },
-          }
+              createMany: {
+                data: fileIds.map((id) => ({ fileId: id })),
+                skipDuplicates: true,
+              },
+            }
           : undefined,
       },
       include: {
@@ -203,7 +203,7 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => { });
+          .catch(() => {});
       } catch (err) {
         this.logger.error(
           'Failed to send lead-sent notification to client',

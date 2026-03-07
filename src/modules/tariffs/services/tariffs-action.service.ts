@@ -14,7 +14,7 @@ export class TariffsActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-  ) { }
+  ) {}
 
   /**
    * Создать новый тариф

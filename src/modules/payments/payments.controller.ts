@@ -28,7 +28,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   // ==================== MIA PAYMENTS ====================
 

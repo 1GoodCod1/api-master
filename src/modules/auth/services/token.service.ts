@@ -11,7 +11,7 @@ export class TokenService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   generateAccessToken(
     user: Pick<User, 'id' | 'email' | 'role' | 'isVerified'>,

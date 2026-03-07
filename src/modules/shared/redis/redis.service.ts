@@ -13,8 +13,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private client: Redis;
 
   constructor(private configService: ConfigService) {
-    const sentinels = this.configService.get<{ host: string; port: number }[]>('redis.sentinels');
-    const name = this.configService.get<string>('redis.sentinelName', 'mymaster');
+    const sentinels =
+      this.configService.get<{ host: string; port: number }[]>(
+        'redis.sentinels',
+      );
+    const name = this.configService.get<string>(
+      'redis.sentinelName',
+      'mymaster',
+    );
     const password = this.configService.get<string>('redis.password', '');
 
     const options: RedisOptions = {
@@ -195,7 +201,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     try {
-      await this.client.quit().catch(() => { });
+      await this.client.quit().catch(() => {});
     } catch {
       this.logger.debug('Redis connection closed');
     }

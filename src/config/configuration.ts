@@ -19,9 +19,9 @@ export default () => ({
     password: process.env.REDIS_PASSWORD || '',
     sentinels: process.env.REDIS_SENTINELS
       ? process.env.REDIS_SENTINELS.split(',').map((s) => {
-        const parts = s.split(':');
-        return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
-      })
+          const parts = s.split(':');
+          return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
+        })
       : null,
     sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
   },

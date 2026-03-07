@@ -12,9 +12,9 @@ export class CacheService {
   private readonly defaultTTL = 300; // 5 minutes
 
   // Защита от Cache Stampede: хранит текущие выполняющиеся запросы
-  private readonly inFlightRequests = new Map<string, Promise<any>>();
+  private readonly inFlightRequests = new Map<string, Promise<unknown>>();
 
-  constructor(private readonly redis: RedisService) { }
+  constructor(private readonly redis: RedisService) {}
 
   /**
    * Get value from cache
@@ -162,12 +162,17 @@ export class CacheService {
 
     // Cache Stampede Protection (Singleflight pattern)
     // Если другой запрос уже вычисляет значение для этого ключа — ждём его
-    if (this.inFlightRequests.has(key)) {
-      this.logger.debug(`Cache Stampede blocked for key: ${key} (awaiting in-flight promise)`);
-      return this.inFlightRequests.get(key);
+    const inFlightPromise = this.inFlightRequests.get(key) as
+      | Promise<T>
+      | undefined;
+    if (inFlightPromise) {
+      this.logger.debug(
+        `Cache Stampede blocked for key: ${key} (awaiting in-flight promise)`,
+      );
+      return inFlightPromise;
     }
 
-    const promise = (async () => {
+    const promise: Promise<T> = (async () => {
       let lastError: unknown;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -190,7 +195,7 @@ export class CacheService {
     })();
 
     // Сохраняем промис ДО его завершения
-    this.inFlightRequests.set(key, promise);
+    this.inFlightRequests.set(key, promise as Promise<unknown>);
 
     try {
       return await promise;

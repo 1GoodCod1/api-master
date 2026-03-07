@@ -436,7 +436,9 @@ export class ChatService {
       });
 
       if (filesCount !== dto.fileIds.length) {
-        throw new ForbiddenException('Invalid file IDs provided - some files do not belong to you');
+        throw new ForbiddenException(
+          'Invalid file IDs provided - some files do not belong to you',
+        );
       }
     }
 
@@ -450,10 +452,10 @@ export class ChatService {
         content: sanitizedContent,
         files: dto.fileIds?.length
           ? {
-            create: dto.fileIds.map((fileId) => ({
-              fileId,
-            })),
-          }
+              create: dto.fileIds.map((fileId) => ({
+                fileId,
+              })),
+            }
           : undefined,
       },
       include: {

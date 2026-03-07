@@ -45,7 +45,8 @@ function resolveWsCorsOrigins(): string | string[] {
   allowEIO3: true,
 })
 export class WebsocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 

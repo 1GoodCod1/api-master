@@ -25,6 +25,11 @@ interface SocketAuthData {
   userRole?: string;
 }
 
+interface JwtPayload {
+  sub: string;
+  role?: UserRole;
+}
+
 /** Shape of message returned from ChatService.sendMessage (for offline notification) */
 interface SendMessageResult {
   id: string;
@@ -54,7 +59,8 @@ function parseUserRole(value: string): UserRole | undefined {
   allowEIO3: true,
 })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -68,7 +74,7 @@ export class ChatGateway
     private readonly websocketService: WebsocketService,
     @Inject(forwardRef(() => InAppNotificationService))
     private readonly inAppNotifications: InAppNotificationService,
-  ) { }
+  ) {}
 
   afterInit(_server: Server) {
     this.logger.log('Chat Gateway initialized');
@@ -92,17 +98,22 @@ export class ChatGateway
 
       // SECURITY: Verify token immediately on connection to prevent DoS by unauth users
       // This ensures only valid users can hold a connection open.
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('jwt.accessSecret'),
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret: this.configService.get<string>('jwt.accessSecret'),
       });
 
       // Save user data to socket for later use in SubscribeMessages
-      client.data.userId = payload.sub;
-      client.data.userRole = payload.role;
+      const socketData = client.data as SocketAuthData;
+      socketData.userId = payload.sub;
+      socketData.userRole = payload.role;
 
-      this.logger.log(`Chat client authenticated: ${payload.sub} (${client.id})`);
+      this.logger.log(
+        `Chat client authenticated: ${payload.sub} (${client.id})`,
+      );
     } catch (error) {
-      this.logger.error(`Chat auth error for ${client.id}: ${error instanceof Error ? error.message : 'Invalid token'}`);
+      this.logger.error(
+        `Chat auth error for ${client.id}: ${error instanceof Error ? error.message : 'Invalid token'}`,
+      );
       client.disconnect(true);
     }
   }

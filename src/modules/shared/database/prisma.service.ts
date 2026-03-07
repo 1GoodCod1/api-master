@@ -4,47 +4,74 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 
+interface PoolConnectClient {
+  connection?: {
+    stream?: {
+      setKeepAlive?: (enable: boolean, initialDelayMs: number) => void;
+    };
+  };
+}
+
+interface PgPool {
+  on(event: 'connect', listener: (client: PoolConnectClient) => void): void;
+  end(): Promise<void>;
+}
+
+function attachKeepAliveToPool(pool: PgPool): void {
+  // TCP keepAlive so idle connections aren't dropped by network/load balancers
+  pool.on('connect', (client) => {
+    try {
+      client.connection?.stream?.setKeepAlive?.(true, 60_000);
+    } catch {
+      // ignore keepalive setup errors
+    }
+  });
+}
+
+function createPgPool(connectionString: string): PgPool {
+  // pg Pool types may not resolve in eslint's type-aware analysis
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Pool from pg
+  const rawPool: unknown = new Pool({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000, // 10s for Docker/cold DB; was 2s
+    allowExitOnIdle: true,
+  });
+  const pool = rawPool as PgPool;
+
+  attachKeepAliveToPool(pool);
+  return pool;
+}
+
+async function closePgPool(pool: PgPool | undefined): Promise<void> {
+  if (!pool) {
+    return;
+  }
+
+  try {
+    await pool.end();
+  } catch {
+    // ignore pool end errors
+  }
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy {
-  private pool: Pool;
-  private replicaPools: Pool[] = [];
+  implements OnModuleInit, OnModuleDestroy
+{
+  private pool: PgPool;
+  private replicaPools: PgPool[] = [];
   private replicaClients: PrismaClient[] = [];
+  private readonly extendedClient: PrismaClient;
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
-    // pg Pool types may not resolve in eslint's type-aware analysis
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call -- Pool from pg
-    const pool = new Pool({
-      connectionString,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // 10s for Docker/cold DB; was 2s
-      allowExitOnIdle: true,
-    }) as Pool;
-
-    // TCP keepAlive so idle connections aren't dropped by network/load balancers
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Pool from pg
-    pool.on(
-      'connect',
-      (client: {
-        connection?: {
-          stream?: {
-            setKeepAlive?: (enable: boolean, initialDelayMs: number) => void;
-          };
-        };
-      }) => {
-        try {
-          client.connection?.stream?.setKeepAlive?.(true, 60_000);
-        } catch {
-
-        }
-      },
-    );
+    const pool = createPgPool(connectionString);
 
     const adapter = new PrismaPg(pool);
 
@@ -56,50 +83,31 @@ export class PrismaService
           : ['error'],
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- pool from pg Pool, typed above
     this.pool = pool;
 
     if (process.env.DATABASE_READ_URL) {
-      const poolReplica = new Pool({
-        connectionString: process.env.DATABASE_READ_URL,
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-        allowExitOnIdle: true,
-      }) as Pool;
-
-      poolReplica.on('connect', (client: any) => {
-        try {
-          client.connection?.stream?.setKeepAlive?.(true, 60_000);
-        } catch {
-          // ignore
-        }
-      });
+      const poolReplica = createPgPool(process.env.DATABASE_READ_URL);
 
       const adapterReplica = new PrismaPg(poolReplica);
       const replicaClient = new PrismaClient({
         adapter: adapterReplica,
-        log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+        log:
+          process.env.NODE_ENV === 'development'
+            ? ['error', 'warn']
+            : ['error'],
       });
 
       this.replicaPools.push(poolReplica);
       this.replicaClients.push(replicaClient);
 
-      // Store the extended client in a property instead of returning from constructor
-      // We will proxy calls to this if needed or just use it locally
-      (this as any)._extended = this.$extends(
+      this.extendedClient = this.$extends(
         readReplicas({
           replicas: [replicaClient],
         }),
-      );
+      ) as unknown as PrismaClient;
     } else {
-      (this as any)._extended = this;
+      this.extendedClient = this;
     }
-  }
-
-  // Helper to ensure we use the extended client for all operations
-  private get client(): any {
-    return (this as any)._extended || this;
   }
 
   async onModuleInit() {
@@ -129,13 +137,7 @@ export class PrismaService
     } catch {
       // ignore disconnect errors
     }
-    if (this.pool) {
-      try {
-        await this.pool.end();
-      } catch {
-        // ignore pool end errors
-      }
-    }
+    await closePgPool(this.pool);
 
     // Close all replica pools and clients
     for (const replicaClient of this.replicaClients) {
@@ -146,11 +148,7 @@ export class PrismaService
       }
     }
     for (const replicaPool of this.replicaPools) {
-      try {
-        await replicaPool.end();
-      } catch {
-        // ignore
-      }
+      await closePgPool(replicaPool);
     }
   }
 
