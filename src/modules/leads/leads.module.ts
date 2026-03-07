@@ -13,9 +13,11 @@ import { LeadsActionsService } from './services/leads-actions.service';
 import { MasterAvailableListener } from './listeners/master-available.listener';
 
 import { MastersModule } from '../masters/masters.module';
+import { EmailModule } from '../email/email.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, NotificationsModule, MastersModule],
+  imports: [PrismaModule, RedisModule, NotificationsModule, MastersModule, EmailModule, ReferralsModule],
   controllers: [LeadsController],
   providers: [
     LeadsService,
@@ -29,4 +31,4 @@ import { MastersModule } from '../masters/masters.module';
   ],
   exports: [LeadsService],
 })
-export class LeadsModule {}
+export class LeadsModule { }

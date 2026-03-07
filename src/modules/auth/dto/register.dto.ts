@@ -82,4 +82,9 @@ export class RegisterDto {
   @IsOptional()
   @Transform(({ value }) => sanitizeOptionalString(value))
   description?: string;
+
+  @ApiProperty({ required: false, example: 'JOHN1234' })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }

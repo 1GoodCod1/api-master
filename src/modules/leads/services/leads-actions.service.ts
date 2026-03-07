@@ -11,6 +11,8 @@ import { CacheService } from '../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
 import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
 import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
+import { EmailDripService } from '../../email/email-drip.service';
+import { ReferralsService } from '../../referrals/referrals.service';
 
 /**
  * Допустимые переходы статусов лида.
@@ -33,6 +35,8 @@ export class LeadsActionsService {
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
     private readonly availabilityService: MastersAvailabilityService,
+    private readonly emailDripService: EmailDripService,
+    private readonly referralsService: ReferralsService,
   ) {}
 
   /**
@@ -96,6 +100,29 @@ export class LeadsActionsService {
       // Если статус перешёл в AVAILABLE — отправляем уведомления
       if (updatedMaster && updatedMaster.availabilityStatus === 'AVAILABLE') {
         void this.notifySubscribersAboutAvailability(lead.masterId);
+      }
+
+      // Если лид закрыт, проставляем квалификацию реферала и запускам рассылку (отзыв)
+      if (lead.clientId) {
+        const master = await this.prisma.master.findUnique({
+          where: { id: lead.masterId },
+          select: { user: { select: { firstName: true, lastName: true } } },
+        });
+        const masterName = master?.user
+          ? [master.user.firstName, master.user.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim() || undefined
+          : undefined;
+
+        this.referralsService
+          .qualifyReferral(lead.clientId)
+          .catch((e) => console.error(e));
+        this.emailDripService
+          .startChain(lead.clientId, 'lead_closed', {
+            masterName,
+          })
+          .catch((e) => console.error(e));
       }
     }
 

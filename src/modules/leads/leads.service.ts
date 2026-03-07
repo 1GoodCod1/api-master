@@ -13,6 +13,7 @@ import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
 import { MastersAvailabilityService } from '../masters/services/masters-availability.service';
 import { encodeId } from '../shared/utils/id-encoder';
+import { EmailDripService } from '../email/email-drip.service';
 
 @Injectable()
 export class LeadsService {
@@ -28,6 +29,7 @@ export class LeadsService {
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly availabilityService: MastersAvailabilityService,
+    private readonly emailDripService: EmailDripService,
   ) {}
 
   /**
@@ -135,11 +137,11 @@ export class LeadsService {
         isPremium,
         files: fileIds?.length
           ? {
-              createMany: {
-                data: fileIds.map((id) => ({ fileId: id })),
-                skipDuplicates: true,
-              },
-            }
+            createMany: {
+              data: fileIds.map((id) => ({ fileId: id })),
+              skipDuplicates: true,
+            },
+          }
           : undefined,
       },
       include: {
@@ -203,13 +205,17 @@ export class LeadsService {
             .trim() || 'мастеру';
         await this.inAppNotifications
           .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => {});
+          .catch(() => { });
       } catch (err) {
         this.logger.error(
           'Failed to send lead-sent notification to client',
           err,
         );
       }
+
+      this.emailDripService.startChain(clientId, 'lead_created').catch(err => {
+        this.logger.error('Failed to start lead_created drip chain', err);
+      });
     }
 
     // 11. In-app уведомление мастеру (сохраняется в БД + отправляется через WebSocket)

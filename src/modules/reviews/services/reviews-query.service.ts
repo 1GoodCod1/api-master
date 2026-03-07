@@ -180,18 +180,19 @@ export class ReviewsQueryService {
    */
   async canCreateReview(masterId: string, clientId: string) {
     // Use parallel count queries instead of fetching full objects
-    const [existingCount, closedLeadCount] = await Promise.all([
+    const [existingCount, closedLead] = await Promise.all([
       this.prisma.review.count({
         where: { masterId, clientId },
       }),
-      this.prisma.lead.count({
+      this.prisma.lead.findFirst({
         where: { masterId, clientId, status: LeadStatus.CLOSED },
+        select: { id: true },
       }),
     ]);
 
     if (existingCount > 0) return { canCreate: false, alreadyReviewed: true };
-    if (closedLeadCount === 0) return { canCreate: false, noClosedLead: true };
+    if (!closedLead) return { canCreate: false, noClosedLead: true };
 
-    return { canCreate: true };
+    return { canCreate: true, leadId: closedLead.id };
   }
 }

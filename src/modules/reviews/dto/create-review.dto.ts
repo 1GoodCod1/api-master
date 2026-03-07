@@ -22,6 +22,11 @@ export class CreateReviewDto {
   @IsNotEmpty()
   masterId: string;
 
+  @ApiProperty({ description: 'ID of the closed lead this review is for' })
+  @IsString()
+  @IsNotEmpty()
+  leadId: string;
+
   @ApiProperty({
     example: '+37360000000',
     required: false,

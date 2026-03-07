@@ -1,0 +1,133 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as webpush from 'web-push';
+import { PrismaService } from '../shared/database/prisma.service';
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  url?: string;
+  tag?: string;
+  data?: Record<string, unknown>;
+}
+
+@Injectable()
+export class WebPushService {
+  private readonly logger = new Logger(WebPushService.name);
+  private readonly enabled: boolean;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    const publicKey = this.configService.get<string>('webPush.publicKey', '');
+    const privateKey = this.configService.get<string>('webPush.privateKey', '');
+    const email = this.configService.get<string>('webPush.email', '');
+
+    if (publicKey && privateKey && email) {
+      webpush.setVapidDetails(`mailto:${email}`, publicKey, privateKey);
+      this.enabled = true;
+      this.logger.log('Web Push VAPID configured');
+    } else {
+      this.enabled = false;
+      this.logger.warn('Web Push disabled: VAPID keys not configured');
+    }
+  }
+
+  /**
+   * Save push subscription for a user
+   */
+  async subscribe(
+    userId: string,
+    endpoint: string,
+    p256dh: string,
+    auth: string,
+    userAgent?: string,
+  ) {
+    return this.prisma.pushSubscription.upsert({
+      where: { endpoint },
+      create: { userId, endpoint, p256dh, auth, userAgent },
+      update: { userId, p256dh, auth, userAgent },
+    });
+  }
+
+  /**
+   * Remove push subscription
+   */
+  async unsubscribe(endpoint: string) {
+    await this.prisma.pushSubscription.deleteMany({
+      where: { endpoint },
+    });
+    return { success: true };
+  }
+
+  /**
+   * Send push notification to a specific user (all their devices)
+   */
+  async sendToUser(userId: string, payload: PushPayload): Promise<number> {
+    if (!this.enabled) {
+      this.logger.debug(
+        `[PUSH DISABLED] Would send to user ${userId}: ${payload.title}`,
+      );
+      return 0;
+    }
+
+    const subscriptions = await this.prisma.pushSubscription.findMany({
+      where: { userId },
+    });
+
+    if (subscriptions.length === 0) return 0;
+
+    let sent = 0;
+    const staleIds: string[] = [];
+
+    await Promise.allSettled(
+      subscriptions.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            JSON.stringify(payload),
+            { TTL: 86400 }, // 24 hours
+          );
+          sent++;
+        } catch (error: unknown) {
+          const statusCode =
+            error && typeof error === 'object' && 'statusCode' in error
+              ? (error as { statusCode?: number }).statusCode
+              : undefined;
+
+          if (statusCode === 410 || statusCode === 404) {
+            // Subscription expired or not found, mark for removal
+            staleIds.push(sub.id);
+          } else {
+            this.logger.warn(
+              `Push notification failed for subscription ${sub.id}: ${String(error)}`,
+            );
+          }
+        }
+      }),
+    );
+
+    // Clean up stale subscriptions
+    if (staleIds.length > 0) {
+      await this.prisma.pushSubscription.deleteMany({
+        where: { id: { in: staleIds } },
+      });
+      this.logger.log(`Cleaned ${staleIds.length} stale push subscriptions`);
+    }
+
+    return sent;
+  }
+
+  /**
+   * Get VAPID public key for frontend
+   */
+  getPublicKey(): string {
+    return this.configService.get<string>('webPush.publicKey', '');
+  }
+}

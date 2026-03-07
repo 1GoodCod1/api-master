@@ -112,6 +112,7 @@
     "socket.io": "^4.8.3",
     "twilio": "^5.12.1",
     "uuid": "^13.0.0",
+    "web-push": "^3.6.7",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
@@ -133,6 +134,7 @@
     "@types/pdfkit": "^0.17.4",
     "@types/sanitize-html": "^2.16.0",
     "@types/supertest": "^6.0.3",
+    "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^10.0.2",

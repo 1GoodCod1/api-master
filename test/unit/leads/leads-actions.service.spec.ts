@@ -3,11 +3,20 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+
+jest.mock('../../../src/modules/referrals/referrals.service', () => ({
+  ReferralsService: jest.fn().mockImplementation(() => ({
+    qualifyReferral: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
+
 import { LeadsActionsService } from '../../../src/modules/leads/services/leads-actions.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
 import type { MastersAvailabilityService } from '../../../src/modules/masters/services/masters-availability.service';
+import type { EmailDripService } from '../../../src/modules/email/email-drip.service';
+import type { ReferralsService } from '../../../src/modules/referrals/referrals.service';
 import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';
 
 type PrismaLeadsActionsMock = {
@@ -49,6 +58,14 @@ describe('LeadsActionsService', () => {
     decrementActiveLeads: jest.fn(),
   } as unknown as jest.Mocked<MastersAvailabilityService>;
 
+  const emailDripService = {
+    startChain: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<EmailDripService>;
+
+  const referralsService = {
+    qualifyReferral: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<ReferralsService>;
+
   let service: LeadsActionsService;
 
   const masterUser: JwtUser = {
@@ -66,6 +83,8 @@ describe('LeadsActionsService', () => {
       cache,
       inAppNotifications,
       availabilityService,
+      emailDripService,
+      referralsService,
     );
   });
 
@@ -138,6 +157,38 @@ describe('LeadsActionsService', () => {
         masterId: 'm1',
         masterName: 'John Doe',
       },
+    );
+  });
+
+  it('triggers referral qualification and email drip with master context on CLOSED with clientId', async () => {
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-2',
+      masterId: 'm1',
+      clientId: 'client-1',
+      status: 'NEW',
+    } as never);
+    prisma.lead.update.mockResolvedValue({
+      id: 'lead-2',
+      masterId: 'm1',
+      clientId: 'client-1',
+      status: 'CLOSED',
+    } as never);
+    availabilityService.decrementActiveLeads.mockResolvedValue({
+      id: 'm1',
+      availabilityStatus: 'BUSY',
+    } as never);
+    prisma.master.findUnique.mockResolvedValue({
+      id: 'm1',
+      user: { firstName: 'John', lastName: 'Doe' },
+    } as never);
+
+    await service.updateStatus('lead-2', masterUser, { status: 'CLOSED' });
+
+    expect(referralsService.qualifyReferral).toHaveBeenCalledWith('client-1');
+    expect(emailDripService.startChain).toHaveBeenCalledWith(
+      'client-1',
+      'lead_closed',
+      { masterName: 'John Doe' },
     );
   });
 });

@@ -86,7 +86,7 @@ describe('ReviewsActionService', () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', rating: 5, criteria: [] }, 'c1', {
+        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
           id: 'c1',
           role: 'CLIENT',
           phoneVerified: true,
@@ -102,7 +102,7 @@ describe('ReviewsActionService', () => {
       prisma.master.findUnique.mockResolvedValue({ id: 'm1', userId: 'u1' });
 
       await expect(
-        service.create({ masterId: 'm1', rating: 5, criteria: [] }, 'c1', {
+        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
           id: 'c1',
           role: 'CLIENT',
           phoneVerified: false,
@@ -118,7 +118,7 @@ describe('ReviewsActionService', () => {
       prisma.master.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', rating: 5, criteria: [] }, 'c1', {
+        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
           id: 'c1',
           role: 'CLIENT',
           phoneVerified: true,
@@ -135,7 +135,7 @@ describe('ReviewsActionService', () => {
       prisma.review.findFirst.mockResolvedValue({ id: 'r1' });
 
       await expect(
-        service.create({ masterId: 'm1', rating: 5, criteria: [] }, 'c1', {
+        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
           id: 'c1',
           role: 'CLIENT',
           phoneVerified: true,
@@ -153,7 +153,7 @@ describe('ReviewsActionService', () => {
       prisma.lead.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.create({ masterId: 'm1', rating: 5, criteria: [] }, 'c1', {
+        service.create({ masterId: 'm1', leadId: 'l1', rating: 5, criteria: [] }, 'c1', {
           id: 'c1',
           role: 'CLIENT',
           phoneVerified: true,

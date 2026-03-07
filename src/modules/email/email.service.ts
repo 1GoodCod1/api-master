@@ -74,4 +74,36 @@ export class EmailService {
       );
     }
   }
+
+  /**
+   * Generic method to send any email.
+   * Used by drip campaigns, notifications, and other modules.
+   */
+  async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ): Promise<void> {
+    const from =
+      this.configService.get<string>('email.from') || 'noreply@moldmasters.md';
+
+    if (this.transporter) {
+      try {
+        await this.transporter.sendMail({ from, to, subject, html, text });
+        this.logger.log(`Email sent to ${to}: "${subject}"`);
+      } catch (err: any) {
+        this.logger.error(`Failed to send email to ${to}:`, err);
+        throw err;
+      }
+      return;
+    }
+
+    // SMTP not configured: log in development
+    if (this.configService.get<string>('nodeEnv') === 'development') {
+      this.logger.warn(
+        `[EMAIL NOT CONFIGURED] Would send to ${to}: "${subject}"`,
+      );
+    }
+  }
 }

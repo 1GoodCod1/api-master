@@ -19,9 +19,9 @@ export default () => ({
     password: process.env.REDIS_PASSWORD || '',
     sentinels: process.env.REDIS_SENTINELS
       ? process.env.REDIS_SENTINELS.split(',').map((s) => {
-          const parts = s.split(':');
-          return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
-        })
+        const parts = s.split(':');
+        return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
+      })
       : null,
     sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
   },
@@ -123,6 +123,12 @@ export default () => ({
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASS || '',
     },
+  },
+
+  webPush: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '',
+    email: process.env.VAPID_EMAIL || 'admin@moldmasters.md',
   },
 
   rateLimit: {

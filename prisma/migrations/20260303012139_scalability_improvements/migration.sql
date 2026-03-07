@@ -24,7 +24,7 @@ FROM users u
 WHERE u.id = m."userId";
 
 -- Create GIN index for fast full-text lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_masters_search_vector
+CREATE INDEX IF NOT EXISTS idx_masters_search_vector
     ON masters USING GIN(search_vector);
 
 -- Trigger function: keep search_vector up-to-date when master's own fields change
@@ -62,16 +62,16 @@ CREATE TRIGGER trg_masters_search_vector
 -- ----------------------------------------------------------------------------
 
 -- Composite index for the most common search filter: category + city + tariff + rating
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_masters_search_main
+CREATE INDEX IF NOT EXISTS idx_masters_search_main
     ON masters("categoryId", "cityId", "tariffType", rating DESC, "isFeatured")
     WHERE "categoryId" IS NOT NULL AND "cityId" IS NOT NULL;
 
 -- Index for "available now" filter
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_masters_available_now
+CREATE INDEX IF NOT EXISTS idx_masters_available_now
     ON masters("isOnline", "availabilityStatus", "categoryId", "cityId")
     WHERE "isOnline" = true AND "availabilityStatus" = 'AVAILABLE';
 
 -- Index for tariff expiry checks
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_masters_tariff_expiry
+CREATE INDEX IF NOT EXISTS idx_masters_tariff_expiry
     ON masters("tariffType", "tariffExpiresAt")
     WHERE "tariffType" != 'BASIC';

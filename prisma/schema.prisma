@@ -134,6 +134,13 @@ enum AvailabilityStatus {
   OFFLINE
 }
 
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  EXPIRED
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -178,6 +185,10 @@ model User {
   masterAvailabilitySubscriptions MasterAvailabilitySubscription[]
   conversations Conversation[] @relation("ClientConversations")
   reviewVotes   ReviewVote[]
+  pushSubscriptions PushSubscription[]
+  referralCode  ReferralCode?  @relation("ReferralOwner")
+  referredBy    Referral?      @relation("ReferredBy")
+  emailDripStatuses EmailDripStatus[]
   
   @@index([avatarFileId])
   @@index([phoneVerified])
@@ -463,6 +474,7 @@ model Lead {
   files       LeadFile[]
   bookings    Booking[]
   reports     Report[]
+  reviews     Review[]
   conversation Conversation?
 
   @@index([masterId])
@@ -498,6 +510,8 @@ model Review {
   clientName  String?
   clientId    String?     
   client      User?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId      String?      @unique
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
   rating      Int          
   comment     String?
   status      ReviewStatus @default(PENDING)
@@ -507,6 +521,7 @@ model Review {
   updatedAt   DateTime     @updatedAt
 
   @@unique([masterId, clientPhone])
+  @@unique([masterId, clientId])
   reviewCriteria ReviewCriteria[]
   reviewFiles    ReviewFile[]
   replies        ReviewReply[]
@@ -515,6 +530,7 @@ model Review {
   @@index([masterId])
   @@index([clientPhone])
   @@index([clientId])
+  @@index([leadId])
   @@index([rating])
   @@index([status])
   @@index([createdAt])
@@ -1017,4 +1033,81 @@ model ReviewVote {
   @@index([reviewId])
   @@index([userId])
   @@map("review_votes")
+}
+
+// ============================================
+// WEB PUSH SUBSCRIPTIONS
+// ============================================
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ============================================
+// REFERRAL PROGRAM
+// ============================================
+
+model ReferralCode {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation("ReferralOwner", fields: [userId], references: [id], onDelete: Cascade)
+  code        String   @unique
+  usageCount  Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  referrals   Referral[]
+
+  @@index([code])
+  @@index([userId])
+  @@map("referral_codes")
+}
+
+model Referral {
+  id              String         @id @default(uuid())
+  referralCodeId  String
+  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  referredUserId  String         @unique
+  referredUser    User           @relation("ReferredBy", fields: [referredUserId], references: [id], onDelete: Cascade)
+  status          ReferralStatus @default(PENDING)
+  rewardGranted   Boolean        @default(false)
+  rewardGrantedAt DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([referralCodeId])
+  @@index([referredUserId])
+  @@index([status])
+  @@map("referrals")
+}
+
+// ============================================
+// EMAIL DRIP CAMPAIGNS
+// ============================================
+
+model EmailDripStatus {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chainType  String
+  step       Int      @default(0)
+  status     String   @default("ACTIVE")
+  metadata   Json?
+  nextSendAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, chainType])
+  @@index([userId])
+  @@index([status, nextSendAt])
+  @@map("email_drip_statuses")
 }

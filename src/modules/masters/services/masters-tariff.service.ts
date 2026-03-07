@@ -123,4 +123,62 @@ export class MastersTariffService {
 
     return master;
   }
+
+  /**
+   * Extend current tariff by days. For BASIC: grants days of VIP. For VIP/PREMIUM: adds days to expiry.
+   */
+  async extendTariffByDays(
+    masterId: string,
+    days: number,
+    onCacheInvalidate?: (
+      masterId: string,
+      slug: string | null,
+    ) => Promise<void>,
+  ) {
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      select: {
+        tariffType: true,
+        tariffExpiresAt: true,
+        slug: true,
+      },
+    });
+
+    if (!master) {
+      throw new NotFoundException('Master not found');
+    }
+
+    const now = new Date();
+    const isExpired = !master.tariffExpiresAt || master.tariffExpiresAt < now;
+
+    let newTariffType = master.tariffType;
+    let newExpiresAt: Date;
+
+    if (master.tariffType === 'BASIC' || isExpired) {
+      newTariffType = TariffType.VIP;
+      newExpiresAt = new Date();
+      newExpiresAt.setDate(newExpiresAt.getDate() + days);
+    } else {
+      const base = master.tariffExpiresAt!;
+      newExpiresAt = new Date(base);
+      newExpiresAt.setDate(newExpiresAt.getDate() + days);
+    }
+
+    const updated = await this.prisma.master.update({
+      where: { id: masterId },
+      data: {
+        tariffType: newTariffType,
+        tariffExpiresAt: newExpiresAt,
+        isFeatured:
+          newTariffType === TariffType.VIP ||
+          newTariffType === TariffType.PREMIUM,
+      },
+    });
+
+    if (onCacheInvalidate) {
+      await onCacheInvalidate(masterId, updated.slug);
+    }
+
+    return updated;
+  }
 }

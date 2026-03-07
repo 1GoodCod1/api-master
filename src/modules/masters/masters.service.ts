@@ -572,6 +572,16 @@ export class MastersService {
   }
 
   /**
+   * Extend current tariff by days (e.g. referral reward).
+   * For BASIC/expired: grants days of VIP. For VIP/PREMIUM: adds days to expiry.
+   */
+  async extendTariffByDays(masterId: string, days: number) {
+    const onInvalidate = (mid: string, slug: string | null) =>
+      this.invalidateMasterCache(mid, slug);
+    return this.tariffService.extendTariffByDays(masterId, days, onInvalidate);
+  }
+
+  /**
    * Верифицированный мастер получает любой тариф бесплатно 1 кликом (до настройки оплаты).
    */
   async claimFreePlan(userId: string, tariffType: 'VIP' | 'PREMIUM') {

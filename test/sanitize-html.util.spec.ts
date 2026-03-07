@@ -7,8 +7,7 @@ import {
   sanitizeArray,
   sanitizeObject,
 } from '../src/modules/shared/utils/sanitize-html.util';
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+
 
 describe('HTML Sanitization Utilities', () => {
   describe('sanitizeStrict', () => {

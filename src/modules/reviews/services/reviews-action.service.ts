@@ -34,7 +34,7 @@ export class ReviewsActionService {
     clientId: string,
     authUser?: JwtUser | null,
   ) {
-    const { masterId, rating, criteria, fileIds } = createReviewDto;
+    const { masterId, leadId, rating, criteria, fileIds } = createReviewDto;
 
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
     if (!user || !user.phone) {
@@ -54,7 +54,7 @@ export class ReviewsActionService {
     });
     if (!master) throw new NotFoundException('Мастер не найден');
 
-    // Проверка на дубликат
+    // Проверка на дубликат (один отзыв на мастера от клиента)
     const existingReview = await this.prisma.review.findFirst({
       where: { masterId, clientId },
     });
@@ -62,14 +62,33 @@ export class ReviewsActionService {
       throw new BadRequestException('Вы уже оставили отзыв об этом мастере');
     }
 
-    // Проверка наличия завершенного лида
-    const closedLead = await this.prisma.lead.findFirst({
-      where: { masterId, clientId, status: LeadStatus.CLOSED },
+    // Валидация leadId: лид принадлежит клиенту, имеет правильный статус, нет дубликата
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { id: true, masterId: true, clientId: true, status: true, clientName: true },
     });
-    if (!closedLead) {
+
+    if (!lead) {
+      throw new BadRequestException('Указанная заявка не найдена.');
+    }
+    if (lead.clientId !== clientId) {
+      throw new ForbiddenException('Эта заявка принадлежит другому клиенту.');
+    }
+    if (lead.masterId !== masterId) {
+      throw new BadRequestException('Заявка относится к другому мастеру.');
+    }
+    if (lead.status !== LeadStatus.CLOSED) {
       throw new BadRequestException(
         'Отзыв можно оставить только после того, как заказ будет выполнен (статус CLOSED).',
       );
+    }
+
+    // Проверка: отзыв на этот лид уже написан
+    const reviewForLead = await this.prisma.review.findUnique({
+      where: { leadId },
+    });
+    if (reviewForLead) {
+      throw new BadRequestException('Отзыв на эту заявку уже оставлен.');
     }
 
     // Валидация критериев
@@ -79,7 +98,7 @@ export class ReviewsActionService {
       fileIds && fileIds.length ? fileIds.slice(0, 5).filter(Boolean) : [];
     let displayName =
       createReviewDto.clientName?.trim() ||
-      closedLead.clientName?.trim() ||
+      lead.clientName?.trim() ||
       null;
     if (!displayName && user) {
       const full = [user.firstName, user.lastName]
@@ -93,6 +112,7 @@ export class ReviewsActionService {
       data: {
         masterId,
         clientId,
+        leadId,
         clientPhone: user.phone,
         clientName: displayName,
         rating,
@@ -101,13 +121,13 @@ export class ReviewsActionService {
         reviewCriteria:
           criteria && criteria.length > 0
             ? {
-                createMany: {
-                  data: criteria.map((c) => ({
-                    criteria: c.criteria,
-                    rating: c.rating,
-                  })),
-                },
-              }
+              createMany: {
+                data: criteria.map((c) => ({
+                  criteria: c.criteria,
+                  rating: c.rating,
+                })),
+              },
+            }
             : undefined,
         reviewFiles:
           safeFileIds.length > 0
@@ -244,16 +264,16 @@ export class ReviewsActionService {
     });
     const result = existingReply
       ? await this.prisma.reviewReply.update({
-          where: { reviewId },
-          data: { content },
-        })
+        where: { reviewId },
+        data: { content },
+      })
       : await this.prisma.reviewReply.create({
-          data: {
-            reviewId,
-            masterId,
-            content,
-          },
-        });
+        data: {
+          reviewId,
+          masterId,
+          content,
+        },
+      });
 
     await this.invalidateMasterCache(review.masterId);
     return result;

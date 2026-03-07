@@ -48,6 +48,8 @@ import { CacheWarmingModule } from './modules/cache-warming/cache-warming.module
 import { EmailModule } from './modules/email/email.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
+import { WebPushModule } from './modules/web-push/web-push.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 import { AppModule as AppRootModule } from './app/app.module';
 
 @Module({
@@ -191,6 +193,8 @@ import { AppModule as AppRootModule } from './app/app.module';
     CacheWarmingModule,
     ChatModule,
     PromotionsModule,
+    WebPushModule,
+    ReferralsModule,
   ],
 })
 export class AppModule implements NestModule {
