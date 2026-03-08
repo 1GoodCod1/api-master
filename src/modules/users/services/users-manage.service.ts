@@ -104,6 +104,19 @@ export class UsersManageService {
   }
 
   /**
+   * Установить предпочитаемый язык для email-шаблонов
+   */
+  async setPreferredLanguage(
+    userId: string,
+    lang: 'en' | 'ru' | 'ro',
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredLanguage: lang },
+    });
+  }
+
+  /**
    * Установить или удалить аватар пользователя
    */
   async setAvatar(userId: string, fileId?: string) {

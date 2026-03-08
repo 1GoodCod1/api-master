@@ -18,15 +18,37 @@ export class WebPushService {
   private readonly logger = new Logger(WebPushService.name);
   private readonly enabled: boolean;
 
+  private readonly publicKey: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    const publicKey = this.configService.get<string>('webPush.publicKey', '');
-    const privateKey = this.configService.get<string>('webPush.privateKey', '');
-    const email = this.configService.get<string>('webPush.email', '');
+    let publicKey = this.configService.get<string>('webPush.publicKey', '');
+    let privateKey = this.configService.get<string>('webPush.privateKey', '');
+    const email = this.configService.get<string>(
+      'webPush.email',
+      'admin@moldmasters.md',
+    );
 
-    if (publicKey && privateKey && email) {
+    if (!publicKey || !privateKey) {
+      const isDev =
+        this.configService.get<string>('nodeEnv', 'development') ===
+        'development';
+      if (isDev) {
+        const keys = webpush.generateVAPIDKeys();
+        publicKey = keys.publicKey;
+        privateKey = keys.privateKey;
+        this.logger.warn(
+          'Web Push: VAPID keys not configured. Using auto-generated keys for development. ' +
+            'Run "npm run generate:secrets" and add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY to .env for production.',
+        );
+      }
+    }
+
+    this.publicKey = publicKey;
+
+    if (publicKey && privateKey) {
       webpush.setVapidDetails(`mailto:${email}`, publicKey, privateKey);
       this.enabled = true;
       this.logger.log('Web Push VAPID configured');
@@ -128,6 +150,6 @@ export class WebPushService {
    * Get VAPID public key for frontend
    */
   getPublicKey(): string {
-    return this.configService.get<string>('webPush.publicKey', '');
+    return this.publicKey;
   }
 }

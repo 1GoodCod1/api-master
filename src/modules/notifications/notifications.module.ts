@@ -12,6 +12,7 @@ import { NotificationsActionService } from './services/notifications-action.serv
 import { NotificationsSenderService } from './services/notifications-sender.service';
 import { InAppNotificationService } from './services/in-app-notification.service';
 import { WebSocketModule } from '../websocket/websocket.module';
+import { WebPushModule } from '../web-push/web-push.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { WebSocketModule } from '../websocket/websocket.module';
     PrismaModule,
     RedisModule,
     forwardRef(() => WebSocketModule),
+    WebPushModule,
   ],
   controllers: [NotificationsController],
   providers: [

@@ -1,8 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../shared/database/prisma.service';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
-import type { TemplateContext } from './email-template.service';
+import type { TemplateContext } from './templates';
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v != null && typeof v === 'object' && !Array.isArray(v);
+}
+
+function parseLang(s: string | null | undefined): 'en' | 'ru' | 'ro' {
+  if (s === 'en' || s === 'ru' || s === 'ro') return s;
+  return 'ro';
+}
+
+/** Copy only primitive values from metadata to avoid unsafe assignment from Prisma JsonValue */
+function toTemplateContext(metadata: Record<string, unknown>): TemplateContext {
+  const ctx: TemplateContext = {};
+  for (const [k, v] of Object.entries(metadata)) {
+    if (
+      typeof v === 'string' ||
+      typeof v === 'number' ||
+      typeof v === 'boolean' ||
+      v === null ||
+      v === undefined
+    ) {
+      ctx[k] = v;
+    }
+  }
+  return ctx;
+}
 
 /**
  * Drip chain definitions: [step] → { template, delayMs }
@@ -66,6 +93,11 @@ export class EmailDripService {
       this.logger.debug(`Chain ${chainType} already active for user ${userId}`);
       return;
     }
+    // Reengagement: don't restart if already completed (avoid daily spam)
+    if (chainType === 'reengagement' && existing?.status === 'COMPLETED') {
+      this.logger.debug(`Reengagement already sent for user ${userId}`);
+      return;
+    }
 
     // Send first step immediately if delay is 0
     const firstStep = chain[0];
@@ -89,13 +121,13 @@ export class EmailDripService {
         chainType,
         step: nextStepIndex,
         status,
-        metadata: context,
+        metadata: context as unknown as Prisma.InputJsonValue,
         nextSendAt,
       },
       update: {
         step: nextStepIndex,
         status,
-        metadata: context,
+        metadata: context as unknown as Prisma.InputJsonValue,
         nextSendAt,
       },
     });
@@ -115,7 +147,14 @@ export class EmailDripService {
         nextSendAt: { lte: now },
       },
       include: {
-        user: { select: { email: true, firstName: true, lastName: true } },
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true,
+            preferredLanguage: true,
+          },
+        },
       },
       take: 50, // process in batches
     });
@@ -133,12 +172,16 @@ export class EmailDripService {
           continue;
         }
 
-        const context: TemplateContext = {
-          ...((drip.metadata as TemplateContext) ?? {}),
-          userName: drip.user.firstName ?? undefined,
-        };
-
-        await this.sendStep(drip.userId, drip.chainType, drip.step, context);
+        const metadata = isPlainObject(drip.metadata) ? drip.metadata : {};
+        const user = drip.user as {
+          firstName: string | null;
+          preferredLanguage: string | null;
+        } & Prisma.UserGetPayload<{ select: { email: true } }>;
+        await this.sendStep(drip.userId, drip.chainType, drip.step, {
+          ...toTemplateContext(metadata),
+          userName: user.firstName ?? undefined,
+          lang: parseLang(user.preferredLanguage),
+        });
 
         // Advance to next step
         const nextStep = drip.step + 1;
@@ -188,7 +231,7 @@ export class EmailDripService {
     const step = chain[stepIndex];
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, firstName: true },
+      select: { email: true, firstName: true, preferredLanguage: true },
     });
 
     if (!user?.email) {
@@ -199,6 +242,7 @@ export class EmailDripService {
     const ctx: TemplateContext = {
       ...context,
       userName: user.firstName ?? undefined,
+      lang: parseLang(user.preferredLanguage),
     };
 
     const rendered = this.templateService.render(step.template, ctx);

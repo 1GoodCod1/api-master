@@ -13,9 +13,16 @@ import { AdminPaymentsService } from './services/admin-payments.service';
 import { AdminAuditService } from './services/admin-audit.service';
 import { AdminAnalyticsService } from './services/admin-analytics.service';
 import { AdminSystemService } from './services/admin-system.service';
+import { AppSettingsModule } from '../app-settings/app-settings.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, CacheModule, TasksModule],
+  imports: [
+    PrismaModule,
+    RedisModule,
+    CacheModule,
+    TasksModule,
+    AppSettingsModule,
+  ],
   controllers: [AdminController],
   providers: [
     AdminService,

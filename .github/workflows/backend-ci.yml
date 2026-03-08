@@ -125,4 +125,4 @@ jobs:
             cd /opt/moldmasters-backend
             docker-compose -f docker-compose.prod.yml pull api
             docker-compose -f docker-compose.prod.yml up -d api
-            docker exec moldmasters-api-prod npx prisma migrate deploy
+            docker exec masterhub-api-prod npx prisma migrate deploy

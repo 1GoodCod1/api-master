@@ -5,6 +5,8 @@ import { TasksAnalyticsService } from './services/tasks-analytics.service';
 import { TasksMaintenanceService } from './services/tasks-maintenance.service';
 import { TasksActivityService } from './services/tasks-activity.service';
 import { TasksBookingReminderService } from './services/tasks-booking-reminder.service';
+import { TasksDigestService } from './services/tasks-digest.service';
+import { TasksDripService } from './services/tasks-drip.service';
 
 /**
  * TasksService — координатор фоновых задач системы.
@@ -20,6 +22,8 @@ export class TasksService {
     private readonly maintenanceTasks: TasksMaintenanceService,
     private readonly activityTasks: TasksActivityService,
     private readonly bookingReminderTasks: TasksBookingReminderService,
+    private readonly digestTasks: TasksDigestService,
+    private readonly dripTasks: TasksDripService,
   ) {}
 
   /**
@@ -36,6 +40,7 @@ export class TasksService {
       this.analyticsTasks.sendDailyReports(),
       this.maintenanceTasks.cleanupExpiredTokens(),
       this.activityTasks.checkInactiveMasters(),
+      this.digestTasks.sendDigest(),
     ]);
 
     this.logger.log('Ежедневные задачи завершены');
@@ -54,6 +59,7 @@ export class TasksService {
       this.tariffTasks.checkPendingUpgradeTimeouts(),
       this.tariffTasks.sendTariffExpirationReminders(),
       this.bookingReminderTasks.sendBookingReminders(),
+      this.dripTasks.processPendingDrips(),
     ]);
   }
 

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -13,6 +14,7 @@ import type { RequestWithUser } from '../../common/decorators/get-user.decorator
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SetUserAvatarDto } from './dto/set-avatar.dto';
+import { PreferredLanguageDto } from './dto/preferred-language.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -80,6 +82,19 @@ export class UsersController {
   })
   async getStatistics() {
     return this.usersService.getStatistics();
+  }
+
+  @Patch('me/preferred-language')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Установить язык для email-шаблонов (en | ru | ro)',
+  })
+  async setPreferredLanguage(
+    @Req() req: RequestWithUser,
+    @Body() dto: PreferredLanguageDto,
+  ) {
+    return this.usersService.setPreferredLanguage(req.user.id, dto.lang);
   }
 
   @Put('me/avatar')

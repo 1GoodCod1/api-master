@@ -164,6 +164,7 @@ model User {
   lastWarningAt DateTime?
   ipAddress     String?
   deviceFingerprint String?
+  preferredLanguage String?  @default("ro") // en | ru | ro — для email-шаблонов
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -186,6 +187,7 @@ model User {
   conversations Conversation[] @relation("ClientConversations")
   reviewVotes   ReviewVote[]
   pushSubscriptions PushSubscription[]
+  digestSubscription DigestSubscription?
   referralCode  ReferralCode?  @relation("ReferralOwner")
   referredBy    Referral?      @relation("ReferredBy")
   emailDripStatuses EmailDripStatus[]
@@ -1051,6 +1053,32 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+// ============================================
+// DIGEST SUBSCRIPTION (auth-only, role-based)
+// ============================================
+
+model DigestSubscription {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscribedAt DateTime @default(now())
+
+  @@map("digest_subscriptions")
+}
+
+// ============================================
+// APP SETTINGS (admin-toggleable features)
+// ============================================
+
+model AppSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
 }
 
 // ============================================

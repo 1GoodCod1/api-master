@@ -8,6 +8,7 @@ import { PrismaService } from '../shared/database/prisma.service';
 import { Prisma, ReferralStatus } from '@prisma/client';
 import { MastersService } from '../masters/masters.service';
 import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
 
 const REFERRAL_REWARD_DAYS = 7;
 
@@ -19,6 +20,7 @@ export class ReferralsService {
     private readonly prisma: PrismaService,
     private readonly mastersService: MastersService,
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly appSettings: AppSettingsService,
   ) {}
 
   /**
@@ -69,6 +71,15 @@ export class ReferralsService {
    * Get referral info for current user
    */
   async getMyReferralInfo(userId: string) {
+    const enabled = await this.appSettings.isReferralsEnabled();
+    if (!enabled) {
+      return {
+        code: '',
+        usageCount: 0,
+        referrals: [],
+        stats: { total: 0, pending: 0, qualified: 0, rewarded: 0 },
+      };
+    }
     let referralCode = await this.prisma.referralCode.findUnique({
       where: { userId },
       include: {
@@ -132,6 +143,10 @@ export class ReferralsService {
    * Apply referral code during registration
    */
   async applyReferralCode(referredUserId: string, code: string) {
+    const enabled = await this.appSettings.isReferralsEnabled();
+    if (!enabled) {
+      throw new BadRequestException('Реферальная программа отключена');
+    }
     const referralCode = await this.prisma.referralCode.findUnique({
       where: { code },
     });
@@ -182,6 +197,8 @@ export class ReferralsService {
    * Called when a referred user closes their first lead — qualify and grant reward
    */
   async qualifyReferral(referredUserId: string) {
+    const enabled = await this.appSettings.isReferralsEnabled();
+    if (!enabled) return;
     const referral = await this.prisma.referral.findUnique({
       where: { referredUserId },
       include: {
@@ -247,6 +264,8 @@ export class ReferralsService {
    * Validate a referral code (public endpoint for registration form)
    */
   async validateCode(code: string) {
+    const enabled = await this.appSettings.isReferralsEnabled();
+    if (!enabled) return { valid: false };
     const referralCode = await this.prisma.referralCode.findUnique({
       where: { code },
       select: {

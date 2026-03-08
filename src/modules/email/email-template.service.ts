@@ -1,21 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TEMPLATES } from './templates';
+import type { TemplateContext } from './templates';
 
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue =
-  | JsonPrimitive
-  | JsonValue[]
-  | { [key: string]: JsonValue | undefined };
+function htmlEscape(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
-export interface TemplateContext {
-  userName?: string;
-  masterName?: string;
-  leadId?: string;
-  resetLink?: string;
-  reviewLink?: string;
-  dashboardLink?: string;
-  frontendUrl?: string;
-  [key: string]: JsonValue | undefined;
+/**
+ * Recursively sanitize context values for safe HTML rendering.
+ * Escapes strings at any nesting level; passes through primitives; recurses into objects/arrays.
+ * Prevents XSS when templates render nested fields (e.g. metadata.foo).
+ */
+function sanitizeValue(v: unknown, visited = new WeakSet<object>()): unknown {
+  if (v === null || v === undefined) return v;
+  if (typeof v === 'string') return htmlEscape(v);
+  if (typeof v === 'number' || typeof v === 'boolean') return v;
+  if (typeof v === 'object') {
+    if (visited.has(v)) return v;
+    visited.add(v);
+    if (Array.isArray(v)) {
+      return v.map((item) => sanitizeValue(item, visited));
+    }
+    if (Object.getPrototypeOf(v) === Object.prototype) {
+      const out: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(v)) {
+        out[k] = sanitizeValue(val, visited);
+      }
+      return out;
+    }
+  }
+  return v;
+}
+
+function sanitizeContext(ctx: TemplateContext): TemplateContext {
+  return sanitizeValue(ctx, new WeakSet()) as TemplateContext;
 }
 
 @Injectable()
@@ -28,13 +52,22 @@ export class EmailTemplateService {
   }
 
   /**
-   * Render email template by name
+   * Render email template by name.
+   * @param context.lang — язык (en|ru|ro), по умолчанию 'ro'
    */
   render(
     templateName: string,
     context: TemplateContext = {},
   ): { subject: string; html: string; text: string } {
-    const ctx = { ...context, frontendUrl: this.frontendUrl };
+    const lang = (
+      ['en', 'ru', 'ro'].includes(context.lang as string) ? context.lang : 'ro'
+    ) as 'en' | 'ru' | 'ro';
+    const raw = {
+      ...context,
+      frontendUrl: this.frontendUrl,
+      lang,
+    };
+    const ctx = sanitizeContext(raw);
     const template = TEMPLATES[templateName];
     if (!template) {
       return {
@@ -72,182 +105,11 @@ export class EmailTemplateService {
     <div class="header"><h1>MoldMasters</h1></div>
     <div class="content">${bodyHtml}</div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} MoldMasters. Все права защищены.</p>
-      <p><a href="${this.frontendUrl}" style="color:#f59e0b;">moldmasters.md</a></p>
+      <p>© ${new Date().getFullYear()} MasterHub. Все права защищены.</p>
+      <p><a href="${this.frontendUrl}" style="color:#f59e0b;">master-hub.md</a></p>
     </div>
   </div>
 </body>
 </html>`;
   }
 }
-
-// ============================================
-// EMAIL TEMPLATES
-// ============================================
-
-type TemplateFn = {
-  subject: (ctx: TemplateContext) => string;
-  html: (ctx: TemplateContext) => string;
-  text: (ctx: TemplateContext) => string;
-};
-
-const TEMPLATES: Record<string, TemplateFn> = {
-  // ---- WELCOME CHAIN ----
-  'welcome-1': {
-    subject: () => 'Добро пожаловать в MoldMasters! 🎉',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Мы рады, что вы присоединились к MoldMasters — платформе для поиска лучших мастеров Молдовы.</p>
-      <p><strong>Что вы можете сделать:</strong></p>
-      <ul>
-        <li>🔍 Найти мастера по категории и городу</li>
-        <li>📩 Отправить заявку на услугу</li>
-        <li>💬 Написать мастеру в чат</li>
-        <li>⭐ Оставить честный отзыв</li>
-      </ul>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/masters" class="btn">Найти мастера →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Добро пожаловать${ctx.userName ? `, ${ctx.userName}` : ''}! Начните поиск мастера: ${ctx.frontendUrl}/masters`,
-  },
-
-  'welcome-2': {
-    subject: () => 'Как найти идеального мастера — 3 простых шага',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Расскажем, как быстро найти нужного мастера:</p>
-      <p><strong>Шаг 1:</strong> Выберите категорию и город</p>
-      <p><strong>Шаг 2:</strong> Просмотрите профили, рейтинги и портфолио</p>
-      <p><strong>Шаг 3:</strong> Отправьте заявку с описанием задачи</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/how-it-works" class="btn">Как это работает →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `3 шага для поиска мастера: 1) Категория + город 2) Рейтинги и портфолио 3) Отправьте заявку. ${ctx.frontendUrl}/how-it-works`,
-  },
-
-  // ---- LEAD CHAIN ----
-  'lead-created': {
-    subject: () => 'Ваша заявка отправлена ✅',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Ваша заявка${ctx.masterName ? ` мастеру <strong>${ctx.masterName}</strong>` : ''} успешно отправлена.</p>
-      <p>Мастер получил уведомление и обычно отвечает в течение 1-2 часов.</p>
-      <p>Вы можете отслеживать статус заявки в личном кабинете.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/client-dashboard/leads" class="btn">Мои заявки →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Заявка${ctx.masterName ? ` мастеру ${ctx.masterName}` : ''} отправлена. Отслеживайте: ${ctx.frontendUrl}/client-dashboard/leads`,
-  },
-
-  'lead-followup': {
-    subject: () => 'Мастер ответил на вашу заявку?',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Вы отправляли заявку${ctx.masterName ? ` мастеру <strong>${ctx.masterName}</strong>` : ''}.</p>
-      <p>Мастер уже ответил? Если да, обсудите детали в чате. Если нет — можно найти другого мастера.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/client-dashboard/leads" class="btn">Проверить статус →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Мастер ответил? Проверьте: ${ctx.frontendUrl}/client-dashboard/leads`,
-  },
-
-  // ---- REVIEW REQUEST CHAIN ----
-  'review-request': {
-    subject: () => 'Как прошла работа? Оставьте отзыв ⭐',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Ваш заказ${ctx.masterName ? ` у мастера <strong>${ctx.masterName}</strong>` : ''} выполнен.</p>
-      <p>Пожалуйста, оцените качество работы — это поможет другим клиентам и мотивирует мастера.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.reviewLink || `${ctx.frontendUrl}/client-dashboard/leads`}" class="btn">Оставить отзыв ⭐</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Оставьте отзыв${ctx.masterName ? ` мастеру ${ctx.masterName}` : ''}: ${ctx.reviewLink || ctx.frontendUrl}`,
-  },
-
-  // ---- RE-ENGAGEMENT ----
-  reengagement: {
-    subject: () => 'Мы скучаем! 💜 Новые мастера ждут вас',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Давно не заходили? У нас появились новые мастера и акции!</p>
-      <p>Загляните — вдруг найдёте именно того мастера, которого искали.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/masters" class="btn">Посмотреть мастеров →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Давно не заходили? Посмотрите новых мастеров: ${ctx.frontendUrl}/masters`,
-  },
-
-  // ---- MASTER WELCOME ----
-  'master-welcome-1': {
-    subject: () => 'Добро пожаловать, мастер! 🛠 Заполните профиль',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Вы зарегистрировались как мастер на MoldMasters.</p>
-      <p><strong>Чтобы получать заявки, заполните профиль:</strong></p>
-      <ul>
-        <li>📸 Добавьте фото</li>
-        <li>📝 Опишите свои услуги</li>
-        <li>💰 Укажите цены</li>
-        <li>🖼 Загрузите портфолио</li>
-      </ul>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/dashboard/profile" class="btn">Заполнить профиль →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Заполните профиль мастера: ${ctx.frontendUrl}/dashboard/profile`,
-  },
-
-  'master-welcome-2': {
-    subject: () => 'Добавьте портфолио — получайте больше заявок!',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Мастера с портфолио получают в <strong>3 раза больше заявок</strong>!</p>
-      <p>Загрузите фото ваших работ «до/после» — это лучший способ показать свой уровень.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/dashboard/portfolio" class="btn">Добавить портфолио →</a>
-      </p>
-    `,
-    text: (ctx) => `Добавьте портфолио: ${ctx.frontendUrl}/dashboard/portfolio`,
-  },
-
-  // ---- BOOKING REMINDER ----
-  'booking-reminder-24h': {
-    subject: () => 'Напоминание: завтра у вас запись 📆',
-    html: (ctx) => `
-      <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-      <p>Напоминаем, что <strong>завтра</strong> у вас запись${ctx.masterName ? ` к мастеру <strong>${ctx.masterName}</strong>` : ''}.</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.frontendUrl}/client-dashboard/bookings" class="btn">Мои записи →</a>
-      </p>
-    `,
-    text: (ctx) =>
-      `Завтра у вас запись${ctx.masterName ? ` к мастеру ${ctx.masterName}` : ''}. ${ctx.frontendUrl}/client-dashboard/bookings`,
-  },
-
-  // ---- PASSWORD RESET (replacing old inline HTML) ----
-  'password-reset': {
-    subject: () => 'MoldMasters: Сброс пароля',
-    html: (ctx) => `
-      <p>Здравствуйте.</p>
-      <p>Вы запросили сброс пароля. Перейдите по ссылке (действует 1 час):</p>
-      <p style="text-align:center; margin-top:24px;">
-        <a href="${ctx.resetLink}" class="btn">Сбросить пароль →</a>
-      </p>
-      <p style="margin-top:16px; font-size:12px; color:#999;">Если вы не запрашивали сброс, проигнорируйте это письмо.</p>
-    `,
-    text: (ctx) => `Сброс пароля: ${ctx.resetLink}. Ссылка действует 1 час.`,
-  },
-};

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { NotificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { WebsocketService } from '../../websocket/websocket.service';
+import { WebPushService } from '../../web-push/web-push.service';
 import { NotificationCategory } from '@prisma/client';
 
 /**
@@ -51,6 +52,7 @@ export class InAppNotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly websocketService: WebsocketService,
+    private readonly webPushService: WebPushService,
   ) {}
 
   // ─── Универсальный метод ────────────────────────────────────────
@@ -85,6 +87,29 @@ export class InAppNotificationService {
         timestamp: notification.createdAt.toISOString(),
         priority: params.priority ?? 'normal',
       });
+
+      // 3. Отправляем Web Push (браузерные уведомления)
+      const url = this.buildNotificationUrl(params.category, params.metadata);
+      this.webPushService
+        .sendToUser(params.userId, {
+          title: params.title,
+          body: params.message,
+          url,
+          tag: params.category,
+          data: params.metadata ?? {},
+        })
+        .then((sent) => {
+          if (sent > 0) {
+            this.logger.debug(
+              `Web push sent to user ${params.userId}: ${params.category}`,
+            );
+          }
+        })
+        .catch((err) => {
+          this.logger.warn(
+            `Web push failed for user ${params.userId}: ${String(err)}`,
+          );
+        });
 
       this.logger.debug(
         `In-app notification sent to user ${params.userId}: ${params.category}`,
@@ -546,6 +571,53 @@ export class InAppNotificationService {
   }
 
   // ─── UTILS ──────────────────────────────────────────────────────
+
+  /**
+   * Построить URL для Web Push (относительный путь для клика по уведомлению)
+   */
+  private buildNotificationUrl(
+    category: NotificationCategory,
+    metadata?: Record<string, any>,
+  ): string | undefined {
+    const m = metadata ?? {};
+    const leadId = m.leadId as string | undefined;
+    const conversationId = m.conversationId as string | undefined;
+    const masterId = m.masterId as string | undefined;
+
+    const masterPaths: Partial<Record<NotificationCategory, string>> = {
+      NEW_LEAD: leadId ? `/dashboard/leads/${leadId}` : '/dashboard/leads',
+      LEAD_STATUS_UPDATED: leadId
+        ? `/dashboard/leads/${leadId}`
+        : '/dashboard/leads',
+      NEW_REVIEW: '/dashboard/reviews',
+      NEW_CHAT_MESSAGE: conversationId
+        ? `/dashboard/chat/${conversationId}`
+        : '/dashboard/chat',
+      SUBSCRIPTION_EXPIRING: '/dashboard/subscription',
+      SUBSCRIPTION_EXPIRED: '/dashboard/subscription',
+      PAYMENT_SUCCESS: '/dashboard/payments',
+      PAYMENT_FAILED: '/dashboard/payments',
+      VERIFICATION_APPROVED: '/dashboard/profile',
+      VERIFICATION_REJECTED: '/dashboard/verification',
+      BOOKING_CONFIRMED: '/dashboard/bookings',
+      BOOKING_CANCELLED: '/dashboard/bookings',
+    };
+
+    const clientPaths: Partial<Record<NotificationCategory, string>> = {
+      LEAD_SENT: leadId
+        ? `/client-dashboard/leads/${leadId}/book`
+        : '/client-dashboard/leads',
+      MASTER_AVAILABLE: masterId ? `/masters/${masterId}` : '/masters',
+      NEW_PROMOTION: masterId ? `/masters/${masterId}` : '/masters',
+      NEW_CHAT_MESSAGE: conversationId
+        ? `/client-dashboard/chat/${conversationId}`
+        : '/client-dashboard/chat',
+      BOOKING_CONFIRMED: '/client-dashboard/bookings',
+      BOOKING_CANCELLED: '/client-dashboard/bookings',
+    };
+
+    return masterPaths[category] ?? clientPaths[category] ?? '/';
+  }
 
   /**
    * Конвертировать NotificationCategory -> фронтенд event type

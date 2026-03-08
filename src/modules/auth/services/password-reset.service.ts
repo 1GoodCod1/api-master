@@ -63,7 +63,13 @@ export class PasswordResetService {
     });
 
     const resetLink = `${this.configService.get('frontendUrl')}/reset-password?token=${token}`;
-    await this.emailService.sendPasswordResetEmail(user.email, resetLink);
+    const lang = (
+      user.preferredLanguage &&
+      ['en', 'ru', 'ro'].includes(user.preferredLanguage)
+        ? user.preferredLanguage
+        : 'ro'
+    ) as 'en' | 'ru' | 'ro';
+    await this.emailService.sendPasswordResetEmail(user.email, resetLink, lang);
 
     return {
       message:

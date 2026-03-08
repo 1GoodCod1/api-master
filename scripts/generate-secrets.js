@@ -6,16 +6,22 @@
  */
 
 const crypto = require('crypto');
+const webpush = require('web-push');
 
 console.log('🔐 Generating production secrets...\n');
 console.log('Copy these to your .env.production file:\n');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+const vapidKeys = webpush.generateVAPIDKeys();
 
 const secrets = {
   JWT_ACCESS_SECRET: crypto.randomBytes(32).toString('hex'),
   JWT_REFRESH_SECRET: crypto.randomBytes(32).toString('hex'),
   ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex'),
   ID_ENCRYPTION_SECRET: crypto.randomBytes(32).toString('hex'),
+  VAPID_PUBLIC_KEY: vapidKeys.publicKey,
+  VAPID_PRIVATE_KEY: vapidKeys.privateKey,
+  VAPID_EMAIL: 'admin@moldmasters.md',
 };
 
 Object.entries(secrets).forEach(([key, value]) => {

@@ -79,8 +79,20 @@ export class UsersService {
   }
 
   /**
+   * Установить предпочитаемый язык для email-шаблонов
+   */
+  async setPreferredLanguage(
+    userId: string,
+    lang: 'en' | 'ru' | 'ro',
+  ): Promise<{ preferredLanguage: string }> {
+    await this.manageService.setPreferredLanguage(userId, lang);
+    return { preferredLanguage: lang };
+  }
+
+  /**
    * Удалить фотографию клиента
    */
+
   async removeMyPhoto(userId: string, fileId: string) {
     return this.manageService.removeMyPhoto(userId, fileId);
   }

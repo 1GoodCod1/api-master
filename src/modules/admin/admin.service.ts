@@ -12,6 +12,12 @@ import {
 } from './services/admin-system.service';
 import { TasksActivityService } from '../tasks/services/tasks-activity.service';
 import { CacheService } from '../shared/cache/cache.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
+import {
+  EmailBroadcastService,
+  type BroadcastResult,
+  type BroadcastSegment,
+} from '../email/email-broadcast.service';
 
 /**
  * Главный сервис админки - координатор для специализированных сервисов
@@ -32,6 +38,8 @@ export class AdminService {
     private readonly systemService: AdminSystemService,
     private readonly activityService: TasksActivityService,
     private readonly cache: CacheService,
+    private readonly appSettings: AppSettingsService,
+    private readonly emailBroadcast: EmailBroadcastService,
   ) {}
 
   // ==================== DASHBOARD ====================
@@ -177,6 +185,14 @@ export class AdminService {
     return this.systemService.getBackupPath(filename);
   }
 
+  async isReferralsEnabled(): Promise<boolean> {
+    return this.appSettings.isReferralsEnabled();
+  }
+
+  async setReferralsEnabled(enabled: boolean): Promise<boolean> {
+    return this.appSettings.setReferralsEnabled(enabled);
+  }
+
   /** Сброс кэша тарифов (после сида или если список пустой из кэша) */
   async invalidateTariffsCache(): Promise<{ invalidated: number }> {
     const invalidated = await this.cache.invalidate('cache:tariffs:all:*');
@@ -193,5 +209,19 @@ export class AdminService {
     ratingPenalty: number;
   }> {
     return this.activityService.getInactivityStats();
+  }
+
+  // ==================== EMAIL BROADCAST ====================
+
+  async sendEmailBroadcast(
+    segment: BroadcastSegment,
+    templateName: string,
+    options?: { sinceDate?: string },
+  ): Promise<BroadcastResult> {
+    return this.emailBroadcast.sendBroadcast(segment, templateName, options);
+  }
+
+  getBroadcastTemplates(): string[] {
+    return this.emailBroadcast.getAvailableTemplates();
   }
 }

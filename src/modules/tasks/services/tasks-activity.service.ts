@@ -8,6 +8,7 @@ interface MasterWithUser extends Master {
 }
 import { RedisService } from '../../shared/redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { EmailDripService } from '../../email/email-drip.service';
 
 /**
  * Сервис для проверки активности мастеров
@@ -36,12 +37,14 @@ export class TasksActivityService {
   // Константы для настройки поведения (можно вынести в .env)
   private readonly INACTIVITY_THRESHOLD_DAYS = 30; // Порог неактивности в днях
   private readonly WARNING_THRESHOLD_DAYS = 25; // Предупреждение за 5 дней до деактивации
+  private readonly REENGAGEMENT_THRESHOLD_DAYS = 14; // Email reengagement (до предупреждения)
   private readonly RATING_PENALTY = 0.5; // Штраф к рейтингу за неактивность
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly notifications: NotificationsService,
+    private readonly emailDripService: EmailDripService,
   ) {}
 
   /**
@@ -61,6 +64,48 @@ export class TasksActivityService {
       warningThreshold.setDate(
         warningThreshold.getDate() - this.WARNING_THRESHOLD_DAYS,
       );
+
+      const reengagementThreshold = new Date();
+      reengagementThreshold.setDate(
+        reengagementThreshold.getDate() - this.REENGAGEMENT_THRESHOLD_DAYS,
+      );
+
+      // Reengagement: мастера неактивны 14–25 дней — email drip
+      const mastersForReengagement = await this.prisma.master.findMany({
+        where: {
+          lastActivityAt: {
+            lt: reengagementThreshold, // inactive > 14 days
+            gte: warningThreshold, // inactive < 25 days
+          },
+          isOnline: true,
+          user: {
+            isBanned: false,
+          },
+        },
+        include: {
+          user: {
+            select: { id: true, email: true },
+          },
+        },
+      });
+
+      this.logger.log(
+        `Найдено ${mastersForReengagement.length} мастеров для reengagement`,
+      );
+
+      for (const master of mastersForReengagement) {
+        if (!master.user?.email) continue;
+        try {
+          await this.emailDripService.startChain(
+            master.user.id,
+            'reengagement',
+          );
+        } catch (err) {
+          this.logger.error(
+            `Reengagement failed for master ${master.id}: ${String(err)}`,
+          );
+        }
+      }
 
       // Находим мастеров, которые не заходили больше месяца
       const inactiveMasters = await this.prisma.master.findMany({

@@ -12,6 +12,7 @@ import {
   Header,
   Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import {
   ApiTags,
@@ -26,6 +27,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemStats } from './services/admin-system.service';
 import { AdminUpdateUserDto } from './dto/update-user.dto';
 import { AdminUpdateMasterDto } from './dto/update-master.dto';
+import { BroadcastEmailDto } from './dto/broadcast-email.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -242,6 +244,22 @@ export class AdminController {
     }
   }
 
+  @Get('settings/referrals')
+  @ApiOperation({ summary: 'Get referrals program enabled state' })
+  async getReferralsEnabled(): Promise<{ enabled: boolean }> {
+    const enabled = await this.adminService.isReferralsEnabled();
+    return { enabled };
+  }
+
+  @Put('settings/referrals')
+  @ApiOperation({ summary: 'Enable or disable referrals program' })
+  async setReferralsEnabled(
+    @Body('enabled') enabled: boolean,
+  ): Promise<{ enabled: boolean }> {
+    const result = await this.adminService.setReferralsEnabled(!!enabled);
+    return { enabled: result };
+  }
+
   @Post('cache/tariffs/invalidate')
   @ApiOperation({ summary: 'Invalidate tariffs cache (e.g. after seed)' })
   async invalidateTariffsCache(): Promise<{ invalidated: number }> {
@@ -267,5 +285,23 @@ export class AdminController {
     ratingPenalty: number;
   }> {
     return this.adminService.getInactivityStats();
+  }
+
+  @Get('email/templates')
+  @ApiOperation({ summary: 'List available broadcast email templates' })
+  getBroadcastTemplates(): { templates: string[] } {
+    const templates = this.adminService.getBroadcastTemplates();
+    return { templates };
+  }
+
+  @Post('email/broadcast')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 broadcasts per minute
+  @ApiOperation({ summary: 'Send broadcast email to segment' })
+  async sendBroadcast(@Body() dto: BroadcastEmailDto) {
+    return this.adminService.sendEmailBroadcast(
+      dto.segment,
+      dto.templateName,
+      dto.sinceDate ? { sinceDate: dto.sinceDate } : undefined,
+    );
   }
 }

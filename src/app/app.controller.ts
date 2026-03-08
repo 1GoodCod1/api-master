@@ -2,11 +2,15 @@ import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AppService } from './app.service';
+import { AppSettingsService } from '../modules/app-settings/app-settings.service';
 
 @ApiTags('App')
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly appSettings: AppSettingsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get application status' })
@@ -40,6 +44,13 @@ export class AppController {
   @ApiOperation({ summary: 'Health check endpoint' })
   async health() {
     return this.appService.getHealth();
+  }
+
+  @Get('config/referrals-enabled')
+  @ApiOperation({ summary: 'Public: check if referrals program is enabled' })
+  async getReferralsEnabled(): Promise<{ enabled: boolean }> {
+    const enabled = await this.appSettings.isReferralsEnabled();
+    return { enabled };
   }
 
   @Get('version')

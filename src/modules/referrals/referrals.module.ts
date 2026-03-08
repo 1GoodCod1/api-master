@@ -4,9 +4,15 @@ import { ReferralsController } from './referrals.controller';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { MastersModule } from '../masters/masters.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AppSettingsModule } from '../app-settings/app-settings.module';
 
 @Module({
-  imports: [PrismaModule, MastersModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    MastersModule,
+    NotificationsModule,
+    AppSettingsModule,
+  ],
   controllers: [ReferralsController],
   providers: [ReferralsService],
   exports: [ReferralsService],
