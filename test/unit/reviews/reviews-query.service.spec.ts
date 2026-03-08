@@ -4,13 +4,13 @@ import type { CacheService } from '../../../src/modules/shared/cache/cache.servi
 
 type PrismaReviewsQueryMock = {
   review: { findMany: jest.Mock; count: jest.Mock; groupBy: jest.Mock };
-  lead: { count: jest.Mock };
+  lead: { count: jest.Mock; findFirst: jest.Mock };
 };
 
 describe('ReviewsQueryService', () => {
   const prisma: PrismaReviewsQueryMock = {
     review: { findMany: jest.fn(), count: jest.fn(), groupBy: jest.fn() },
-    lead: { count: jest.fn() },
+    lead: { count: jest.fn(), findFirst: jest.fn() },
   };
 
   const cache = {
@@ -77,7 +77,7 @@ describe('ReviewsQueryService', () => {
   describe('canCreateReview', () => {
     it('returns canCreate: false when already reviewed', async () => {
       prisma.review.count.mockResolvedValue(1);
-      prisma.lead.count.mockResolvedValue(1);
+      prisma.lead.findFirst.mockResolvedValue({ id: 'l1' });
 
       const result = await service.canCreateReview('m1', 'c1');
 
@@ -87,7 +87,7 @@ describe('ReviewsQueryService', () => {
 
     it('returns canCreate: false when no closed lead', async () => {
       prisma.review.count.mockResolvedValue(0);
-      prisma.lead.count.mockResolvedValue(0);
+      prisma.lead.findFirst.mockResolvedValue(null);
 
       const result = await service.canCreateReview('m1', 'c1');
 
@@ -97,7 +97,7 @@ describe('ReviewsQueryService', () => {
 
     it('returns canCreate: true when eligible', async () => {
       prisma.review.count.mockResolvedValue(0);
-      prisma.lead.count.mockResolvedValue(1);
+      prisma.lead.findFirst.mockResolvedValue({ id: 'l1' });
 
       const result = await service.canCreateReview('m1', 'c1');
 

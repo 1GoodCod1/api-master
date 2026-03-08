@@ -19,7 +19,7 @@ type PrismaReviewsActionMock = {
     create: jest.Mock;
     update: jest.Mock;
   };
-  lead: { findFirst: jest.Mock };
+  lead: { findFirst: jest.Mock; findUnique: jest.Mock };
   reviewReply: {
     findUnique: jest.Mock;
     create: jest.Mock;
@@ -45,7 +45,7 @@ describe('ReviewsActionService', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
-    lead: { findFirst: jest.fn() },
+    lead: { findFirst: jest.fn(), findUnique: jest.fn() },
     reviewReply: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -166,7 +166,13 @@ describe('ReviewsActionService', () => {
       });
       prisma.master.findUnique.mockResolvedValue({ id: 'm1', userId: 'u1' });
       prisma.review.findFirst.mockResolvedValue(null);
-      prisma.lead.findFirst.mockResolvedValue(null);
+      prisma.lead.findUnique.mockResolvedValue({
+        id: 'l1',
+        masterId: 'm1',
+        clientId: 'c1',
+        status: 'IN_PROGRESS',
+        clientName: 'Test',
+      });
 
       await expect(
         service.create(
