@@ -18,6 +18,10 @@ import {
   type BroadcastResult,
   type BroadcastSegment,
 } from '../email/email-broadcast.service';
+import { EmailTemplateService } from '../email/email-template.service';
+import { DigestService } from '../digest/digest.service';
+import { PrismaService } from '../shared/database/prisma.service';
+import { EmailTemplateOverrideRepository } from './services/email-template-override.repository';
 
 /**
  * Главный сервис админки - координатор для специализированных сервисов
@@ -40,6 +44,10 @@ export class AdminService {
     private readonly cache: CacheService,
     private readonly appSettings: AppSettingsService,
     private readonly emailBroadcast: EmailBroadcastService,
+    private readonly emailTemplateService: EmailTemplateService,
+    private readonly digestService: DigestService,
+    private readonly prisma: PrismaService,
+    private readonly emailTemplateOverrideRepo: EmailTemplateOverrideRepository,
   ) {}
 
   // ==================== DASHBOARD ====================
@@ -223,5 +231,68 @@ export class AdminService {
 
   getBroadcastTemplates(): string[] {
     return this.emailBroadcast.getAvailableTemplates();
+  }
+
+  // ==================== DIGEST ====================
+
+  async getDigestStats(): Promise<{ subscriberCount: number }> {
+    const subscriberCount = await this.digestService.getSubscriberCount();
+    return { subscriberCount };
+  }
+
+  async sendDigestNow(): Promise<{ sent: number }> {
+    const sent = await this.digestService.sendDigestToAllSubscribers();
+    return { sent };
+  }
+
+  async getDigestSubscribers(params: { page?: number; limit?: number }) {
+    return this.digestService.getSubscribers(params);
+  }
+
+  async adminUnsubscribeDigest(userId: string): Promise<void> {
+    await this.digestService.unsubscribe(userId);
+  }
+
+  async getDigestAnnouncement(): Promise<string> {
+    return this.appSettings.getDigestAnnouncement();
+  }
+
+  async setDigestAnnouncement(value: string): Promise<string> {
+    return this.appSettings.setDigestAnnouncement(value);
+  }
+
+  getTemplateDefault(
+    templateId: string,
+    lang: string,
+  ): Promise<{ subject: string; bodyHtml: string } | null> {
+    const validLang = ['en', 'ru', 'ro'].includes(lang)
+      ? (lang as 'en' | 'ru' | 'ro')
+      : 'ro';
+    return Promise.resolve(
+      this.emailTemplateService.renderDefault(templateId, validLang),
+    );
+  }
+
+  getTemplateIds(): string[] {
+    return this.emailTemplateService.getTemplateIds();
+  }
+
+  async getTemplateOverrides() {
+    return this.emailTemplateOverrideRepo.findMany();
+  }
+
+  async getTemplateOverride(
+    templateId: string,
+    lang: string,
+  ): Promise<{ subject: string | null; bodyHtml: string | null } | null> {
+    return this.emailTemplateOverrideRepo.findUnique(templateId, lang);
+  }
+
+  async setTemplateOverride(
+    templateId: string,
+    lang: string,
+    data: { subject?: string; bodyHtml?: string },
+  ): Promise<void> {
+    await this.emailTemplateOverrideRepo.upsert(templateId, lang, data);
   }
 }

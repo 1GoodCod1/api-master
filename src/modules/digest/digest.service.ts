@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
 import { DigestSubscription, UserRole } from '@prisma/client';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class DigestService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly templateService: EmailTemplateService,
+    private readonly appSettings: AppSettingsService,
   ) {}
 
   async subscribe(userId: string): Promise<DigestSubscription> {
@@ -27,6 +29,44 @@ export class DigestService {
       where: { userId },
     });
     return { subscribed: !!sub };
+  }
+
+  /** Admin: count of digest subscribers */
+  async getSubscriberCount(): Promise<number> {
+    return this.prisma.digestSubscription.count();
+  }
+
+  /** Admin: paginated list of subscribers */
+  async getSubscribers(params: { page?: number; limit?: number }) {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(100, Math.max(1, params.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      this.prisma.digestSubscription.findMany({
+        skip,
+        take: limit,
+        orderBy: { subscribedAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              preferredLanguage: true,
+            },
+          },
+        },
+      }),
+      this.prisma.digestSubscription.count(),
+    ]);
+
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async unsubscribe(userId: string): Promise<void> {
@@ -58,6 +98,8 @@ export class DigestService {
 
     this.logger.log(`Sending digest to ${subs.length} subscribers`);
 
+    const announcement = await this.appSettings.getDigestAnnouncement();
+
     let sent = 0;
     for (const sub of subs) {
       try {
@@ -68,9 +110,10 @@ export class DigestService {
           ['en', 'ru', 'ro'].includes(sub.user.preferredLanguage)
             ? (sub.user.preferredLanguage as 'en' | 'ru' | 'ro')
             : 'ro';
-        const rendered = this.templateService.render(templateName, {
+        const rendered = await this.templateService.render(templateName, {
           userName: sub.user.firstName ?? undefined,
           lang,
+          announcement: announcement || undefined,
         });
         await this.emailService.sendEmail(
           sub.user.email,

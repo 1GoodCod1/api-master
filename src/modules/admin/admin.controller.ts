@@ -3,6 +3,7 @@ import {
   Get,
   Put,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -303,5 +304,104 @@ export class AdminController {
       dto.templateName,
       dto.sinceDate ? { sinceDate: dto.sinceDate } : undefined,
     );
+  }
+
+  @Get('digest/stats')
+  @ApiOperation({ summary: 'Get digest subscriber stats' })
+  getDigestStats() {
+    return this.adminService.getDigestStats();
+  }
+
+  @Post('digest/send-now')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({ summary: 'Manually trigger digest send to all subscribers' })
+  async sendDigestNow() {
+    return this.adminService.sendDigestNow();
+  }
+
+  @Get('digest/subscribers')
+  @ApiOperation({ summary: 'List digest subscribers (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getDigestSubscribers(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.adminService.getDigestSubscribers({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Delete('digest/subscribers/:userId')
+  @ApiOperation({ summary: 'Admin: unsubscribe user from digest' })
+  async adminUnsubscribeDigest(@Param('userId') userId: string) {
+    await this.adminService.adminUnsubscribeDigest(userId);
+    return { success: true };
+  }
+
+  @Get('digest/announcement')
+  @ApiOperation({ summary: 'Get digest announcement text' })
+  getDigestAnnouncement() {
+    return this.adminService.getDigestAnnouncement();
+  }
+
+  @Put('digest/announcement')
+  @ApiOperation({
+    summary: 'Set digest announcement text (shown in digest emails)',
+  })
+  async setDigestAnnouncement(@Body() body: { value?: string }) {
+    const value = await this.adminService.setDigestAnnouncement(
+      body.value ?? '',
+    );
+    return { value };
+  }
+
+  @Get('email/template-ids')
+  @ApiOperation({ summary: 'List all template IDs (for overrides)' })
+  getTemplateIds() {
+    return this.adminService.getTemplateIds();
+  }
+
+  @Get('email/template-default/:templateId/:lang')
+  @ApiOperation({
+    summary: 'Get default template content (from file) for pre-fill',
+  })
+  async getTemplateDefault(
+    @Param('templateId') templateId: string,
+    @Param('lang') lang: string,
+  ) {
+    const result = await this.adminService.getTemplateDefault(templateId, lang);
+    return result ?? { subject: '', bodyHtml: '' };
+  }
+
+  @Get('email/template-overrides')
+  @ApiOperation({ summary: 'List all template overrides' })
+  getTemplateOverrides() {
+    return this.adminService.getTemplateOverrides();
+  }
+
+  @Get('email/template-overrides/:templateId/:lang')
+  @ApiOperation({ summary: 'Get template override for template+lang' })
+  async getTemplateOverride(
+    @Param('templateId') templateId: string,
+    @Param('lang') lang: string,
+  ) {
+    const override = await this.adminService.getTemplateOverride(
+      templateId,
+      lang,
+    );
+    return override ?? { subject: null, bodyHtml: null };
+  }
+
+  @Put('email/template-overrides/:templateId/:lang')
+  @ApiOperation({ summary: 'Set template override (subject, bodyHtml)' })
+  async setTemplateOverride(
+    @Param('templateId') templateId: string,
+    @Param('lang') lang: string,
+    @Body() body: { subject?: string; bodyHtml?: string },
+  ) {
+    await this.adminService.setTemplateOverride(templateId, lang, body);
+    return { success: true };
   }
 }

@@ -245,7 +245,7 @@ export class EmailDripService {
       lang: parseLang(user.preferredLanguage),
     };
 
-    const rendered = this.templateService.render(step.template, ctx);
+    const rendered = await this.templateService.render(step.template, ctx);
 
     await this.emailService.sendEmail(
       user.email,

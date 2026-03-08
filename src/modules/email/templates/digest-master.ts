@@ -6,6 +6,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Digestul săptămânal pentru meșteri — cereri, recenzii și actualizări ale platformei.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Anunț:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>În acest număr:</strong></p>
     <ul>
       <li>📬 Cum să răspundeți mai rapid la cereri și să atrageți mai mulți clienți</li>
@@ -25,6 +26,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Ваш еженедельный дайджест для мастеров — заявки, отзывы и обновления платформы.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Объявление:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>В этом выпуске:</strong></p>
     <ul>
       <li>📬 Как быстрее отвечать на заявки и получать больше клиентов</li>
@@ -44,6 +46,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Your weekly digest for masters — requests, reviews and platform updates.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Announcement:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>In this issue:</strong></p>
     <ul>
       <li>📬 How to respond faster to requests and get more clients</li>

@@ -6,6 +6,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Digestul săptămânal MoldMasters — sfaturi și știri despre găsirea celor mai buni meșteri.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Anunț:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>În acest număr:</strong></p>
     <ul>
       <li>🔍 Cum să alegeți un meșter după recenzii și portofoliu</li>
@@ -25,6 +26,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Ваш еженедельный дайджест MoldMasters — советы и новости о поиске лучших мастеров.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Объявление:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>В этом выпуске:</strong></p>
     <ul>
       <li>🔍 Как выбрать мастера по отзывам и портфолио</li>
@@ -44,6 +46,7 @@ const T = {
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Your weekly MoldMasters digest — tips and news about finding the best masters.</p>
+    ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Announcement:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>In this issue:</strong></p>
     <ul>
       <li>🔍 How to choose a master by reviews and portfolio</li>

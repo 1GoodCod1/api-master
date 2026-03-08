@@ -40,6 +40,46 @@ export function sanitizeStrict(value: string): string {
 }
 
 /**
+ * Конфигурация для email HTML (шаблоны, объявления)
+ * Разрешает безопасные теги для писем
+ */
+const EMAIL_HTML_CONFIG: sanitizeHtml.IOptions = {
+  allowedTags: [
+    'p',
+    'br',
+    'b',
+    'i',
+    'em',
+    'strong',
+    'u',
+    'a',
+    'ul',
+    'ol',
+    'li',
+    'div',
+    'span',
+    'h1',
+    'h2',
+    'h3',
+  ],
+  allowedAttributes: {
+    a: ['href', 'target'],
+    div: ['style'],
+    span: ['style'],
+    p: ['style'],
+  },
+  disallowedTagsMode: 'recursiveEscape',
+};
+
+/**
+ * Санитизация HTML для email-шаблонов (override от админа)
+ */
+export function sanitizeEmailHtml(value: string): string {
+  if (!value || typeof value !== 'string') return '';
+  return sanitizeHtml(value.trim(), EMAIL_HTML_CONFIG);
+}
+
+/**
  * Базовая санитизация - разрешает безопасное форматирование текста
  * Используется для: описаний с базовым форматированием
  *

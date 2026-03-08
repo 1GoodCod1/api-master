@@ -1082,6 +1082,22 @@ model AppSetting {
 }
 
 // ============================================
+// EMAIL TEMPLATE OVERRIDES (admin-editable)
+// ============================================
+
+model EmailTemplateOverride {
+  id        String   @id @default(uuid())
+  templateId String
+  lang      String
+  subject   String?
+  bodyHtml  String?
+  updatedAt DateTime @updatedAt
+
+  @@unique([templateId, lang])
+  @@map("email_template_overrides")
+}
+
+// ============================================
 // REFERRAL PROGRAM
 // ============================================
 

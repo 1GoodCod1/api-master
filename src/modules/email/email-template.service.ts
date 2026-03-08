@@ -1,7 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../shared/database/prisma.service';
+import { sanitizeEmailHtml } from '../shared/utils/sanitize-html.util';
 import { TEMPLATES } from './templates';
 import type { TemplateContext } from './templates';
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function htmlEscape(s: string): string {
   return s
@@ -46,19 +55,23 @@ function sanitizeContext(ctx: TemplateContext): TemplateContext {
 export class EmailTemplateService {
   private readonly frontendUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     this.frontendUrl =
       this.configService.get<string>('frontendUrl') || 'http://localhost:3000';
   }
 
   /**
    * Render email template by name.
+   * Uses DB override if exists for (templateName, lang), else file template.
    * @param context.lang — язык (en|ru|ro), по умолчанию 'ro'
    */
-  render(
+  async render(
     templateName: string,
     context: TemplateContext = {},
-  ): { subject: string; html: string; text: string } {
+  ): Promise<{ subject: string; html: string; text: string }> {
     const lang = (
       ['en', 'ru', 'ro'].includes(context.lang as string) ? context.lang : 'ro'
     ) as 'en' | 'ru' | 'ro';
@@ -68,6 +81,26 @@ export class EmailTemplateService {
       lang,
     };
     const ctx = sanitizeContext(raw);
+
+    const override = await this.prisma.emailTemplateOverride.findUnique({
+      where: {
+        templateId_lang: { templateId: templateName, lang },
+      },
+    });
+
+    if (override && (override.subject != null || override.bodyHtml != null)) {
+      const subject = override.subject ?? 'MoldMasters';
+      const bodyHtml = override.bodyHtml
+        ? sanitizeEmailHtml(override.bodyHtml)
+        : '';
+      const text = bodyHtml ? stripHtml(bodyHtml) : '';
+      return {
+        subject,
+        html: this.wrapLayout(bodyHtml || '<p></p>'),
+        text: text || subject,
+      };
+    }
+
     const template = TEMPLATES[templateName];
     if (!template) {
       return {
@@ -81,6 +114,32 @@ export class EmailTemplateService {
       html: this.wrapLayout(template.html(ctx)),
       text: template.text(ctx),
     };
+  }
+
+  /**
+   * Render default template from file (no DB override).
+   * Returns subject and bodyHtml (content only, no layout wrapper) for admin editing.
+   */
+  renderDefault(
+    templateName: string,
+    lang: 'en' | 'ru' | 'ro' = 'ro',
+  ): { subject: string; bodyHtml: string } | null {
+    const template = TEMPLATES[templateName];
+    if (!template) return null;
+    const ctx = sanitizeContext({
+      frontendUrl: this.frontendUrl,
+      lang,
+      userName: undefined,
+    });
+    return {
+      subject: template.subject(ctx),
+      bodyHtml: template.html(ctx),
+    };
+  }
+
+  /** List all template IDs available for overrides */
+  getTemplateIds(): string[] {
+    return Object.keys(TEMPLATES).sort();
   }
 
   private wrapLayout(bodyHtml: string): string {

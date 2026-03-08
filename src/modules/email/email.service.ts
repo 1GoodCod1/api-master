@@ -50,7 +50,7 @@ export class EmailService {
     resetLink: string,
     lang: 'en' | 'ru' | 'ro' = 'ro',
   ): Promise<void> {
-    const rendered = this.templateService.render('password-reset', {
+    const rendered = await this.templateService.render('password-reset', {
       resetLink,
       lang,
     });

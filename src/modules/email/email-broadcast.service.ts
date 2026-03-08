@@ -165,7 +165,7 @@ export class EmailBroadcastService {
           userName: user.firstName ?? undefined,
           lang,
         };
-        const rendered = this.templateService.render(templateName, ctx);
+        const rendered = await this.templateService.render(templateName, ctx);
         await this.emailService.sendEmail(
           user.email,
           rendered.subject,
