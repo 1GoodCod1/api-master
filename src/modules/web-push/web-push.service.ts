@@ -28,7 +28,7 @@ export class WebPushService {
     let privateKey = this.configService.get<string>('webPush.privateKey', '');
     const email = this.configService.get<string>(
       'webPush.email',
-      'admin@moldmasters.md',
+      'admin@master-hub.md',
     );
 
     if (!publicKey || !privateKey) {

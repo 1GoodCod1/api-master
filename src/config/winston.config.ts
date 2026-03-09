@@ -8,7 +8,7 @@ export const winstonConfig = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.ms(),
-        nestWinstonModuleUtilities.format.nestLike('MoldMasters', {
+        nestWinstonModuleUtilities.format.nestLike('Master-Hub', {
           colors: true,
           prettyPrint: true,
         }),

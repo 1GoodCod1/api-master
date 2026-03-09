@@ -148,6 +148,8 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         type: 'NEW_LEAD',
         title: 'Новая заявка',
         message: `Новая заявка от ${clientName}`,
+        messageKey: 'notifications.messages.newLeadFrom',
+        messageParams: { clientName },
         data: sanitizedLeadData,
         timestamp: new Date().toISOString(),
         priority: 'high',
@@ -176,6 +178,8 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         type: 'LEAD_SENT',
         title: 'Заявка отправлена',
         message: `Заявка отправлена мастеру ${payload.masterName || ''}`.trim(),
+        messageKey: 'notifications.messages.leadSentTo',
+        messageParams: { masterName: payload.masterName || '' },
         data: payload,
         timestamp: new Date().toISOString(),
       });

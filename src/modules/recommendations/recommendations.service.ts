@@ -74,7 +74,7 @@ export class RecommendationsService {
   async trackActivity(data: {
     userId?: string;
     sessionId?: string;
-    action: string;
+    action?: string;
     masterId?: string;
     categoryId?: string;
     cityId?: string;
@@ -83,8 +83,13 @@ export class RecommendationsService {
     ipAddress?: string;
     userAgent?: string;
   }) {
+    if (!data.action) {
+      this.logger.warn('trackActivity called without action, skipping');
+      return;
+    }
     try {
-      await this.trackerService.trackActivity(data);
+      const { action, ...rest } = data;
+      await this.trackerService.trackActivity({ ...rest, action });
 
       // Сбрасываем кэш, так как интересы пользователя могли измениться
       const cacheKey = `recommendations:${data.userId || data.sessionId || 'anon'}`;

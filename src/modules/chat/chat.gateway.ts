@@ -18,6 +18,7 @@ import { ChatService } from './chat.service';
 import { SendMessageWsDto, TypingDto } from './dto';
 import { WebsocketService } from '../websocket/websocket.service';
 import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /** Shape of client.data set by WsJwtGuard */
 interface SocketAuthData {
@@ -37,7 +38,9 @@ interface SendMessageResult {
   conversation?: {
     id: string;
     clientId: string | null;
+    clientPhone?: string | null;
     masterUserId?: string;
+    masterName?: string;
   };
 }
 
@@ -74,6 +77,7 @@ export class ChatGateway
     private readonly websocketService: WebsocketService,
     @Inject(forwardRef(() => InAppNotificationService))
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   afterInit(_server: Server) {
@@ -320,6 +324,22 @@ export class ChatGateway
             const msg = e instanceof Error ? e.message : String(e);
             this.logger.warn(`Failed to save in-app chat notification: ${msg}`);
           });
+
+        // MASTER_RESPONDED: SMS клиенту, когда мастер отвечает
+        if (
+          message.senderType === 'MASTER' &&
+          conversation.clientId === recipientUserId &&
+          conversation.clientPhone
+        ) {
+          const masterName = conversation.masterName || 'Мастер';
+          const smsText = `${masterName} ответил вам в чате. Откройте приложение для просмотра.`;
+          await this.notifications
+            .sendSMS(conversation.clientPhone, smsText)
+            .catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : String(e);
+              this.logger.warn(`Failed to send MASTER_RESPONDED SMS: ${msg}`);
+            });
+        }
       }
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : String(error);

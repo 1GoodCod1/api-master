@@ -87,24 +87,31 @@ export class TasksTariffService {
         },
       });
 
-      await this.notifications.sendSMS(
-        master.user.phone,
-        `Ваш тариф истек. Текущий тариф: BASIC. Для продления посетите личный кабинет.`,
-        { userId: master.userId },
-      );
+      const smsEnabled =
+        (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
+      if (smsEnabled) {
+        await this.notifications.sendSMS(
+          master.user.phone,
+          `Ваш тариф истек. Текущий тариф: BASIC. Для продления посетите личный кабинет.`,
+          { userId: master.userId },
+        );
+      }
 
-      // In-app уведомление о истечении подписки
-      await this.inAppNotifications
-        .notifySubscriptionExpired(master.userId, {
-          tariffType: master.tariffType,
-          masterId: master.id,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(
-            `Failed to send in-app subscription expired: ${msg}`,
-          );
-        });
+      const inAppEnabled =
+        (master as { notifyTariffInApp?: boolean }).notifyTariffInApp !== false;
+      if (inAppEnabled) {
+        await this.inAppNotifications
+          .notifySubscriptionExpired(master.userId, {
+            tariffType: master.tariffType,
+            masterId: master.id,
+          })
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(
+              `Failed to send in-app subscription expired: ${msg}`,
+            );
+          });
+      }
     }
 
     this.logger.log(`Checked ${expiredMasters.length} expired tariffs`);
@@ -150,20 +157,24 @@ export class TasksTariffService {
         ? `Ваш запрос на обновление до PREMIUM истек (12 часов). Вы остаетесь на текущем тарифе ${master.tariffType}.`
         : `Ваш запрос на обновление до PREMIUM истек (12 часов). Тариф изменен на BASIC.`;
 
-      await this.notifications.sendSMS(master.user.phone, message, {
-        userId: master.userId,
-      });
-
-      // In-app уведомление о таймауте апгрейда
-      await this.inAppNotifications
-        .notifySubscriptionExpired(master.userId, {
-          tariffType: master.tariffType,
-          masterId: master.id,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(`Failed to send in-app upgrade timeout: ${msg}`);
+      if ((master as { notifyTariffSms?: boolean }).notifyTariffSms !== false) {
+        await this.notifications.sendSMS(master.user.phone, message, {
+          userId: master.userId,
         });
+      }
+      if (
+        (master as { notifyTariffInApp?: boolean }).notifyTariffInApp !== false
+      ) {
+        await this.inAppNotifications
+          .notifySubscriptionExpired(master.userId, {
+            tariffType: master.tariffType,
+            masterId: master.id,
+          })
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(`Failed to send in-app upgrade timeout: ${msg}`);
+          });
+      }
     }
 
     if (expiredPendingUpgrades.length > 0) {
@@ -212,28 +223,46 @@ export class TasksTariffService {
 
       const message = `Ваш тариф ${master.tariffType} истекает через ${daysUntilExpiry} ${daysUntilExpiry === 1 ? 'день' : 'дня'}. Обновите тариф в личном кабинете.`;
 
-      await this.notifications.sendSMS(master.user.phone, message, {
-        userId: master.userId,
-        metadata: {
-          masterId: master.id,
-          tariffType: master.tariffType,
-          expiresAt: master.tariffExpiresAt,
-          daysUntilExpiry,
-        },
-      });
-
-      // In-app уведомление о скором истечении подписки
-      await this.inAppNotifications
-        .notifySubscriptionExpiring(master.userId, {
-          daysLeft: daysUntilExpiry,
-          tariffType: master.tariffType,
-          expiresAt: master.tariffExpiresAt!,
-          masterId: master.id,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(`Failed to send in-app expiring: ${msg}`);
+      const smsEnabled =
+        (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
+      if (smsEnabled) {
+        await this.notifications.sendSMS(master.user.phone, message, {
+          userId: master.userId,
+          metadata: {
+            masterId: master.id,
+            tariffType: master.tariffType,
+            expiresAt: master.tariffExpiresAt,
+            daysUntilExpiry,
+          },
         });
+      }
+      if (master.telegramChatId) {
+        await this.notifications.sendTelegram(`⏰ ${message}`, {
+          chatId: master.telegramChatId,
+        });
+      }
+      if (master.whatsappPhone) {
+        await this.notifications.sendWhatsApp(
+          master.whatsappPhone,
+          `⏰ ${message}`,
+        );
+      }
+
+      const inAppEnabled =
+        (master as { notifyTariffInApp?: boolean }).notifyTariffInApp !== false;
+      if (inAppEnabled) {
+        await this.inAppNotifications
+          .notifySubscriptionExpiring(master.userId, {
+            daysLeft: daysUntilExpiry,
+            tariffType: master.tariffType,
+            expiresAt: master.tariffExpiresAt!,
+            masterId: master.id,
+          })
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(`Failed to send in-app expiring: ${msg}`);
+          });
+      }
     }
 
     if (mastersToNotify.length > 0) {

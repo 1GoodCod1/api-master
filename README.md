@@ -191,7 +191,7 @@ npm run docker:seed
 | Переменная | Описание | По умолчанию |
 |---|---|---|
 | `B2_APPLICATION_KEY_ID` / `B2_APPLICATION_KEY` | B2 ключи | — |
-| `B2_BUCKET` | Название бакета | `moldmasters-uploads` |
+| `B2_BUCKET` | Название бакета | `master-hub-uploads` |
 | `B2_REGION` | Регион | `eu-central-003` |
 
 ### Уведомления (опционально)
@@ -480,11 +480,11 @@ curl http://localhost:4000/health
 ### Деплой
 
 ```bash
-# 1. Создать prod-конфиг
-cp .env.docker.example .env.production
-# Отредактировать .env.production
+# 1. Создать prod-конфиг из шаблона
+cp .env.production.example .env
+# Заполнить .env (секреты, API_URL, FRONTEND_URL)
 
-# 2. Запустить
+# 2. Запустить (compose подхватывает .env)
 npm run docker:prod:up
 
 # 3. Миграции

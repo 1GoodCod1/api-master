@@ -10,7 +10,7 @@ export default () => ({
   database: {
     url:
       process.env.DATABASE_URL ||
-      'postgresql://postgres:password@localhost:5432/moldmasters',
+      'postgresql://postgres:password@localhost:5432/master-hub',
   },
 
   redis: {
@@ -76,7 +76,9 @@ export default () => ({
 
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
     chatId: process.env.TELEGRAM_CHAT_ID || '',
+    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
   },
 
   whatsapp: {
@@ -115,7 +117,7 @@ export default () => ({
 
   email: {
     enabled: process.env.EMAIL_ENABLED !== 'false',
-    from: process.env.EMAIL_FROM || 'noreply@moldmasters.md',
+    from: process.env.EMAIL_FROM || 'noreply@master-hub.md',
     smtp: {
       host: process.env.SMTP_HOST || '',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -128,7 +130,7 @@ export default () => ({
   webPush: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
-    email: process.env.VAPID_EMAIL || 'admin@moldmasters.md',
+    email: process.env.VAPID_EMAIL || 'admin@master-hub.md',
   },
 
   rateLimit: {

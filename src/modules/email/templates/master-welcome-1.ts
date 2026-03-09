@@ -5,7 +5,7 @@ const T = {
     subject: 'Bun venit, meșter! 🛠 Completați profilul',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>V-ați înregistrat ca meșter pe MoldMasters.</p>
+    <p>V-ați înregistrat ca meșter pe Master-Hub.</p>
     <p><strong>Pentru a primi cereri, completați profilul:</strong></p>
     <ul>
       <li>📸 Adăugați fotografii</li>
@@ -24,7 +24,7 @@ const T = {
     subject: 'Добро пожаловать, мастер! 🛠 Заполните профиль',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Вы зарегистрировались как мастер на MoldMasters.</p>
+    <p>Вы зарегистрировались как мастер на Master-Hub.</p>
     <p><strong>Чтобы получать заявки, заполните профиль:</strong></p>
     <ul>
       <li>📸 Добавьте фото</li>
@@ -43,7 +43,7 @@ const T = {
     subject: 'Welcome, master! 🛠 Complete your profile',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>You registered as a master on MoldMasters.</p>
+    <p>You registered as a master on Master-Hub.</p>
     <p><strong>To receive requests, complete your profile:</strong></p>
     <ul>
       <li>📸 Add photos</li>

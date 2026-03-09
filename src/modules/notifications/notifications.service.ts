@@ -102,6 +102,13 @@ export class NotificationsService {
   }
 
   /**
+   * Отправить WhatsApp уведомление
+   */
+  async sendWhatsApp(to: string, message: string) {
+    return this.senderService.sendWhatsApp(to, message);
+  }
+
+  /**
    * Уведомление о новом лиде (SMS на to, Telegram и WhatsApp — по привязанным каналам premium)
    */
   async sendLeadNotification(
@@ -113,13 +120,14 @@ export class NotificationsService {
   }
 
   /**
-   * Подтверждение платежа
+   * Подтверждение платежа (SMS + опционально Telegram/WhatsApp)
    */
   async sendPaymentConfirmation(
     to: string,
     paymentData: PaymentConfirmationData,
+    options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {
-    return this.senderService.sendPaymentConfirmation(to, paymentData);
+    return this.senderService.sendPaymentConfirmation(to, paymentData, options);
   }
 
   /**

@@ -29,10 +29,10 @@ describe('Export API (e2e)', () => {
       .expect(401);
   });
 
-  it('GET /export/leads/excel/:masterId requires auth', async () => {
+  it('POST /export/queue/excel/:masterId requires auth', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/export/leads/excel/${masterId}`)
+      .post(`/export/queue/excel/${masterId}`)
       .expect(401);
   });
 });

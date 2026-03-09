@@ -170,7 +170,7 @@ export class ExportService {
     }
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'MoldMasters';
+    workbook.creator = 'Master-Hub';
     workbook.created = new Date();
 
     // ----- Sheet 1: Report Info -----
@@ -475,7 +475,7 @@ export class ExportService {
 
     // Excel
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'MoldMasters';
+    workbook.creator = 'Master-Hub';
     workbook.created = new Date();
     const infoSheet = workbook.addWorksheet('Report Info', {
       properties: { tabColor: { argb: 'FFB45309' } },

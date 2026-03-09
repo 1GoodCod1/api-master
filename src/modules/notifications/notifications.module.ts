@@ -5,6 +5,9 @@ import { NotificationsService } from './notifications.service';
 import { SmsProcessor } from './proccessor/sms.processor';
 import { TelegramProcessor } from './proccessor/telegram.processor';
 import { NotificationsController } from './notifications.controller';
+import { TelegramWebhookController } from './telegram-webhook.controller';
+import { TelegramConnectService } from './services/telegram-connect.service';
+import { TelegramWebhookSecretGuard } from '../../common/guards/telegram-webhook-secret.guard';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { RedisModule } from '../shared/redis/redis.module';
 import { NotificationsQueryService } from './services/notifications-query.service';
@@ -60,7 +63,7 @@ import { WebPushModule } from '../web-push/web-push.module';
     forwardRef(() => WebSocketModule),
     WebPushModule,
   ],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, TelegramWebhookController],
   providers: [
     NotificationsService,
     NotificationsQueryService,
@@ -69,7 +72,13 @@ import { WebPushModule } from '../web-push/web-push.module';
     InAppNotificationService,
     SmsProcessor,
     TelegramProcessor,
+    TelegramConnectService,
+    TelegramWebhookSecretGuard,
   ],
-  exports: [NotificationsService, InAppNotificationService],
+  exports: [
+    NotificationsService,
+    InAppNotificationService,
+    TelegramConnectService,
+  ],
 })
 export class NotificationsModule {}

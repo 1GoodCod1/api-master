@@ -2,6 +2,7 @@ import { PaymentStatus } from '@prisma/client';
 import { PaymentsWebhookService } from '../../../src/modules/payments/services/payments-webhook.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
+import type { NotificationsService } from '../../../src/modules/notifications/notifications.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
 type PrismaPaymentsWebhookMock = {
@@ -25,6 +26,10 @@ describe('PaymentsWebhookService', () => {
     notifyPaymentSuccess: jest.fn(),
   } as unknown as jest.Mocked<InAppNotificationService>;
 
+  const notifications = {
+    sendPaymentConfirmation: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<NotificationsService>;
+
   const cache = {
     del: jest.fn(),
     invalidate: jest.fn(),
@@ -43,6 +48,7 @@ describe('PaymentsWebhookService', () => {
     service = new PaymentsWebhookService(
       prisma as unknown as PrismaService,
       inAppNotifications,
+      notifications,
       cache,
     );
   });

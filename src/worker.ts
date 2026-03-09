@@ -29,6 +29,9 @@ async function bootstrapWorker() {
 
     app.enableShutdownHooks();
 
+    if (process.env.NODE_ENV === 'production') {
+      logger.log('[PRODUCTION] Worker started with NODE_ENV=production');
+    }
     logger.log(
       'Worker process started. Listening for Bull jobs and running cron tasks...',
     );

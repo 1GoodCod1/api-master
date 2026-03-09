@@ -40,7 +40,9 @@ type ConversationInfo = {
   id: string;
   masterId: string;
   clientId: string | null;
+  clientPhone: string | null;
   masterUserId: string;
+  masterName?: string;
 };
 
 export type OutgoingChatMessage = MessageWithFiles & {
@@ -397,6 +399,7 @@ export class ChatService {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
+        lead: { select: { clientPhone: true } },
         master: {
           select: {
             id: true,
@@ -405,6 +408,7 @@ export class ChatService {
             workEndHour: true,
             autoresponderEnabled: true,
             autoresponderMessage: true,
+            user: { select: { firstName: true, lastName: true } },
           },
         },
       },
@@ -487,11 +491,21 @@ export class ChatService {
     // Auto-transition lead status NEW -> IN_PROGRESS on first exchange
     void this.checkLeadTransition(conversationId);
 
+    const masterName = [
+      conversation.master.user?.firstName,
+      conversation.master.user?.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
     const conversationInfo: ConversationInfo = {
       id: conversation.id,
       masterId: conversation.masterId,
       clientId: conversation.clientId,
+      clientPhone:
+        conversation.clientPhone ?? conversation.lead?.clientPhone ?? null,
       masterUserId: conversation.master.userId,
+      masterName: masterName || undefined,
     };
     const primary: OutgoingChatMessage = {
       ...message,

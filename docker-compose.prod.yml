@@ -1,3 +1,15 @@
+# =============================================================================
+# PRODUCTION — переменные из .env (локально) или из UI (Dokploy)
+# =============================================================================
+# Локальный запуск:
+#   cp .env.production.example .env
+#   # Заполните .env, затем:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Dokploy: добавьте переменные из .env.production.example в Environment tab.
+# Dokploy сохраняет их в .env, compose подхватывает через env_file: .env
+# =============================================================================
+
 services:
   postgres:
     image: postgres:18
@@ -185,7 +197,7 @@ services:
     # ports:
     #   - "4001:4000" # Прямой доступ закрыт, используем gateway
     env_file:
-      - .env.production
+      - .env
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
@@ -232,7 +244,7 @@ services:
     container_name: masterhub-worker-prod
     command: [ "node", "dist/worker.js" ]
     env_file:
-      - .env.production
+      - .env
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}

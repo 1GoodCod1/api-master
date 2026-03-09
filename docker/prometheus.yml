@@ -2,15 +2,15 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    monitor: 'moldmasters-monitor'
+    monitor: 'master-hub-monitor'
 
 scrape_configs:
   # API метрики (внутри Docker сети)
-  - job_name: 'moldmasters-api'
+  - job_name: 'master-hub-api'
     static_configs:
       - targets: ['api:4000']
         labels:
-          service: 'moldmasters-api'
+          service: 'master-hub-api'
           environment: 'development'
     metrics_path: '/metrics'
     scrape_interval: 15s

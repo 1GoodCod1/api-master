@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Matches, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateNotificationSettingsDto {
   @ApiProperty({
@@ -23,4 +30,30 @@ export class UpdateNotificationSettingsDto {
     message: 'whatsappPhone must be international format (e.g. +37369123456)',
   })
   whatsappPhone?: string | null;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Канал для уведомлений о заявках: telegram | whatsapp | both | none',
+  })
+  @ValidateIf((_, v) => v != null && v !== '')
+  @IsString()
+  @IsIn(['telegram', 'whatsapp', 'both', 'none'])
+  leadNotifyChannel?: string | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'Получать SMS о тарифе (истечение, напоминания)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  notifyTariffSms?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description: 'Получать in-app уведомления о тарифе',
+  })
+  @IsOptional()
+  @IsBoolean()
+  notifyTariffInApp?: boolean;
 }

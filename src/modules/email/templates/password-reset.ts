@@ -2,7 +2,7 @@ import type { TemplateContext, TemplateFn } from './types';
 
 const T = {
   ro: {
-    subject: 'MoldMasters: Resetare parolă',
+    subject: 'Master-Hub: Resetare parolă',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua.</p>
     <p>Ați solicitat resetarea parolei. Accesați linkul (valabil 1 oră):</p>
@@ -15,7 +15,7 @@ const T = {
       `Resetare parolă: ${ctx.resetLink}. Linkul este valabil 1 oră.`,
   },
   ru: {
-    subject: 'MoldMasters: Сброс пароля',
+    subject: 'Master-Hub: Сброс пароля',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте.</p>
     <p>Вы запросили сброс пароля. Перейдите по ссылке (действует 1 час):</p>
@@ -28,7 +28,7 @@ const T = {
       `Сброс пароля: ${ctx.resetLink}. Ссылка действует 1 час.`,
   },
   en: {
-    subject: 'MoldMasters: Password reset',
+    subject: 'Master-Hub: Password reset',
     html: (ctx: TemplateContext) => `
     <p>Hello.</p>
     <p>You requested a password reset. Follow the link (valid 1 hour):</p>

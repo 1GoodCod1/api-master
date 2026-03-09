@@ -89,7 +89,7 @@ export class EmailTemplateService {
     });
 
     if (override && (override.subject != null || override.bodyHtml != null)) {
-      const subject = override.subject ?? 'MoldMasters';
+      const subject = override.subject ?? 'Master-Hub';
       const bodyHtml = override.bodyHtml
         ? sanitizeEmailHtml(override.bodyHtml)
         : '';
@@ -104,7 +104,7 @@ export class EmailTemplateService {
     const template = TEMPLATES[templateName];
     if (!template) {
       return {
-        subject: 'MoldMasters',
+        subject: 'Master-Hub',
         html: `<p>Шаблон не найден</p>`,
         text: `Template "${templateName}" not found`,
       };
@@ -161,7 +161,7 @@ export class EmailTemplateService {
 </head>
 <body>
   <div class="container">
-    <div class="header"><h1>MoldMasters</h1></div>
+    <div class="header"><h1>Master-Hub</h1></div>
     <div class="content">${bodyHtml}</div>
     <div class="footer">
       <p>© ${new Date().getFullYear()} MasterHub. Все права защищены.</p>

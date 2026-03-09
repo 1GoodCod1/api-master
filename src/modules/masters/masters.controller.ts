@@ -19,6 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { MastersService } from './masters.service';
+import { TelegramConnectService } from '../notifications/services/telegram-connect.service';
 import { UpdateMasterDto } from './dto/update-master.dto';
 import { UpdateMasterServicesDto } from './dto/update-services.dto';
 import { SearchMastersDto } from './dto/search-masters.dto';
@@ -31,8 +32,6 @@ import { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
 import { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
 import { ClaimFreePlanDto } from './dto/claim-free-plan.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { PlansGuard } from '../../common/guards/plans.guard';
-import { Plans } from '../../common/decorators/plans.decorator';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -43,7 +42,10 @@ import type { RequestWithOptionalUser } from '../../common/decorators/get-user.d
 @ApiTags('Masters')
 @Controller('masters')
 export class MastersController {
-  constructor(private readonly mastersService: MastersService) {}
+  constructor(
+    private readonly mastersService: MastersService,
+    private readonly telegramConnect: TelegramConnectService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Search masters with filters' })
@@ -245,9 +247,20 @@ export class MastersController {
     return await this.mastersService.getNotificationSettings(user.id);
   }
 
+  @Post('telegram-connect-token/me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MASTER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Create Telegram connect link (Premium only). Opens t.me/bot?start=connect_XXX',
+  })
+  async createTelegramConnectLink(@GetUser() user: JwtUser) {
+    return this.telegramConnect.createConnectLink(user.id);
+  }
+
   @Patch('notifications-settings/me')
-  @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Plans('VIP', 'PREMIUM')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('MASTER', 'ADMIN')
   @ApiBearerAuth()
   @ApiOperation({

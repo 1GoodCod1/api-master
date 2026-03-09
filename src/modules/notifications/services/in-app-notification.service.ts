@@ -9,17 +9,13 @@ import { NotificationCategory } from '@prisma/client';
  * Параметры для создания in-app уведомления
  */
 export interface CreateInAppNotificationParams {
-  /** ID пользователя-получателя */
   userId: string;
-  /** Категория уведомления (бизнес-событие) */
   category: NotificationCategory;
-  /** Заголовок уведомления */
   title: string;
-  /** Текст уведомления */
   message: string;
-  /** Дополнительные данные (JSON) */
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   metadata?: Record<string, any>;
-  /** Приоритет: low, normal, high */
   priority?: 'low' | 'normal' | 'high';
 }
 
@@ -27,13 +23,11 @@ export interface CreateInAppNotificationParams {
  * Параметры для отправки уведомления админам
  */
 export interface CreateAdminNotificationParams {
-  /** Категория уведомления */
   category: NotificationCategory;
-  /** Заголовок */
   title: string;
-  /** Текст */
   message: string;
-  /** Дополнительные данные */
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   metadata?: Record<string, any>;
 }
 
@@ -76,13 +70,15 @@ export class InAppNotificationService {
         },
       });
 
-      // 2. Отправляем через WebSocket
+      // 2. Отправляем через WebSocket (messageKey + messageParams для i18n на фронте)
       await this.websocketService.sendToUser(params.userId, 'notification', {
         id: notification.id,
         type: this.categoryToEventType(params.category),
         category: params.category,
         title: params.title,
         message: params.message,
+        messageKey: params.messageKey,
+        messageParams: params.messageParams,
         data: params.metadata ?? {},
         timestamp: notification.createdAt.toISOString(),
         priority: params.priority ?? 'normal',
@@ -162,6 +158,8 @@ export class InAppNotificationService {
         category: params.category,
         title: params.title,
         message: params.message,
+        messageKey: params.messageKey,
+        messageParams: params.messageParams,
         data: params.metadata ?? {},
         timestamp: new Date().toISOString(),
         priority: 'normal',
@@ -197,6 +195,8 @@ export class InAppNotificationService {
       category: 'NEW_LEAD',
       title: 'Новая заявка',
       message: `Новая заявка от ${clientName}`,
+      messageKey: 'notifications.messages.newLeadFrom',
+      messageParams: { clientName },
       metadata: data,
       priority: 'high',
     });
@@ -205,6 +205,8 @@ export class InAppNotificationService {
       category: 'ADMIN_NEW_LEAD',
       title: 'Новая заявка',
       message: `Заявка от ${clientName} для мастера`,
+      messageKey: 'notifications.messages.newLeadFrom',
+      messageParams: { clientName },
       metadata: data,
     });
   }
@@ -214,11 +216,14 @@ export class InAppNotificationService {
     masterUserId: string,
     data: { leadId: string; status: string; clientName?: string },
   ) {
+    const clientName = data.clientName || 'клиента';
     await this.notify({
       userId: masterUserId,
       category: 'LEAD_STATUS_UPDATED',
       title: 'Статус заявки обновлён',
-      message: `Заявка #${data.leadId.slice(0, 8)} — ${data.status}`,
+      message: `Заявка от ${clientName} — ${data.status}`,
+      messageKey: 'notifications.messages.leadStatusFrom',
+      messageParams: { clientName, status: data.status },
       metadata: data,
     });
   }

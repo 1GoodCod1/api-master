@@ -141,7 +141,7 @@ async function bootstrap() {
 
     // Swagger
     const config = new DocumentBuilder()
-      .setTitle('MoldMasters API')
+      .setTitle('Master-Hub API')
       .setDescription('Marketplace for masters in Moldova')
       .setVersion('1.0')
       .addBearerAuth()
@@ -155,6 +155,14 @@ async function bootstrap() {
     await app.listen(port);
 
     const logger = new Logger('Bootstrap');
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    if (nodeEnv === 'production') {
+      const apiUrl = configService.get<string>('apiUrl', '');
+      const frontendUrl = configService.get<string>('frontendUrl', '');
+      logger.log(
+        `[PRODUCTION] NODE_ENV=production | API=${apiUrl || '(not set)'} | FRONTEND=${frontendUrl || '(not set)'}`,
+      );
+    }
     logger.log(`[5] Приложение запущено на: http://localhost:${port}`);
     if (process.env.NODE_ENV !== 'production') {
       logger.log(`Swagger документация: http://localhost:${port}/docs`);

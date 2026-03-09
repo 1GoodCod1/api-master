@@ -29,17 +29,17 @@ async function main() {
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({
-    where: { email: 'admin@moldmasters.md' },
+    where: { email: 'admin@master-hub.md' },
     update: {},
     create: {
-      email: 'admin@moldmasters.md',
+      email: 'admin@master-hub.md',
       phone: '+37360000000',
       password: adminPassword,
       role: UserRole.ADMIN,
       isVerified: true,
     },
   });
-  console.log('👑 Admin: admin@moldmasters.md / admin123');
+  console.log('👑 Admin: admin@master-hub.md / admin123');
 
   // Create categories (услуги для Молдовы, enhanced)
   const categoriesData = [

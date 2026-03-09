@@ -170,20 +170,20 @@ export class NotificationsSenderService {
     leadData: LeadNotificationData,
     options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {
+    const clientName = leadData.clientName || 'Клиент';
     const msg = (leadData.message ?? '').toString();
-    const text = `Новая заявка! Клиент: ${leadData.clientName || 'Без имени'}, Телефон: ${leadData.clientPhone}. Сообщение: ${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}`;
-    const fullMessage = `📞 Новая заявка #${leadData.leadId}\n${text}`;
+    const text = `Новая заявка от ${clientName}! Телефон: ${leadData.clientPhone}. Сообщение: ${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}`;
+    const fullMessage = `📞 Новая заявка от ${clientName}\nТелефон: ${leadData.clientPhone}\nСообщение: ${msg.substring(0, 200)}${msg.length > 200 ? '...' : ''}`;
 
     await this.sendSMS(to, text);
 
+    // Telegram: без дублей — собираем уникальные chatId
     const globalChatId = this.configService.get<string>('telegram.chatId');
-    if (options?.telegramChatId) {
-      await this.sendTelegram(fullMessage, { chatId: options.telegramChatId });
-    }
-    if (globalChatId && options?.telegramChatId !== globalChatId) {
-      await this.sendTelegram(fullMessage, { chatId: globalChatId });
-    } else if (!options?.telegramChatId && globalChatId) {
-      await this.sendTelegram(fullMessage);
+    const telegramChatIds = new Set<string>();
+    if (options?.telegramChatId) telegramChatIds.add(options.telegramChatId);
+    if (globalChatId) telegramChatIds.add(globalChatId);
+    for (const chatId of telegramChatIds) {
+      await this.sendTelegram(fullMessage, { chatId });
     }
 
     if (options?.whatsappPhone) {
@@ -192,14 +192,23 @@ export class NotificationsSenderService {
   }
 
   /**
-   * Уведомление о подтверждении платежа
+   * Уведомление о подтверждении платежа (SMS + опционально Telegram/WhatsApp)
    */
   async sendPaymentConfirmation(
     to: string,
     paymentData: PaymentConfirmationData,
+    options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {
     const message = `Платеж успешно проведен! Тариф: ${paymentData.tariffType}, Сумма: ${paymentData.amount} MDL. Спасибо!`;
     await this.sendSMS(to, message);
+    if (options?.telegramChatId) {
+      await this.sendTelegram(`✅ ${message}`, {
+        chatId: options.telegramChatId,
+      });
+    }
+    if (options?.whatsappPhone) {
+      await this.sendWhatsApp(options.whatsappPhone, `✅ ${message}`);
+    }
   }
 
   /**

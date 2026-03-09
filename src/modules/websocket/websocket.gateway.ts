@@ -22,7 +22,7 @@ import type { SocketData } from './services/websocket-connection.service';
 /**
  * Парсит FRONTEND_URL так же как getCorsOrigins() в main.ts.
  * Поддерживает несколько origins через запятую:
- *   FRONTEND_URL=https://moldmasters.md,https://www.moldmasters.md
+ *   FRONTEND_URL=https://master-hub.md,https://www.master-hub.md
  * Вызывается один раз при загрузке модуля (декораторы вычисляются при старте).
  */
 function resolveWsCorsOrigins(): string | string[] {

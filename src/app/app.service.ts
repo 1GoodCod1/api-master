@@ -83,7 +83,7 @@ export class AppService {
     name: string;
   } {
     return {
-      name: 'MoldMasters API',
+      name: 'Master-Hub API',
       version: this.configService.get('npm_package_version') || '1.0.0',
       build: process.env.BUILD_ID || 'local',
     };

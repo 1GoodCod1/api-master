@@ -173,16 +173,22 @@ export class LeadsService {
       );
     }
 
-    // 9. Уведомление мастера (SMS; Telegram и WhatsApp — по привязанным каналам premium)
+    // 9. Уведомление мастера (SMS всегда; Telegram/WhatsApp по leadNotifyChannel)
+    const channel =
+      (master as { leadNotifyChannel?: string }).leadNotifyChannel || 'both';
     const tg = master.telegramChatId as string | null | undefined;
     const wa = master.whatsappPhone as string | null | undefined;
     const notificationOptions: {
       telegramChatId?: string;
       whatsappPhone?: string;
-    } = {
-      ...(tg ? { telegramChatId: tg } : {}),
-      ...(wa ? { whatsappPhone: wa } : {}),
-    };
+    } = {};
+    if (channel === 'telegram' && tg) notificationOptions.telegramChatId = tg;
+    else if (channel === 'whatsapp' && wa)
+      notificationOptions.whatsappPhone = wa;
+    else if (channel === 'both') {
+      if (tg) notificationOptions.telegramChatId = tg;
+      if (wa) notificationOptions.whatsappPhone = wa;
+    }
     await this.notificationsService.sendLeadNotification(
       master.user.phone,
       {
@@ -302,6 +308,7 @@ export class LeadsService {
         await this.inAppNotifications.notifyLeadStatusUpdated(master.userId, {
           leadId: updated.id,
           status: updated.status,
+          clientName: updated.clientName ?? undefined,
         });
       }
     } catch (err) {

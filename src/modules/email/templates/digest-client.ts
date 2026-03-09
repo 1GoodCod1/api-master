@@ -2,10 +2,10 @@ import type { TemplateContext, TemplateFn } from './types';
 
 const T = {
   ro: {
-    subject: 'MoldMasters: Digest — sfaturi și știri',
+    subject: 'Master-Hub: Digest — sfaturi și știri',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Digestul săptămânal MoldMasters — sfaturi și știri despre găsirea celor mai buni meșteri.</p>
+    <p>Digestul săptămânal Master-Hub — sfaturi și știri despre găsirea celor mai buni meșteri.</p>
     ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Anunț:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>În acest număr:</strong></p>
     <ul>
@@ -19,13 +19,13 @@ const T = {
     <p style="margin-top:16px; font-size:12px; color:#999;">V-ați abonat la digest în cabinet. Dezabonarea în setările profilului.</p>
   `,
     text: (ctx: TemplateContext) =>
-      `Digest MoldMasters${ctx.userName ? `, ${ctx.userName}` : ''}. Sfaturi despre meșteri: ${ctx.frontendUrl}/masters`,
+      `Digest Master-Hub${ctx.userName ? `, ${ctx.userName}` : ''}. Sfaturi despre meșteri: ${ctx.frontendUrl}/masters`,
   },
   ru: {
-    subject: 'MoldMasters: Дайджест — советы и новости',
+    subject: 'Master-Hub: Дайджест — советы и новости',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Ваш еженедельный дайджест MoldMasters — советы и новости о поиске лучших мастеров.</p>
+    <p>Ваш еженедельный дайджест Master-Hub — советы и новости о поиске лучших мастеров.</p>
     ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Объявление:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>В этом выпуске:</strong></p>
     <ul>
@@ -39,13 +39,13 @@ const T = {
     <p style="margin-top:16px; font-size:12px; color:#999;">Вы подписались на дайджест в личном кабинете. Отписаться можно в настройках профиля.</p>
   `,
     text: (ctx: TemplateContext) =>
-      `Дайджест MoldMasters${ctx.userName ? `, ${ctx.userName}` : ''}. Советы о поиске мастеров: ${ctx.frontendUrl}/masters`,
+      `Дайджест Master-Hub${ctx.userName ? `, ${ctx.userName}` : ''}. Советы о поиске мастеров: ${ctx.frontendUrl}/masters`,
   },
   en: {
-    subject: 'MoldMasters: Digest — tips and news',
+    subject: 'Master-Hub: Digest — tips and news',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Your weekly MoldMasters digest — tips and news about finding the best masters.</p>
+    <p>Your weekly Master-Hub digest — tips and news about finding the best masters.</p>
     ${typeof ctx.announcement === 'string' && ctx.announcement ? `<div style="margin:20px 0; padding:16px; background:#fef3c7; border-radius:8px; border-left:4px solid #f59e0b;"><strong>🆕 Announcement:</strong><p style="margin:8px 0 0;">${ctx.announcement}</p></div>` : ''}
     <p><strong>In this issue:</strong></p>
     <ul>
@@ -59,7 +59,7 @@ const T = {
     <p style="margin-top:16px; font-size:12px; color:#999;">You subscribed in your dashboard. Unsubscribe in profile settings.</p>
   `,
     text: (ctx: TemplateContext) =>
-      `MoldMasters digest${ctx.userName ? `, ${ctx.userName}` : ''}. Tips: ${ctx.frontendUrl}/masters`,
+      `Master-Hub digest${ctx.userName ? `, ${ctx.userName}` : ''}. Tips: ${ctx.frontendUrl}/masters`,
   },
 };
 

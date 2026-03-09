@@ -29,11 +29,12 @@ function attachKeepAliveToPool(pool: PgPool): void {
 }
 
 function createPgPool(connectionString: string): PgPool {
+  const isTest = process.env.NODE_ENV === 'test';
   // pg Pool types may not resolve in eslint's type-aware analysis
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Pool from pg
   const rawPool: unknown = new Pool({
     connectionString,
-    max: 20,
+    max: isTest ? 3 : 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000, // 10s for Docker/cold DB; was 2s
     allowExitOnIdle: true,

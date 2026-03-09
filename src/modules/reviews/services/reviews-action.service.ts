@@ -9,6 +9,7 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import type { ReviewCriteriaDto } from '../dto/review-criteria.dto';
 import { LeadStatus, ReviewStatus } from '../../../common/constants';
@@ -21,6 +22,7 @@ export class ReviewsActionService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -51,6 +53,7 @@ export class ReviewsActionService {
 
     const master = await this.prisma.master.findUnique({
       where: { id: masterId },
+      include: { user: { select: { phone: true } } },
     });
     if (!master) throw new NotFoundException('Мастер не найден');
 
@@ -165,6 +168,37 @@ export class ReviewsActionService {
         const msg = e instanceof Error ? e.message : String(e);
         this.logger.warn(`Failed to send in-app review notification: ${msg}`);
       });
+
+    // SMS, Telegram, WhatsApp мастеру о новом отзыве
+    const comment = createReviewDto.comment ?? '';
+    const reviewMsg = `Новый отзыв от ${displayName || 'клиента'}: ${rating}/5. ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`;
+    if (master.user?.phone) {
+      await this.notifications
+        .sendSMS(master.user.phone, reviewMsg)
+        .catch((e) => {
+          this.logger.warn(
+            `Failed to send review SMS: ${e instanceof Error ? e.message : e}`,
+          );
+        });
+    }
+    if (master.telegramChatId) {
+      await this.notifications
+        .sendTelegram(`⭐ ${reviewMsg}`, { chatId: master.telegramChatId })
+        .catch((e) => {
+          this.logger.warn(
+            `Failed to send review Telegram: ${e instanceof Error ? e.message : e}`,
+          );
+        });
+    }
+    if (master.whatsappPhone) {
+      await this.notifications
+        .sendWhatsApp(master.whatsappPhone, `⭐ ${reviewMsg}`)
+        .catch((e) => {
+          this.logger.warn(
+            `Failed to send review WhatsApp: ${e instanceof Error ? e.message : e}`,
+          );
+        });
+    }
 
     return review;
   }

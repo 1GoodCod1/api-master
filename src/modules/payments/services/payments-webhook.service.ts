@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
@@ -12,6 +13,7 @@ export class PaymentsWebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly notifications: NotificationsService,
     private readonly cache: CacheService,
   ) {}
 
@@ -52,12 +54,30 @@ export class PaymentsWebhookService {
         days,
       );
 
-      // Notify master about successful tariff payment
+      // Notify master about successful tariff payment (in-app + SMS/Telegram)
       try {
         const master = await this.prisma.master.findUnique({
           where: { id: payment.masterId },
-          select: { userId: true },
+          select: {
+            userId: true,
+            telegramChatId: true,
+            whatsappPhone: true,
+            user: { select: { phone: true } },
+          },
         });
+        if (master?.user?.phone) {
+          await this.notifications.sendPaymentConfirmation(
+            master.user.phone,
+            {
+              tariffType: String(payment.tariffType),
+              amount: String(payment.amount),
+            },
+            {
+              telegramChatId: master.telegramChatId ?? undefined,
+              whatsappPhone: master.whatsappPhone ?? undefined,
+            },
+          );
+        }
         if (master) {
           await this.inAppNotifications.notifyPaymentSuccess(master.userId, {
             paymentId: orderId,
@@ -67,7 +87,7 @@ export class PaymentsWebhookService {
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(`Failed to send in-app payment notification: ${msg}`);
+        this.logger.warn(`Failed to send payment notification: ${msg}`);
       }
     }
   }

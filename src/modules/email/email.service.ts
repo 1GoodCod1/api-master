@@ -81,7 +81,7 @@ export class EmailService {
     devLogWhenNotConfigured?: string,
   ): Promise<void> {
     const from =
-      this.configService.get<string>('email.from') || 'noreply@moldmasters.md';
+      this.configService.get<string>('email.from') || 'noreply@master-hub.md';
 
     if (this.transporter) {
       try {
