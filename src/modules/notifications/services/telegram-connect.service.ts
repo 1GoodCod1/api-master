@@ -83,7 +83,7 @@ export class TelegramConnectService {
     const chatId = String(message.chat.id);
 
     if (!text.startsWith(`/start ${CONNECT_PREFIX}`)) {
-      this.sendTelegramReply(
+      void this.sendTelegramReply(
         chatId,
         'Привет! Нажмите «Подключить Telegram» в настройках уведомлений на сайте, затем перейдите по полученной ссылке.',
       );
@@ -99,7 +99,7 @@ export class TelegramConnectService {
     });
 
     if (!record) {
-      this.sendTelegramReply(
+      void this.sendTelegramReply(
         chatId,
         'Ссылка недействительна или уже использована. Получите новую ссылку в настройках уведомлений.',
       );
@@ -110,7 +110,7 @@ export class TelegramConnectService {
       await this.prisma.telegramConnectToken.delete({
         where: { id: record.id },
       });
-      this.sendTelegramReply(
+      void this.sendTelegramReply(
         chatId,
         'Ссылка истекла. Получите новую ссылку в настройках уведомлений.',
       );
@@ -128,7 +128,7 @@ export class TelegramConnectService {
     ]);
 
     this.logger.log(`Telegram connected for master ${record.masterId}`);
-    this.sendTelegramReply(
+    void this.sendTelegramReply(
       chatId,
       '✅ Telegram подключен! Теперь вы будете получать уведомления о новых заявках здесь.',
     );
