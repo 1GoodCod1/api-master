@@ -2,6 +2,34 @@ import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 
+const PII_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
+  { regex: /\b[\w.-]+@[\w.-]+\.\w{2,}\b/g, replacement: '***@***.***' },
+  {
+    regex: /\b(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{2,6}\b/g,
+    replacement: '+***',
+  },
+  {
+    regex:
+      /"(email|phone|clientPhone|clientName|firstName|lastName|documentNumber|twoFactorSecret)"\s*:\s*"[^"]*"/g,
+    replacement: '"$1":"[REDACTED]"',
+  },
+];
+
+const piiRedactor = winston.format((info) => {
+  let msg = typeof info.message === 'string' ? info.message : '';
+  for (const { regex, replacement } of PII_PATTERNS) {
+    msg = msg.replace(regex, replacement);
+  }
+  info.message = msg;
+  return info;
+});
+
+const fileFormat = winston.format.combine(
+  winston.format.timestamp(),
+  piiRedactor(),
+  winston.format.json(),
+);
+
 export const winstonConfig = {
   transports: [
     new winston.transports.Console({
@@ -20,10 +48,7 @@ export const winstonConfig = {
       zippedArchive: true,
       maxSize: '20m',
       maxFiles: '14d',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-      ),
+      format: fileFormat,
     }),
     new winston.transports.DailyRotateFile({
       filename: 'logs/error-%DATE%.log',
@@ -32,10 +57,7 @@ export const winstonConfig = {
       maxSize: '20m',
       maxFiles: '30d',
       level: 'error',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-      ),
+      format: fileFormat,
     }),
   ],
 };

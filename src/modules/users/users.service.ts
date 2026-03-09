@@ -92,8 +92,21 @@ export class UsersService {
   /**
    * Удалить фотографию клиента
    */
-
   async removeMyPhoto(userId: string, fileId: string) {
     return this.manageService.removeMyPhoto(userId, fileId);
+  }
+
+  /**
+   * GDPR: Самостоятельное удаление аккаунта
+   */
+  async removeSelf(userId: string) {
+    return this.manageService.removeSelf(userId);
+  }
+
+  /**
+   * GDPR: Экспорт персональных данных
+   */
+  async exportPersonalData(userId: string) {
+    return this.manageService.exportPersonalData(userId);
   }
 }

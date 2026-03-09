@@ -130,7 +130,6 @@ export class TasksMaintenanceService {
         },
       });
 
-    // Очищаем UserActivity старше 60 дней, так как они нужны только для недавней аналитики
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     const deletedActivities = await this.prisma.userActivity.deleteMany({
@@ -139,13 +138,38 @@ export class TasksMaintenanceService {
       },
     });
 
-    if (
-      deletedRefreshTokens.count > 0 ||
-      deletedPasswordResetTokens.count > 0 ||
-      deletedActivities.count > 0
-    ) {
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const deletedLoginHistory = await this.prisma.loginHistory.deleteMany({
+      where: {
+        createdAt: { lt: ninetyDaysAgo },
+      },
+    });
+
+    const deletedPhoneVerifications =
+      await this.prisma.phoneVerification.deleteMany({
+        where: {
+          OR: [
+            { expiresAt: { lt: now } },
+            { verified: true, createdAt: { lt: sixtyDaysAgo } },
+          ],
+        },
+      });
+
+    const totalCleaned =
+      deletedRefreshTokens.count +
+      deletedPasswordResetTokens.count +
+      deletedActivities.count +
+      deletedLoginHistory.count +
+      deletedPhoneVerifications.count;
+
+    if (totalCleaned > 0) {
       this.logger.log(
-        `Cleaned up ${deletedRefreshTokens.count} expired refresh tokens, ${deletedPasswordResetTokens.count} expired password reset tokens, and ${deletedActivities.count} old user activities`,
+        `Data retention cleanup: ${deletedRefreshTokens.count} refresh tokens, ` +
+          `${deletedPasswordResetTokens.count} password reset tokens, ` +
+          `${deletedActivities.count} user activities (>60d), ` +
+          `${deletedLoginHistory.count} login history (>90d), ` +
+          `${deletedPhoneVerifications.count} phone verifications`,
       );
     }
   }

@@ -1,10 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { EncryptionService } from '../../shared/utils/encryption.service';
 
 @Injectable()
 export class VerificationQueryService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(VerificationQueryService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly encryption: EncryptionService,
+  ) {}
+
+  private decryptDocumentNumber(docNumber: string | null): string | null {
+    if (!docNumber) return null;
+    try {
+      return this.encryption.decrypt(docNumber);
+    } catch {
+      return docNumber;
+    }
+  }
 
   /**
    * Получить статус верификации для текущего мастера
@@ -77,7 +92,10 @@ export class VerificationQueryService {
     ]);
 
     return {
-      verifications,
+      verifications: verifications.map((v) => ({
+        ...v,
+        documentNumber: this.decryptDocumentNumber(v.documentNumber),
+      })),
       meta: {
         total,
         page,
@@ -120,7 +138,10 @@ export class VerificationQueryService {
       throw new NotFoundException('Заявка на верификацию не найдена');
     }
 
-    return verification;
+    return {
+      ...verification,
+      documentNumber: this.decryptDocumentNumber(verification.documentNumber),
+    };
   }
 
   /** Количество уже одобренных верификаций (для автовыдачи премиума первым 100) */

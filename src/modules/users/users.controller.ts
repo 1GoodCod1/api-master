@@ -84,6 +84,26 @@ export class UsersController {
     return this.usersService.getStatistics();
   }
 
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Удалить собственный аккаунт (GDPR Art. 17 — Right to Erasure)',
+  })
+  async removeSelf(@Req() req: RequestWithUser) {
+    return this.usersService.removeSelf(req.user.id);
+  }
+
+  @Get('me/export')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Экспорт персональных данных (GDPR Art. 20 — Data Portability)',
+  })
+  async exportPersonalData(@Req() req: RequestWithUser) {
+    return this.usersService.exportPersonalData(req.user.id);
+  }
+
   @Patch('me/preferred-language')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

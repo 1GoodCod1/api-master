@@ -8,6 +8,7 @@ import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
+import { EncryptionService } from '../../shared/utils/encryption.service';
 import { SubmitVerificationDto } from '../dto/submit-verification.dto';
 import {
   ReviewVerificationDto,
@@ -22,6 +23,7 @@ export class VerificationActionService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly encryption: EncryptionService,
   ) {}
 
   /**
@@ -60,13 +62,14 @@ export class VerificationActionService {
       );
     }
 
-    // Создаем или обновляем заявку на верификацию
+    const encryptedDocNumber = this.encryption.encrypt(dto.documentNumber);
+
     const verification = await this.prisma.masterVerification.upsert({
       where: { masterId: user.masterProfile.id },
       create: {
         masterId: user.masterProfile.id,
         documentType: dto.documentType,
-        documentNumber: dto.documentNumber,
+        documentNumber: encryptedDocNumber,
         documentFrontId: dto.documentFrontId,
         documentBackId: dto.documentBackId,
         selfieId: dto.selfieId,
@@ -76,7 +79,7 @@ export class VerificationActionService {
       },
       update: {
         documentType: dto.documentType,
-        documentNumber: dto.documentNumber,
+        documentNumber: encryptedDocNumber,
         documentFrontId: dto.documentFrontId,
         documentBackId: dto.documentBackId,
         selfieId: dto.selfieId,
