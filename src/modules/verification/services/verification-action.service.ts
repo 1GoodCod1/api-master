@@ -30,99 +30,110 @@ export class VerificationActionService {
    * Подать заявку на верификацию
    */
   async submit(userId: string, dto: SubmitVerificationDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { masterProfile: true },
-    });
-
-    if (!user) throw new NotFoundException('Пользователь не найден');
-    if (user.role !== 'MASTER')
-      throw new BadRequestException(
-        'Только мастера могут подавать заявку на верификацию',
-      );
-    if (!user.masterProfile)
-      throw new NotFoundException('Профиль мастера не найден');
-    if (dto.phone !== user.phone)
-      throw new BadRequestException(
-        'Номер телефона должен совпадать с номером в профиле',
-      );
-
-    // Проверяем, не подана ли уже заявка
-    const existingVerification =
-      await this.prisma.masterVerification.findUnique({
-        where: { masterId: user.masterProfile.id },
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { masterProfile: true },
       });
 
-    if (
-      existingVerification &&
-      existingVerification.status === VerificationStatus.PENDING
-    ) {
-      throw new BadRequestException(
-        'Заявка на верификацию уже подана и ожидает рассмотрения',
-      );
-    }
-
-    const encryptedDocNumber = this.encryption.encrypt(dto.documentNumber);
-
-    const verification = await this.prisma.masterVerification.upsert({
-      where: { masterId: user.masterProfile.id },
-      create: {
-        masterId: user.masterProfile.id,
-        documentType: dto.documentType,
-        documentNumber: encryptedDocNumber,
-        documentFrontId: dto.documentFrontId,
-        documentBackId: dto.documentBackId,
-        selfieId: dto.selfieId,
-        phone: dto.phone,
-        phoneVerified: user.phoneVerified,
-        status: VerificationStatus.PENDING,
-      },
-      update: {
-        documentType: dto.documentType,
-        documentNumber: encryptedDocNumber,
-        documentFrontId: dto.documentFrontId,
-        documentBackId: dto.documentBackId,
-        selfieId: dto.selfieId,
-        phone: dto.phone,
-        phoneVerified: user.phoneVerified,
-        status: VerificationStatus.PENDING,
-        submittedAt: new Date(),
-        reviewedBy: null,
-        reviewedAt: null,
-        notes: null,
-      },
-    });
-
-    // Обновляем статус мастера
-    await this.prisma.master.update({
-      where: { id: user.masterProfile.id },
-      data: {
-        pendingVerification: true,
-        verificationSubmittedAt: new Date(),
-      },
-    });
-
-    // In-app уведомление админам о новой заявке на верификацию
-    const masterName =
-      [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
-      user.phone;
-    await this.inAppNotifications
-      .notifyNewVerificationRequest({
-        verificationId: verification.id,
-        masterId: user.masterProfile.id,
-        masterName,
-      })
-      .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(
-          `Failed to send in-app new verification notification: ${msg}`,
+      if (!user) throw new NotFoundException('Пользователь не найден');
+      if (user.role !== 'MASTER')
+        throw new BadRequestException(
+          'Только мастера могут подавать заявку на верификацию',
         );
+      if (!user.masterProfile)
+        throw new NotFoundException('Профиль мастера не найден');
+      if (dto.phone !== user.phone)
+        throw new BadRequestException(
+          'Номер телефона должен совпадать с номером в профиле',
+        );
+
+      // Проверяем, не подана ли уже заявка
+      const existingVerification =
+        await this.prisma.masterVerification.findUnique({
+          where: { masterId: user.masterProfile.id },
+        });
+
+      if (
+        existingVerification &&
+        existingVerification.status === VerificationStatus.PENDING
+      ) {
+        throw new BadRequestException(
+          'Заявка на верификацию уже подана и ожидает рассмотрения',
+        );
+      }
+
+      const encryptedDocNumber = this.encryption.encrypt(dto.documentNumber);
+
+      const verification = await this.prisma.masterVerification.upsert({
+        where: { masterId: user.masterProfile.id },
+        create: {
+          masterId: user.masterProfile.id,
+          documentType: dto.documentType,
+          documentNumber: encryptedDocNumber,
+          documentFrontId: dto.documentFrontId,
+          documentBackId: dto.documentBackId,
+          selfieId: dto.selfieId,
+          phone: dto.phone,
+          phoneVerified: user.phoneVerified,
+          status: VerificationStatus.PENDING,
+        },
+        update: {
+          documentType: dto.documentType,
+          documentNumber: encryptedDocNumber,
+          documentFrontId: dto.documentFrontId,
+          documentBackId: dto.documentBackId,
+          selfieId: dto.selfieId,
+          phone: dto.phone,
+          phoneVerified: user.phoneVerified,
+          status: VerificationStatus.PENDING,
+          submittedAt: new Date(),
+          reviewedBy: null,
+          reviewedAt: null,
+          notes: null,
+        },
       });
 
-    return {
-      message: 'Заявка на верификацию успешно отправлена',
-      verificationId: verification.id,
-    };
+      // Обновляем статус мастера
+      await this.prisma.master.update({
+        where: { id: user.masterProfile.id },
+        data: {
+          pendingVerification: true,
+          verificationSubmittedAt: new Date(),
+        },
+      });
+
+      // In-app уведомление админам о новой заявке на верификацию
+      const masterName =
+        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+        user.phone;
+      await this.inAppNotifications
+        .notifyNewVerificationRequest({
+          verificationId: verification.id,
+          masterId: user.masterProfile.id,
+          masterName,
+        })
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          this.logger.warn(
+            `Failed to send in-app new verification notification: ${msg}`,
+          );
+        });
+
+      return {
+        message: 'Заявка на верификацию успешно отправлена',
+        verificationId: verification.id,
+      };
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      ) {
+        throw err;
+      }
+      this.logger.error('submit verification failed', err);
+      throw err;
+    }
   }
 
   /**
@@ -133,86 +144,97 @@ export class VerificationActionService {
     adminId: string,
     dto: ReviewVerificationDto,
   ) {
-    const verification = await this.prisma.masterVerification.findUnique({
-      where: { id: verificationId },
-      include: { master: true },
-    });
-
-    if (!verification) throw new NotFoundException('Заявка не найдена');
-    if (verification.status !== VerificationStatus.PENDING)
-      throw new BadRequestException('Заявка уже была обработана');
-
-    const status =
-      dto.decision === VerificationDecision.APPROVE
-        ? VerificationStatus.APPROVED
-        : VerificationStatus.REJECTED;
-
-    // Обновляем заявку
-    await this.prisma.masterVerification.update({
-      where: { id: verificationId },
-      data: {
-        status,
-        reviewedBy: adminId,
-        reviewedAt: new Date(),
-        notes: dto.notes || null,
-      },
-    });
-
-    // Если одобрено — обновляем статус мастера и пользователя.
-    // Тариф мастер выбирает сам 1 кликом после верификации (claim-free).
-    if (dto.decision === VerificationDecision.APPROVE) {
-      const userId = verification.master.userId;
-      await this.prisma.$transaction([
-        this.prisma.master.update({
-          where: { id: verification.masterId },
-          data: { pendingVerification: false },
-        }),
-        this.prisma.user.update({
-          where: { id: userId },
-          data: { isVerified: true },
-        }),
-      ]);
-      await this.invalidateCache(userId);
-
-      // In-app уведомление мастеру: верификация одобрена
-      await this.inAppNotifications
-        .notifyVerificationApproved(userId, {
-          verificationId,
-          masterId: verification.masterId,
-          isFirst100: false,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(
-            `Failed to send in-app verification approved: ${msg}`,
-          );
-        });
-    } else {
-      // Если отклонено - сбрасываем флаг ожидания
-      await this.prisma.master.update({
-        where: { id: verification.masterId },
-        data: { pendingVerification: false },
+    try {
+      const verification = await this.prisma.masterVerification.findUnique({
+        where: { id: verificationId },
+        include: { master: true },
       });
 
-      // In-app уведомление мастеру: верификация отклонена
-      const userId = verification.master.userId;
-      await this.inAppNotifications
-        .notifyVerificationRejected(userId, {
-          verificationId,
-          masterId: verification.masterId,
-          reason: dto.notes || undefined,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(
-            `Failed to send in-app verification rejected: ${msg}`,
-          );
-        });
-    }
+      if (!verification) throw new NotFoundException('Заявка не найдена');
+      if (verification.status !== VerificationStatus.PENDING)
+        throw new BadRequestException('Заявка уже была обработана');
 
-    return {
-      message: `Заявка ${dto.decision === VerificationDecision.APPROVE ? 'одобрена' : 'отклонена'} успешно`,
-    };
+      const status =
+        dto.decision === VerificationDecision.APPROVE
+          ? VerificationStatus.APPROVED
+          : VerificationStatus.REJECTED;
+
+      // Обновляем заявку
+      await this.prisma.masterVerification.update({
+        where: { id: verificationId },
+        data: {
+          status,
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          notes: dto.notes || null,
+        },
+      });
+
+      // Если одобрено — обновляем статус мастера и пользователя.
+      // Тариф мастер выбирает сам 1 кликом после верификации (claim-free).
+      if (dto.decision === VerificationDecision.APPROVE) {
+        const userId = verification.master.userId;
+        await this.prisma.$transaction([
+          this.prisma.master.update({
+            where: { id: verification.masterId },
+            data: { pendingVerification: false },
+          }),
+          this.prisma.user.update({
+            where: { id: userId },
+            data: { isVerified: true },
+          }),
+        ]);
+        await this.invalidateCache(userId);
+
+        // In-app уведомление мастеру: верификация одобрена
+        await this.inAppNotifications
+          .notifyVerificationApproved(userId, {
+            verificationId,
+            masterId: verification.masterId,
+            isFirst100: false,
+          })
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(
+              `Failed to send in-app verification approved: ${msg}`,
+            );
+          });
+      } else {
+        // Если отклонено - сбрасываем флаг ожидания
+        await this.prisma.master.update({
+          where: { id: verification.masterId },
+          data: { pendingVerification: false },
+        });
+
+        // In-app уведомление мастеру: верификация отклонена
+        const userId = verification.master.userId;
+        await this.inAppNotifications
+          .notifyVerificationRejected(userId, {
+            verificationId,
+            masterId: verification.masterId,
+            reason: dto.notes || undefined,
+          })
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(
+              `Failed to send in-app verification rejected: ${msg}`,
+            );
+          });
+      }
+
+      return {
+        message: `Заявка ${dto.decision === VerificationDecision.APPROVE ? 'одобрена' : 'отклонена'} успешно`,
+      };
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      ) {
+        throw err;
+      }
+      this.logger.error('review verification failed', err);
+      throw err;
+    }
   }
 
   private async invalidateCache(userId: string) {

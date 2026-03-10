@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { LeadStatus, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -21,6 +22,8 @@ import {
  */
 @Injectable()
 export class LeadsQueryService {
+  private readonly logger = new Logger(LeadsQueryService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
@@ -38,18 +41,24 @@ export class LeadsQueryService {
       page?: number;
     } = {},
   ) {
-    if (authUser.role === 'CLIENT') {
-      const userId = authUser.id;
-      const phone = authUser.phone || '';
-      return this.findAllForClient(userId, phone, options);
-    }
+    try {
+      if (authUser.role === 'CLIENT') {
+        const userId = authUser.id;
+        const phone = authUser.phone || '';
+        return await this.findAllForClient(userId, phone, options);
+      }
 
-    const masterId = authUser.masterProfile?.id;
-    if (!masterId) {
-      throw new BadRequestException('Master profile not found');
-    }
+      const masterId = authUser.masterProfile?.id;
+      if (!masterId) {
+        throw new BadRequestException('Master profile not found');
+      }
 
-    return this.findAllForMaster(masterId, options);
+      return await this.findAllForMaster(masterId, options);
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      this.logger.error('findAll leads failed', err);
+      throw err;
+    }
   }
 
   private async findAllForMaster(

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AvailabilityStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 
@@ -7,84 +7,96 @@ import { PrismaService } from '../../shared/database/prisma.service';
  */
 @Injectable()
 export class MastersAvailabilityService {
+  private readonly logger = new Logger(MastersAvailabilityService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Увеличить счётчик активных лидов и перевести в BUSY если лимит достигнут.
    */
   async incrementActiveLeads(masterId: string) {
-    const master = await this.prisma.master.update({
-      where: { id: masterId },
-      data: {
-        leadsReceivedToday: { increment: 1 },
-        currentActiveLeads: { increment: 1 },
-      },
-      select: {
-        id: true,
-        currentActiveLeads: true,
-        maxActiveLeads: true,
-        availabilityStatus: true,
-      },
-    });
-
-    if (
-      master.currentActiveLeads >= master.maxActiveLeads &&
-      master.availabilityStatus === AvailabilityStatus.AVAILABLE
-    ) {
-      await this.prisma.master.update({
+    try {
+      const master = await this.prisma.master.update({
         where: { id: masterId },
-        data: { availabilityStatus: AvailabilityStatus.BUSY },
+        data: {
+          leadsReceivedToday: { increment: 1 },
+          currentActiveLeads: { increment: 1 },
+        },
+        select: {
+          id: true,
+          currentActiveLeads: true,
+          maxActiveLeads: true,
+          availabilityStatus: true,
+        },
       });
-    }
 
-    return master;
+      if (
+        master.currentActiveLeads >= master.maxActiveLeads &&
+        master.availabilityStatus === AvailabilityStatus.AVAILABLE
+      ) {
+        await this.prisma.master.update({
+          where: { id: masterId },
+          data: { availabilityStatus: AvailabilityStatus.BUSY },
+        });
+      }
+
+      return master;
+    } catch (err) {
+      this.logger.error('incrementActiveLeads failed', err);
+      throw err;
+    }
   }
 
   /**
    * Уменьшить счётчик активных лидов и перевести в AVAILABLE если место освободилось.
    */
   async decrementActiveLeads(masterId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { id: masterId },
-      select: {
-        id: true,
-        currentActiveLeads: true,
-        maxActiveLeads: true,
-        availabilityStatus: true,
-      },
-    });
-
-    if (!master || master.currentActiveLeads <= 0) return master;
-
-    const updatedMaster = await this.prisma.master.update({
-      where: { id: masterId },
-      data: {
-        currentActiveLeads: { decrement: 1 },
-      },
-      select: {
-        id: true,
-        currentActiveLeads: true,
-        maxActiveLeads: true,
-        availabilityStatus: true,
-      },
-    });
-
-    // Если был занят и место освободилось — делаем доступным
-    if (
-      updatedMaster.availabilityStatus === AvailabilityStatus.BUSY &&
-      updatedMaster.currentActiveLeads < updatedMaster.maxActiveLeads
-    ) {
-      await this.prisma.master.update({
+    try {
+      const master = await this.prisma.master.findUnique({
         where: { id: masterId },
-        data: { availabilityStatus: AvailabilityStatus.AVAILABLE },
+        select: {
+          id: true,
+          currentActiveLeads: true,
+          maxActiveLeads: true,
+          availabilityStatus: true,
+        },
       });
-      return {
-        ...updatedMaster,
-        availabilityStatus: AvailabilityStatus.AVAILABLE,
-      };
-    }
 
-    return updatedMaster;
+      if (!master || master.currentActiveLeads <= 0) return master;
+
+      const updatedMaster = await this.prisma.master.update({
+        where: { id: masterId },
+        data: {
+          currentActiveLeads: { decrement: 1 },
+        },
+        select: {
+          id: true,
+          currentActiveLeads: true,
+          maxActiveLeads: true,
+          availabilityStatus: true,
+        },
+      });
+
+      // Если был занят и место освободилось — делаем доступным
+      if (
+        updatedMaster.availabilityStatus === AvailabilityStatus.BUSY &&
+        updatedMaster.currentActiveLeads < updatedMaster.maxActiveLeads
+      ) {
+        await this.prisma.master.update({
+          where: { id: masterId },
+          data: { availabilityStatus: AvailabilityStatus.AVAILABLE },
+        });
+        return {
+          ...updatedMaster,
+          availabilityStatus: AvailabilityStatus.AVAILABLE,
+        };
+      }
+
+      return updatedMaster;
+    } catch (err) {
+      this.logger.error('decrementActiveLeads failed', err);
+      throw err;
+    }
   }
 
   /**
@@ -92,35 +104,40 @@ export class MastersAvailabilityService {
    * Полезно при ручных изменениях лимитов или удалении данных.
    */
   async syncAvailabilityStatus(masterId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { id: masterId },
-      select: {
-        id: true,
-        currentActiveLeads: true,
-        maxActiveLeads: true,
-        availabilityStatus: true,
-      },
-    });
-
-    if (!master) return;
-
-    let newStatus: AvailabilityStatus = master.availabilityStatus;
-
-    if (master.currentActiveLeads >= master.maxActiveLeads) {
-      if (master.availabilityStatus === AvailabilityStatus.AVAILABLE) {
-        newStatus = AvailabilityStatus.BUSY;
-      }
-    } else {
-      if (master.availabilityStatus === AvailabilityStatus.BUSY) {
-        newStatus = AvailabilityStatus.AVAILABLE;
-      }
-    }
-
-    if (newStatus !== master.availabilityStatus) {
-      await this.prisma.master.update({
+    try {
+      const master = await this.prisma.master.findUnique({
         where: { id: masterId },
-        data: { availabilityStatus: newStatus },
+        select: {
+          id: true,
+          currentActiveLeads: true,
+          maxActiveLeads: true,
+          availabilityStatus: true,
+        },
       });
+
+      if (!master) return;
+
+      let newStatus: AvailabilityStatus = master.availabilityStatus;
+
+      if (master.currentActiveLeads >= master.maxActiveLeads) {
+        if (master.availabilityStatus === AvailabilityStatus.AVAILABLE) {
+          newStatus = AvailabilityStatus.BUSY;
+        }
+      } else {
+        if (master.availabilityStatus === AvailabilityStatus.BUSY) {
+          newStatus = AvailabilityStatus.AVAILABLE;
+        }
+      }
+
+      if (newStatus !== master.availabilityStatus) {
+        await this.prisma.master.update({
+          where: { id: masterId },
+          data: { availabilityStatus: newStatus },
+        });
+      }
+    } catch (err) {
+      this.logger.error('syncAvailabilityStatus failed', err);
+      throw err;
     }
   }
 }

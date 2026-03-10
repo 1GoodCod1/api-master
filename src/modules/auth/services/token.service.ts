@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -7,6 +7,8 @@ import { PrismaService } from '../../shared/database/prisma.service';
 
 @Injectable()
 export class TokenService {
+  private readonly logger = new Logger(TokenService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -30,78 +32,96 @@ export class TokenService {
   }
 
   async generateRefreshToken(userId: string): Promise<string> {
-    const token = randomBytes(40).toString('hex');
-    const days =
-      this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + days);
+    try {
+      const token = randomBytes(40).toString('hex');
+      const days =
+        this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
 
-    await this.prisma.refreshToken.create({
-      data: {
-        token,
-        userId,
-        expiresAt,
-      },
-    });
+      await this.prisma.refreshToken.create({
+        data: {
+          token,
+          userId,
+          expiresAt,
+        },
+      });
 
-    return token;
+      return token;
+    } catch (err) {
+      this.logger.error('generateRefreshToken failed', err);
+      throw err;
+    }
   }
 
   async refreshTokens(refreshToken: string) {
-    const tokenRecord = await this.prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
-            isVerified: true,
-            isBanned: true,
+    try {
+      const tokenRecord = await this.prisma.refreshToken.findUnique({
+        where: { token: refreshToken },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              isVerified: true,
+              isBanned: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!tokenRecord) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+      if (!tokenRecord) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
-    if (tokenRecord.expiresAt < new Date()) {
+      if (tokenRecord.expiresAt < new Date()) {
+        await this.prisma.refreshToken.delete({
+          where: { id: tokenRecord.id },
+        });
+        throw new UnauthorizedException('Refresh token expired');
+      }
+
+      if (!tokenRecord.user || tokenRecord.user.isBanned) {
+        await this.prisma.refreshToken.delete({
+          where: { id: tokenRecord.id },
+        });
+        throw new UnauthorizedException('User not found or banned');
+      }
+
+      const newAccessToken = this.generateAccessToken(tokenRecord.user);
       await this.prisma.refreshToken.delete({
         where: { id: tokenRecord.id },
       });
-      throw new UnauthorizedException('Refresh token expired');
+      const newRefreshToken = await this.generateRefreshToken(
+        tokenRecord.user.id,
+      );
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (err) {
+      if (err instanceof UnauthorizedException) {
+        throw err;
+      }
+      this.logger.error('refreshTokens failed', err);
+      throw err;
     }
-
-    if (!tokenRecord.user || tokenRecord.user.isBanned) {
-      await this.prisma.refreshToken.delete({
-        where: { id: tokenRecord.id },
-      });
-      throw new UnauthorizedException('User not found or banned');
-    }
-
-    const newAccessToken = this.generateAccessToken(tokenRecord.user);
-    await this.prisma.refreshToken.delete({
-      where: { id: tokenRecord.id },
-    });
-    const newRefreshToken = await this.generateRefreshToken(
-      tokenRecord.user.id,
-    );
-
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    };
   }
 
   async cleanupExpiredTokens() {
-    await this.prisma.refreshToken.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
+    try {
+      await this.prisma.refreshToken.deleteMany({
+        where: {
+          expiresAt: {
+            lt: new Date(),
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      this.logger.error('cleanupExpiredTokens failed', err);
+      throw err;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentsMiaService } from './services/payments-mia.service';
 import { PaymentsWebhookService } from './services/payments-webhook.service';
@@ -13,6 +13,8 @@ import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
  */
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly miaService: PaymentsMiaService,
     private readonly webhookService: PaymentsWebhookService,
@@ -26,16 +28,31 @@ export class PaymentsService {
    * Создать QR-платёж через MIA (MAIB)
    */
   async createMiaCheckout(dto: CreatePaymentDto, userId: string) {
-    return this.miaService.createTariffQrPayment(dto, userId);
+    try {
+      return await this.miaService.createTariffQrPayment(dto, userId);
+    } catch (err) {
+      this.logger.error('createMiaCheckout failed', err);
+      throw err;
+    }
   }
 
   async handleMiaCallback(orderId: string) {
-    await this.webhookService.completeMiaTariffPayment(orderId);
-    return { received: true };
+    try {
+      await this.webhookService.completeMiaTariffPayment(orderId);
+      return { received: true };
+    } catch (err) {
+      this.logger.error('handleMiaCallback failed', err);
+      throw err;
+    }
   }
 
   async simulateMiaSandboxPayment(paymentId: string, userId: string) {
-    return this.miaService.simulateSandboxPayment(paymentId, userId);
+    try {
+      return await this.miaService.simulateSandboxPayment(paymentId, userId);
+    } catch (err) {
+      this.logger.error('simulateMiaSandboxPayment failed', err);
+      throw err;
+    }
   }
 
   // ==================== ЗАПРОСЫ И СТАТИСТИКА ====================
@@ -44,30 +61,61 @@ export class PaymentsService {
    * Получить платежи мастера с проверкой прав (ADMIN или сам мастер)
    */
   async getPaymentsForMaster(masterId: string, authUser: JwtUser) {
-    this.validateMasterAccess(masterId, authUser);
-    return this.queryService.getPaymentsForMaster(masterId);
+    try {
+      this.validateMasterAccess(masterId, authUser);
+      return await this.queryService.getPaymentsForMaster(masterId);
+    } catch (err) {
+      if (err instanceof ForbiddenException) {
+        throw err;
+      }
+      this.logger.error('getPaymentsForMaster failed', err);
+      throw err;
+    }
   }
 
   /**
    * Получить статистику платежей с проверкой прав
    */
   async getPaymentStats(masterId: string, authUser: JwtUser) {
-    this.validateMasterAccess(masterId, authUser);
-    return this.queryService.getPaymentStats(masterId);
+    try {
+      this.validateMasterAccess(masterId, authUser);
+      return await this.queryService.getPaymentStats(masterId);
+    } catch (err) {
+      if (err instanceof ForbiddenException) {
+        throw err;
+      }
+      this.logger.error('getPaymentStats failed', err);
+      throw err;
+    }
   }
 
   // ==================== УПРАВЛЕНИЕ АПГРЕЙДАМИ ====================
 
   async confirmPendingUpgrade(userId: string) {
-    return this.upgradeService.confirmPendingUpgrade(userId);
+    try {
+      return await this.upgradeService.confirmPendingUpgrade(userId);
+    } catch (err) {
+      this.logger.error('confirmPendingUpgrade failed', err);
+      throw err;
+    }
   }
 
   async cancelPendingUpgrade(userId: string) {
-    return this.upgradeService.cancelPendingUpgrade(userId);
+    try {
+      return await this.upgradeService.cancelPendingUpgrade(userId);
+    } catch (err) {
+      this.logger.error('cancelPendingUpgrade failed', err);
+      throw err;
+    }
   }
 
   async cancelTariffAtPeriodEnd(userId: string) {
-    return this.upgradeService.cancelTariffAtPeriodEnd(userId);
+    try {
+      return await this.upgradeService.cancelTariffAtPeriodEnd(userId);
+    } catch (err) {
+      this.logger.error('cancelTariffAtPeriodEnd failed', err);
+      throw err;
+    }
   }
 
   // ==================== ВСПОМОГАТЕЛЬНЫЕ ====================

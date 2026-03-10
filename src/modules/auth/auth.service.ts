@@ -69,65 +69,78 @@ export class AuthService {
   // ==================== ПРОФИЛЬ ====================
 
   async getProfile(userId: string) {
-    const cacheKey = this.cache.keys.userProfile(userId);
+    try {
+      const cacheKey = this.cache.keys.userProfile(userId);
 
-    return this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        const user = await this.prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-            isVerified: true,
-            phoneVerified: true,
-            isBanned: true,
-            lastLoginAt: true,
-            createdAt: true,
-            updatedAt: true,
-            avatarFile: {
-              select: {
-                id: true,
-                path: true,
-                filename: true,
+      return this.cache.getOrSet(
+        cacheKey,
+        async () => {
+          const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              isVerified: true,
+              phoneVerified: true,
+              isBanned: true,
+              lastLoginAt: true,
+              createdAt: true,
+              updatedAt: true,
+              avatarFile: {
+                select: {
+                  id: true,
+                  path: true,
+                  filename: true,
+                },
               },
-            },
-            masterProfile: {
-              select: {
-                id: true,
-                tariffType: true,
-                tariffExpiresAt: true,
-                avatarFile: {
-                  select: {
-                    id: true,
-                    path: true,
-                    filename: true,
+              masterProfile: {
+                select: {
+                  id: true,
+                  tariffType: true,
+                  tariffExpiresAt: true,
+                  avatarFile: {
+                    select: {
+                      id: true,
+                      path: true,
+                      filename: true,
+                    },
                   },
                 },
               },
             },
-          },
-        });
+          });
 
-        if (!user) {
-          throw new NotFoundException('User not found');
-        }
+          if (!user) {
+            throw new NotFoundException('User not found');
+          }
 
-        return {
-          user,
-        };
-      },
-      this.cache.ttl.userProfile,
-    );
+          return {
+            user,
+          };
+        },
+        this.cache.ttl.userProfile,
+      );
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+      this.logger.error('getProfile failed', err);
+      throw err;
+    }
   }
 
   async invalidateUserCache(userId: string) {
-    await this.cache.del(this.cache.keys.userProfile(userId));
-    await this.cache.del(this.cache.keys.userMasterProfile(userId));
+    try {
+      await this.cache.del(this.cache.keys.userProfile(userId));
+      await this.cache.del(this.cache.keys.userMasterProfile(userId));
+    } catch (err) {
+      this.logger.error('invalidateUserCache failed', err);
+      throw err;
+    }
   }
 
   // ==================== СБРОС ПАРОЛЯ ====================

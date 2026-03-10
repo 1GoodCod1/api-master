@@ -21,25 +21,38 @@ export class UsersManageService {
    * Обновить данные пользователя
    */
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id } });
 
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+      if (!user) {
+        throw new NotFoundException('Пользователь не найден');
+      }
+
+      return await this.prisma.user.update({
+        where: { id },
+        data: updateUserDto,
+      });
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+      this.logger.error('update failed', err);
+      throw err;
     }
-
-    return this.prisma.user.update({
-      where: { id },
-      data: updateUserDto,
-    });
   }
 
   /**
    * Удалить пользователя
    */
   async remove(id: string) {
-    return this.prisma.user.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.user.delete({
+        where: { id },
+      });
+    } catch (err) {
+      this.logger.error('remove failed', err);
+      throw err;
+    }
   }
 
   /**
@@ -247,26 +260,39 @@ export class UsersManageService {
    * Каскадное удаление через Prisma (onDelete: Cascade) очистит все связанные данные.
    */
   async removeSelf(userId: string): Promise<{ ok: true }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, role: true },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true },
+      });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
 
-    if (user.role === 'ADMIN') {
-      throw new BadRequestException(
-        'Admin accounts cannot be self-deleted. Contact another admin.',
+      if (user.role === 'ADMIN') {
+        throw new BadRequestException(
+          'Admin accounts cannot be self-deleted. Contact another admin.',
+        );
+      }
+
+      await this.prisma.user.delete({ where: { id: userId } });
+      await this.invalidateCache(userId);
+
+      this.logger.log(
+        `User ${userId} self-deleted their account (GDPR erasure)`,
       );
+      return { ok: true };
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof BadRequestException
+      ) {
+        throw err;
+      }
+      this.logger.error('removeSelf failed', err);
+      throw err;
     }
-
-    await this.prisma.user.delete({ where: { id: userId } });
-    await this.invalidateCache(userId);
-
-    this.logger.log(`User ${userId} self-deleted their account (GDPR erasure)`);
-    return { ok: true };
   }
 
   /**

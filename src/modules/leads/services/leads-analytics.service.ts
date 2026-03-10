@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 
 @Injectable()
 export class LeadsAnalyticsService {
+  private readonly logger = new Logger(LeadsAnalyticsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
@@ -13,19 +15,24 @@ export class LeadsAnalyticsService {
    * Обновление статистики мастера и инвалидация кеша
    */
   async handlePostCreation(masterId: string) {
-    // 1. Увеличиваем счетчик лидов у мастера
-    await this.prisma.master.update({
-      where: { id: masterId },
-      data: { leadsCount: { increment: 1 } },
-    });
+    try {
+      // 1. Увеличиваем счетчик лидов у мастера
+      await this.prisma.master.update({
+        where: { id: masterId },
+        data: { leadsCount: { increment: 1 } },
+      });
 
-    // 2. Инвалидируем кеш (профиль мастера — responseRate, лиды, статистика)
-    await this.cache.invalidate(`cache:master:${masterId}:leads:*`);
-    await this.cache.del(this.cache.keys.masterStats(masterId));
-    await this.cache.invalidate(`cache:master:${masterId}:*`);
+      // 2. Инвалидируем кеш (профиль мастера — responseRate, лиды, статистика)
+      await this.cache.invalidate(`cache:master:${masterId}:leads:*`);
+      await this.cache.del(this.cache.keys.masterStats(masterId));
+      await this.cache.invalidate(`cache:master:${masterId}:*`);
 
-    // 3. Обновляем аналитическую таблицу за сегодня
-    await this.updateDailyAnalytics(masterId);
+      // 3. Обновляем аналитическую таблицу за сегодня
+      await this.updateDailyAnalytics(masterId);
+    } catch (err) {
+      this.logger.error('handlePostCreation failed', err);
+      throw err;
+    }
   }
 
   private async updateDailyAnalytics(masterId: string) {
