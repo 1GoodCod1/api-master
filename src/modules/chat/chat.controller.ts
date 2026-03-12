@@ -16,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto, SendMessageDto } from './dto';
@@ -43,6 +44,7 @@ export class ChatController {
   }
 
   @Get('unread-count')
+  @Throttle({ default: { limit: 120, ttl: 60000 } }) // 120 req/min — polling + refetch
   @Roles('CLIENT', 'MASTER')
   @ApiOperation({ summary: 'Get unread messages count' })
   @ApiResponse({ status: 200, description: 'Unread count' })

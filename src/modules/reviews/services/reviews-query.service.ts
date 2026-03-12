@@ -26,6 +26,7 @@ export class ReviewsQueryService {
     masterId: string,
     options: {
       status?: string;
+      statusIn?: ReviewStatus[];
       limit?: number;
       cursor?: string;
       page?: number;
@@ -34,6 +35,7 @@ export class ReviewsQueryService {
   ): Promise<PaginatedResult<unknown>> {
     const {
       status,
+      statusIn,
       limit: rawLimit = 20,
       cursor,
       page,
@@ -43,18 +45,23 @@ export class ReviewsQueryService {
     const limit = Math.min(100, Math.max(1, Number(rawLimit) || 20));
 
     // Cache key includes all pagination params for correct invalidation
+    const statusKey = statusIn ? statusIn.join(',') : status;
     const cacheKey = this.cache.keys.masterReviews(
       masterId,
       page || 1,
       limit,
-      status,
+      statusKey,
     );
 
     return this.cache.getOrSet(
       cacheKey,
       async () => {
         const baseWhere: Prisma.ReviewWhereInput = { masterId };
-        if (status) baseWhere.status = status as ReviewStatus;
+        if (statusIn) {
+          baseWhere.status = { in: statusIn };
+        } else if (status) {
+          baseWhere.status = status as ReviewStatus;
+        }
 
         const queryParams = buildCursorQuery(
           baseWhere as Record<string, unknown>,

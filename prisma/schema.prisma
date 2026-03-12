@@ -974,15 +974,16 @@ model Conversation {
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderId       String
-  senderType     SenderType
-  content        String       @db.VarChar(2000)
-  files          MessageFile[]
-  readAt         DateTime?
-  createdAt      DateTime     @default(now())
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  senderType      SenderType
+  content         String       @db.VarChar(2000)
+  isAutoresponder Boolean      @default(false)
+  files           MessageFile[]
+  readAt          DateTime?
+  createdAt       DateTime     @default(now())
 
   @@index([conversationId])
   @@index([senderId])

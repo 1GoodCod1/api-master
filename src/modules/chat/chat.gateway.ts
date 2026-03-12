@@ -39,6 +39,7 @@ interface SendMessageResult {
     id: string;
     clientId: string | null;
     clientPhone?: string | null;
+    clientName?: string;
     masterUserId?: string;
     masterName?: string;
   };
@@ -315,12 +316,16 @@ export class ChatGateway
           : (conversation.masterUserId ?? null);
 
       if (recipientUserId) {
-        // In-app: сохранение в БД + отправка по WebSocket (единый канал)
+        const senderName =
+          message.senderType === 'MASTER'
+            ? (conversation.masterName ?? undefined)
+            : (conversation.clientName ?? undefined);
         await this.inAppNotifications
           .notifyNewChatMessage(recipientUserId, {
             conversationId,
             messageId: message.id,
             senderType: message.senderType,
+            senderName: senderName || undefined,
           })
           .catch((e: unknown) => {
             const msg = e instanceof Error ? e.message : String(e);

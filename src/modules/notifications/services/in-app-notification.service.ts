@@ -266,12 +266,13 @@ export class InAppNotificationService {
       senderName?: string;
     },
   ) {
-    const senderLabel = data.senderType === 'MASTER' ? 'мастера' : 'клиента';
+    const senderLabel = data.senderType === 'MASTER' ? 'Мастер' : 'Клиент';
+    const displayName = data.senderName?.trim() || senderLabel;
     await this.notify({
       userId: recipientUserId,
       category: 'NEW_CHAT_MESSAGE',
       title: 'Новое сообщение',
-      message: `Новое сообщение от ${data.senderName || senderLabel}`,
+      message: displayName,
       metadata: data,
     });
   }

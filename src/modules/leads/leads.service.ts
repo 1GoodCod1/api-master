@@ -12,7 +12,7 @@ import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
 import { MastersAvailabilityService } from '../masters/services/masters-availability.service';
-import { encodeId } from '../shared/utils/id-encoder';
+import { decodeId, encodeId } from '../shared/utils/id-encoder';
 import { EmailDripService } from '../email/email-drip.service';
 
 @Injectable()
@@ -290,20 +290,34 @@ export class LeadsService {
   }
 
   async updateStatus(
-    leadId: string,
+    idOrEncoded: string,
     authUser: JwtUser,
     updateDto: UpdateLeadStatusDto,
   ) {
+    const leadId = decodeId(idOrEncoded) ?? idOrEncoded;
     const updated = await this.actionsService.updateStatus(
       leadId,
       authUser,
       updateDto,
     );
     try {
-      const master = await this.prisma.master.findUnique({
-        where: { id: updated.masterId },
-        select: { userId: true },
-      });
+      const [master] = await Promise.all([
+        this.prisma.master.findUnique({
+          where: { id: updated.masterId },
+          select: { userId: true },
+        }),
+        updated.clientId
+          ? this.inAppNotifications.notify({
+              userId: updated.clientId,
+              category: 'LEAD_STATUS_UPDATED',
+              title: 'Статус заявки обновлён',
+              message: `Ваша заявка — ${updated.status}`,
+              messageKey: 'notifications.messages.leadStatusUpdated',
+              messageParams: { status: updated.status },
+              metadata: { leadId: updated.id, status: updated.status },
+            })
+          : Promise.resolve(),
+      ]);
       if (master) {
         await this.inAppNotifications.notifyLeadStatusUpdated(master.userId, {
           leadId: updated.id,

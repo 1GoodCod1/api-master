@@ -7,6 +7,7 @@ import {
 import { LeadStatus } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { decodeId } from '../../shared/utils/id-encoder';
 import { CacheService } from '../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
 import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
@@ -43,7 +44,7 @@ export class LeadsActionsService {
    * Обновление статуса лида с валидацией допустимых переходов.
    */
   async updateStatus(
-    leadId: string,
+    idOrEncoded: string,
     authUser: JwtUser,
     updateDto: UpdateLeadStatusDto,
   ) {
@@ -51,6 +52,8 @@ export class LeadsActionsService {
     if (!masterId && authUser.role !== 'ADMIN') {
       throw new BadRequestException('Master profile not found');
     }
+
+    const leadId = decodeId(idOrEncoded) ?? idOrEncoded;
 
     const lead = await this.prisma.lead.findUnique({
       where: { id: leadId },

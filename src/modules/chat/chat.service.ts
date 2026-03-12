@@ -14,6 +14,7 @@ import { isOutOfHours } from './utils/is-out-of-hours.util';
 import { CacheService } from '../shared/cache/cache.service';
 import { sanitizeStrict } from '../shared/utils/sanitize-html.util';
 import { decodeId } from '../shared/utils/id-encoder';
+import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
 
 /** Minimal user for chat - HTTP has full JwtUser, WebSocket has { id, role } */
 type ChatUser = Pick<JwtUser, 'id' | 'role'>;
@@ -41,6 +42,7 @@ type ConversationInfo = {
   masterId: string;
   clientId: string | null;
   clientPhone: string | null;
+  clientName?: string;
   masterUserId: string;
   masterName?: string;
 };
@@ -62,6 +64,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly cache: CacheService,
+    private readonly inAppNotifications: InAppNotificationService,
   ) {}
 
   private readonly autoresponderWindowSeconds = 3 * 60 * 60; // 3h
@@ -399,7 +402,7 @@ export class ChatService {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        lead: { select: { clientPhone: true } },
+        lead: { select: { clientPhone: true, clientName: true } },
         master: {
           select: {
             id: true,
@@ -504,6 +507,7 @@ export class ChatService {
       clientId: conversation.clientId,
       clientPhone:
         conversation.clientPhone ?? conversation.lead?.clientPhone ?? null,
+      clientName: conversation.lead?.clientName ?? undefined,
       masterUserId: conversation.master.userId,
       masterName: masterName || undefined,
     };
@@ -560,6 +564,7 @@ export class ChatService {
         senderId: masterUserId,
         senderType: SenderType.MASTER,
         content,
+        isAutoresponder: true,
       },
       include: {
         files: {
@@ -781,7 +786,11 @@ export class ChatService {
           leadId: true,
           masterId: true,
           lead: {
-            select: { status: true },
+            select: {
+              status: true,
+              clientName: true,
+              clientId: true,
+            },
           },
         },
       });
@@ -790,10 +799,14 @@ export class ChatService {
         return;
       }
 
-      // Проверяем наличие сообщений от обеих сторон
+      // Проверяем наличие сообщений от обеих сторон (автоответчик мастера не учитывается)
       const [msgMaster, msgClient] = await Promise.all([
         this.prisma.message.findFirst({
-          where: { conversationId, senderType: SenderType.MASTER },
+          where: {
+            conversationId,
+            senderType: SenderType.MASTER,
+            isAutoresponder: false,
+          },
           select: { id: true },
         }),
         this.prisma.message.findFirst({
@@ -823,6 +836,45 @@ export class ChatService {
           this.cache.keys.masterStats(conversation.masterId),
         );
         await this.cache.invalidate(`cache:master:${conversation.masterId}:*`);
+
+        // Уведомление мастеру и клиенту — фронт инвалидирует Leads и обновит LeadDetailsPage
+        const master = await this.prisma.master.findUnique({
+          where: { id: conversation.masterId },
+          select: { userId: true },
+        });
+        const clientName = conversation.lead?.clientName ?? undefined;
+        const clientId = conversation.lead?.clientId ?? null;
+
+        if (master) {
+          this.inAppNotifications
+            .notifyLeadStatusUpdated(master.userId, {
+              leadId: conversation.leadId,
+              status: 'IN_PROGRESS',
+              clientName,
+            })
+            .catch((err) =>
+              this.logger.warn(
+                `Failed to notify master of lead status: ${String(err)}`,
+              ),
+            );
+        }
+        if (clientId) {
+          this.inAppNotifications
+            .notify({
+              userId: clientId,
+              category: 'LEAD_STATUS_UPDATED',
+              title: 'Статус заявки обновлён',
+              message: 'Ваша заявка — IN_PROGRESS',
+              messageKey: 'notifications.messages.leadStatusUpdated',
+              messageParams: { status: 'IN_PROGRESS' },
+              metadata: { leadId: conversation.leadId, status: 'IN_PROGRESS' },
+            })
+            .catch((err) =>
+              this.logger.warn(
+                `Failed to notify client of lead status: ${String(err)}`,
+              ),
+            );
+        }
       }
     } catch (error) {
       this.logger.error(

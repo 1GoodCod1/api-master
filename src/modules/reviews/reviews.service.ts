@@ -34,6 +34,7 @@ export class ReviewsService {
     masterId: string,
     options: {
       status?: string;
+      statusIn?: ReviewStatus[];
       limit?: number;
       cursor?: string;
       page?: number;

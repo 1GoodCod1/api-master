@@ -136,7 +136,7 @@ export class ReviewsController {
     const masterId = req.user.masterProfile?.id;
     if (!masterId) throw new BadRequestException('Master profile not found');
     return this.reviewsService.findAllForMaster(masterId, {
-      status: ReviewStatus.VISIBLE,
+      statusIn: [ReviewStatus.PENDING, ReviewStatus.VISIBLE],
       limit: limit ? Math.min(100, Math.max(1, Number(limit) || 20)) : 20,
       cursor,
       page: page ? Number(page) : undefined,

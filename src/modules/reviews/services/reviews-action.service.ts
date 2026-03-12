@@ -227,6 +227,38 @@ export class ReviewsActionService {
     }
 
     await this.invalidateMasterCache(review.masterId);
+
+    // Уведомить мастера об изменении статуса — фронт инвалидирует Reviews
+    const master = await this.prisma.master.findUnique({
+      where: { id: review.masterId },
+      select: { userId: true },
+    });
+    if (master) {
+      const statusMsg =
+        status === ReviewStatus.VISIBLE
+          ? 'Одобрен и опубликован'
+          : status === ReviewStatus.HIDDEN
+            ? 'Скрыт'
+            : status === ReviewStatus.REPORTED
+              ? 'На модерации'
+              : String(status);
+      this.inAppNotifications
+        .notify({
+          userId: master.userId,
+          category: 'NEW_REVIEW',
+          title: 'Статус отзыва обновлён',
+          message: `Отзыв — ${statusMsg}`,
+          messageKey: 'notifications.messages.reviewStatusUpdated',
+          messageParams: { status: statusMsg },
+          metadata: { reviewId: id, status },
+        })
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to notify master of review status: ${String(err)}`,
+          ),
+        );
+    }
+
     return updatedReview;
   }
 
