@@ -24,8 +24,11 @@ import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { VerifiedGuard } from '../../common/guards/verified.guard';
+import { PlansGuard } from '../../common/guards/plans.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Verified } from '../../common/decorators/verified.decorator';
+import { Plans } from '../../common/decorators/plans.decorator';
+import { TariffType } from '@prisma/client';
 
 @ApiTags('Promotions')
 @Controller('promotions')
@@ -60,11 +63,12 @@ export class PromotionsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles('MASTER')
   @Verified(true)
+  @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a promotion' })
+  @ApiOperation({ summary: 'Create a promotion (PREMIUM only)' })
   async create(@Body() dto: CreatePromotionDto, @Req() req: RequestWithUser) {
     const masterId = req.user.masterProfile?.id;
     if (!masterId) throw new BadRequestException('Master profile not found');
@@ -72,11 +76,12 @@ export class PromotionsController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles('MASTER')
   @Verified(true)
+  @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a promotion' })
+  @ApiOperation({ summary: 'Update a promotion (PREMIUM only)' })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdatePromotionDto,
@@ -88,11 +93,12 @@ export class PromotionsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles('MASTER')
   @Verified(true)
+  @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a promotion' })
+  @ApiOperation({ summary: 'Delete a promotion (PREMIUM only)' })
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
     const masterId = req.user.masterProfile?.id;
     if (!masterId) throw new BadRequestException('Master profile not found');

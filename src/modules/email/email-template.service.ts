@@ -51,6 +51,29 @@ function sanitizeContext(ctx: TemplateContext): TemplateContext {
   return sanitizeValue(ctx, new WeakSet()) as TemplateContext;
 }
 
+/** Substitute {{placeholder}} in HTML with context values. Used for overrides. */
+function substitutePlaceholders(
+  html: string,
+  ctx: Record<string, unknown>,
+): string {
+  const allowedKeys = [
+    'resetLink',
+    'frontendUrl',
+    'userName',
+    'masterName',
+    'reviewLink',
+    'dashboardLink',
+  ];
+  let result = html;
+  for (const key of allowedKeys) {
+    const val = ctx[key];
+    if (val != null && typeof val === 'string') {
+      result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val);
+    }
+  }
+  return result;
+}
+
 @Injectable()
 export class EmailTemplateService {
   private readonly frontendUrl: string;
@@ -59,8 +82,10 @@ export class EmailTemplateService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
+    const nodeEnv = this.configService.get<string>('nodeEnv', 'development');
+    const fromConfig = this.configService.get<string>('frontendUrl', '');
     this.frontendUrl =
-      this.configService.get<string>('frontendUrl') || 'http://localhost:3000';
+      fromConfig || (nodeEnv === 'production' ? '' : 'http://localhost:3000');
   }
 
   /**
@@ -90,9 +115,13 @@ export class EmailTemplateService {
 
     if (override && (override.subject != null || override.bodyHtml != null)) {
       const subject = override.subject ?? 'Master-Hub';
-      const bodyHtml = override.bodyHtml
+      let bodyHtml = override.bodyHtml
         ? sanitizeEmailHtml(override.bodyHtml)
         : '';
+      bodyHtml = substitutePlaceholders(
+        bodyHtml,
+        ctx as Record<string, unknown>,
+      );
       const text = bodyHtml ? stripHtml(bodyHtml) : '';
       return {
         subject,

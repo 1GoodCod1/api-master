@@ -18,7 +18,7 @@ export class AnalyticsService {
     private readonly masterAnalytics: AnalyticsMasterService,
     private readonly businessAnalytics: AnalyticsBusinessService,
     private readonly systemAnalytics: AnalyticsSystemService,
-  ) {}
+  ) { }
 
   /**
    * Получение аналитики для пользователя (мастер или админ)
@@ -43,7 +43,7 @@ export class AnalyticsService {
         master.tariffType,
         master.tariffExpiresAt,
       );
-      const maxDays = isPremium ? 30 : 7;
+      const maxDays = isPremium ? 30 : 14;
       days = Math.min(requestedDays, maxDays);
     }
 
@@ -71,7 +71,7 @@ export class AnalyticsService {
       master.tariffType,
       master.tariffExpiresAt,
     );
-    const maxDays = isPremium ? 30 : 7;
+    const maxDays = isPremium ? 30 : 14;
     const days = requestedDays ? Math.min(requestedDays, maxDays) : maxDays;
 
     if (isPremium) {

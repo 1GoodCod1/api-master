@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../shared/database/prisma.service';
 import { CacheService } from '../shared/cache/cache.service';
+import { getEffectiveTariff } from '../../common/helpers/plans';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
@@ -136,9 +137,18 @@ export class PromotionsService {
 
   /**
    * Создать новую акцию (мастер).
-   * Проверки: только услуги с фикс. ценой; одна услуга — одна акция; «на все» только если есть куда применять.
+   * Только PREMIUM. Проверки: только услуги с фикс. ценой; одна услуга — одна акция; «на все» только если есть куда применять.
    */
   async create(masterId: string, dto: CreatePromotionDto) {
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      select: { tariffType: true, tariffExpiresAt: true },
+    });
+    if (getEffectiveTariff(master) !== 'PREMIUM') {
+      throw new ForbiddenException(
+        'Service promotions are available for PREMIUM plan only.',
+      );
+    }
     const serviceTitle = dto.serviceTitle?.trim() || null;
     await this.assertCanCreateOrUpdatePromotion(masterId, serviceTitle);
     const promotion = await this.prisma.promotion.create({
@@ -201,9 +211,18 @@ export class PromotionsService {
   }
 
   /**
-   * Обновить акцию
+   * Обновить акцию (только PREMIUM)
    */
   async update(id: string, masterId: string, dto: UpdatePromotionDto) {
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      select: { tariffType: true, tariffExpiresAt: true },
+    });
+    if (getEffectiveTariff(master) !== 'PREMIUM') {
+      throw new ForbiddenException(
+        'Service promotions are available for PREMIUM plan only.',
+      );
+    }
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
     if (!promotion) throw new NotFoundException('Акция не найдена');
     if (promotion.masterId !== masterId)
@@ -239,9 +258,18 @@ export class PromotionsService {
   }
 
   /**
-   * Удалить акцию
+   * Удалить акцию (только PREMIUM)
    */
   async remove(id: string, masterId: string) {
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      select: { tariffType: true, tariffExpiresAt: true },
+    });
+    if (getEffectiveTariff(master) !== 'PREMIUM') {
+      throw new ForbiddenException(
+        'Service promotions are available for PREMIUM plan only.',
+      );
+    }
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
     if (!promotion) throw new NotFoundException('Акция не найдена');
     if (promotion.masterId !== masterId)

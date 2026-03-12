@@ -8,6 +8,7 @@ import { ReviewsActionService } from '../../../src/modules/reviews/services/revi
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
+import type { NotificationsService } from '../../../src/modules/notifications/notifications.service';
 
 type PrismaReviewsActionMock = {
   user: { findUnique: jest.Mock };
@@ -70,6 +71,12 @@ describe('ReviewsActionService', () => {
     notifyNewReview: jest.fn(),
   } as unknown as jest.Mocked<InAppNotificationService>;
 
+  const notifications = {
+    sendSMS: jest.fn(),
+    sendTelegram: jest.fn(),
+    sendWhatsApp: jest.fn(),
+  } as unknown as jest.Mocked<NotificationsService>;
+
   let service: ReviewsActionService;
 
   beforeEach(() => {
@@ -78,6 +85,7 @@ describe('ReviewsActionService', () => {
       prisma as unknown as PrismaService,
       cache,
       inAppNotifications,
+      notifications,
     );
   });
 

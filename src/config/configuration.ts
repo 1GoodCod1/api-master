@@ -2,7 +2,9 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000', 10),
   apiUrl: process.env.API_URL || 'http://localhost:4000',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl:
+    process.env.FRONTEND_URL ||
+    (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'),
 
   /** Global HTTP request timeout (ms). Increase if DB/cache retries can exceed (e.g. 30000). */
   requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000', 10),

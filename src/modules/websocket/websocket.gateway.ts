@@ -26,12 +26,14 @@ import type { SocketData } from './services/websocket-connection.service';
  * Вызывается один раз при загрузке модуля (декораторы вычисляются при старте).
  */
 function resolveWsCorsOrigins(): string | string[] {
-  const raw = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const isProd = process.env.NODE_ENV === 'production';
+  const fallback = isProd ? '' : 'http://localhost:3000';
+  const raw = process.env.FRONTEND_URL || fallback;
   const origins = raw
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (origins.length === 0) return 'http://localhost:3000';
+  if (origins.length === 0) return fallback || '*';
   return origins.length === 1 ? origins[0] : origins;
 }
 

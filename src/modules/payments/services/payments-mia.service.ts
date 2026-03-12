@@ -175,9 +175,12 @@ export class PaymentsMiaService {
     const amount = await this.getAmount(tariffType);
     const days = await this.getDays(tariffType);
     const sandbox = this.configService.get<boolean>('mia.sandbox');
+    const nodeEnv = this.configService.get<string>('nodeEnv', 'development');
+    const fromConfig = this.configService
+      .get<string>('frontendUrl')
+      ?.replace(/\/$/, '');
     const frontendUrl =
-      this.configService.get<string>('frontendUrl')?.replace(/\/$/, '') ||
-      'http://localhost:3000';
+      fromConfig || (nodeEnv === 'production' ? '' : 'http://localhost:3000');
 
     // Sandbox без конфига MIA: мок-платёж, симуляция через POST /payments/mia-sandbox-simulate
     if (sandbox && !this.isMiaApiConfigured()) {

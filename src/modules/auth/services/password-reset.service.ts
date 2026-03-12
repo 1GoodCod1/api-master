@@ -66,7 +66,17 @@ export class PasswordResetService {
         },
       });
 
-      const resetLink = `${this.configService.get('frontendUrl')}/reset-password?token=${token}`;
+      const frontendUrl = this.configService.get<string>('frontendUrl', '');
+      const nodeEnv = this.configService.get<string>('nodeEnv', 'development');
+      if (!frontendUrl && nodeEnv === 'production') {
+        this.logger.error(
+          'FRONTEND_URL is required in production for password reset links',
+        );
+        throw new BadRequestException(
+          'Password reset is temporarily unavailable. Please try again later.',
+        );
+      }
+      const resetLink = `${frontendUrl || 'http://localhost:3000'}/reset-password?token=${token}`;
       const lang = (
         user.preferredLanguage &&
         ['en', 'ru', 'ro'].includes(user.preferredLanguage)

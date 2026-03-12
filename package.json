@@ -23,7 +23,6 @@
     "test:api": "jest --config ./test/jest-e2e.json test/api",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset --force",
     "seed": "ts-node prisma/seed.ts",
     "docker:up": "docker-compose -f docker-compose.dev.yml up -d",
@@ -51,6 +50,7 @@
     "docker:studio": "docker-compose -f docker-compose.dev.yml up -d prisma-studio",
     "docker:studio:logs": "docker-compose -f docker-compose.dev.yml logs -f prisma-studio",
     "redis:cli": "docker exec -it masterhub-redis redis-cli",
+    "redis:ping": "docker exec -it masterhub-redis redis-cli ping",
     "redis:keys": "docker exec masterhub-redis redis-cli KEYS \"cache:*\"",
     "redis:flush": "docker exec masterhub-redis redis-cli FLUSHDB",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -58,11 +58,7 @@
     "restore": "bash scripts/restore.sh",
     "generate:secrets": "node scripts/generate-secrets.js",
     "local:recreate:db": "npm run prisma:reset && npm run prisma:migrate && npm run prisma:generate && npm run seed",
-    "docker:dev:recreate": "npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed",
-    "docker:db:reset": "bash scripts/docker-db-reset.sh",
-    "docker:db:reset:full": "bash scripts/docker-db-reset.sh --full",
-    "docker:db:reset:win": "powershell -ExecutionPolicy Bypass -File scripts/docker-db-reset.ps1",
-    "docker:db:reset:full:win": "powershell -ExecutionPolicy Bypass -File scripts/docker-db-reset.ps1 -Full"
+    "docker:dev:recreate": "npm run docker:dev:build && npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.994.0",
