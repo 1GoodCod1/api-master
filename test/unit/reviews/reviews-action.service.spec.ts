@@ -69,6 +69,7 @@ describe('ReviewsActionService', () => {
 
   const inAppNotifications = {
     notifyNewReview: jest.fn(),
+    notify: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<InAppNotificationService>;
 
   const notifications = {
@@ -214,6 +215,7 @@ describe('ReviewsActionService', () => {
       prisma.review.findUnique.mockResolvedValue({ id: 'r1', masterId: 'm1' });
       prisma.review.update.mockResolvedValue(updated);
       prisma.review.findMany.mockResolvedValue([{ rating: 5 }]);
+      prisma.master.findUnique.mockResolvedValue({ userId: 'u1' });
 
       await service.updateStatus('r1', ReviewStatus.VISIBLE);
 
@@ -221,6 +223,16 @@ describe('ReviewsActionService', () => {
         where: { id: 'r1' },
         data: expect.objectContaining({ status: ReviewStatus.VISIBLE }),
       });
+      expect(inAppNotifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'u1',
+          category: 'NEW_REVIEW',
+          metadata: expect.objectContaining({
+            reviewId: 'r1',
+            status: 'VISIBLE',
+          }),
+        }),
+      );
     });
   });
 
