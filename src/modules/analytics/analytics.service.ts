@@ -18,7 +18,7 @@ export class AnalyticsService {
     private readonly masterAnalytics: AnalyticsMasterService,
     private readonly businessAnalytics: AnalyticsBusinessService,
     private readonly systemAnalytics: AnalyticsSystemService,
-  ) { }
+  ) {}
 
   /**
    * Получение аналитики для пользователя (мастер или админ)
