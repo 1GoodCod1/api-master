@@ -147,8 +147,7 @@ export class AdminMastersService {
       await Promise.all([
         this.cache.del(this.cache.keys.userProfile(updated.userId)),
         this.cache.del(this.cache.keys.userMasterProfile(updated.userId)),
-        this.cache.invalidate(`cache:master:${masterId}:*`),
-        this.cache.invalidate('cache:search:masters:*'),
+        this.cache.invalidateMasterRelated(masterId),
       ]);
     }
 

@@ -206,10 +206,97 @@ export class CacheService {
   }
 
   /**
-   * Invalidate cache by pattern
+   * Invalidate cache by pattern.
+   *
+   * @param pattern - Redis glob pattern (e.g. `cache:master:123:*`).
+   *   Note: pattern `cache:xyz:all:*` matches keys like `cache:xyz:all:{"filter":true}`,
+   *   but NOT the leaf key `cache:xyz:all` (no trailing segment).
+   *   For leaf keys use del() or invalidateWithLeafKey().
    */
   async invalidate(pattern: string): Promise<number> {
     return this.delByPattern(pattern);
+  }
+
+  /**
+   * Invalidate by pattern AND delete a leaf key that doesn't match the pattern.
+   * Use when the cache has both: a leaf key (e.g. `cache:categories:all`) and
+   * keys with subsegments (e.g. `cache:categories:all:{"isActive":true}`).
+   *
+   * @param leafKey - Exact key to delete (e.g. from cache.keys.categoriesAll())
+   * @param pattern - Pattern for keys with subsegments (e.g. `cache:categories:all:*`)
+   * @returns Number of keys deleted by pattern
+   */
+  async invalidateWithLeafKey(
+    leafKey: string,
+    pattern: string,
+  ): Promise<number> {
+    const [, patternDeleted] = await Promise.all([
+      this.del(leafKey),
+      this.invalidate(pattern),
+    ]);
+    return patternDeleted;
+  }
+
+  /**
+   * Standard invalidation patterns. Use these for consistency.
+   *
+   * When to use del() vs invalidate():
+   * - del(key): For a single known key (e.g. cache.keys.masterFull(id))
+   * - invalidate(pattern): For multiple keys matching a pattern (e.g. cache:search:masters:*)
+   * - invalidateWithLeafKey(leaf, pattern): When you have both a leaf key and prefixed keys
+   */
+  readonly patterns = {
+    master: (masterId: string) => `cache:master:${masterId}:*`,
+    masterLeads: (masterId: string) => `cache:master:${masterId}:leads:*`,
+    masterReviews: (masterId: string) => `cache:master:${masterId}:reviews:*`,
+    searchMasters: () => 'cache:search:masters:*',
+    mastersTop: () => 'cache:masters:top:*',
+    mastersPopular: () => 'cache:masters:popular:*',
+    mastersNew: () => 'cache:masters:new:*',
+    categoriesAll: () => 'cache:categories:all:*',
+    categoriesStatistics: () => 'cache:categories:statistics:*',
+    citiesAll: () => 'cache:cities:all:*',
+    tariffsAll: () => 'cache:tariffs:all:*',
+    promotions: () => 'cache:promotions:*',
+  } as const;
+
+  /**
+   * Full master-related cache invalidation (profile, search, top, popular, new).
+   * Runs all invalidations in parallel. Use when master profile/data changed.
+   *
+   * @param masterId - Master ID
+   * @param slugs - Optional old/new slugs for profile-by-slug keys
+   */
+  async invalidateMasterRelated(
+    masterId: string,
+    slugs?: { old?: string | null; new?: string | null },
+  ): Promise<void> {
+    const tasks: Promise<unknown>[] = [
+      this.del(this.keys.masterFull(masterId)),
+      this.del(this.keys.masterStats(masterId)),
+      this.invalidate(this.patterns.master(masterId)),
+      this.invalidate(this.patterns.searchMasters()),
+      this.invalidate(this.patterns.mastersTop()),
+      this.invalidate(this.patterns.mastersPopular()),
+      this.invalidate(this.patterns.mastersNew()),
+      this.del(this.keys.searchFilters()),
+    ];
+    if (slugs?.old) tasks.push(this.del(this.keys.masterFull(slugs.old)));
+    if (slugs?.new && slugs.new !== slugs.old) {
+      tasks.push(this.del(this.keys.masterFull(slugs.new)));
+    }
+    await Promise.all(tasks);
+  }
+
+  /**
+   * Lightweight master data invalidation (leads, stats). Use when only leads/stats changed.
+   * Does NOT invalidate search, top, popular, new.
+   */
+  async invalidateMasterData(masterId: string): Promise<void> {
+    await Promise.all([
+      this.del(this.keys.masterStats(masterId)),
+      this.invalidate(this.patterns.master(masterId)),
+    ]);
   }
 
   /**

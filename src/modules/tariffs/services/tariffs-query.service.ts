@@ -54,7 +54,7 @@ export class TariffsQueryService {
           `Tariffs cache was stale (empty). DB has ${count} tariffs. Invalidating cache.`,
         );
         await this.cache.del(cacheKey);
-        await this.cache.invalidate('cache:tariffs:all:*');
+        await this.cache.invalidate(this.cache.patterns.tariffsAll());
         return this.prisma.tariff.findMany({
           where,
           orderBy: { sortOrder: 'asc' },

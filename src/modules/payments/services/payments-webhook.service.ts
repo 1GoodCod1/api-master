@@ -143,11 +143,7 @@ export class PaymentsWebhookService {
       await Promise.all([
         this.cache.del(this.cache.keys.userMasterProfile(userId)),
         this.cache.del(this.cache.keys.userProfile(userId)),
-        this.cache.invalidate(`cache:master:${masterId}:*`),
-        this.cache.invalidate('cache:search:masters:*'),
-        this.cache.invalidate('cache:masters:top:*'),
-        this.cache.invalidate('cache:masters:popular:*'),
-        this.cache.invalidate('cache:masters:new:*'),
+        this.cache.invalidateMasterRelated(masterId),
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

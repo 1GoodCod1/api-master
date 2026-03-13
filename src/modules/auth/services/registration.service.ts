@@ -100,8 +100,8 @@ export class RegistrationService {
       // Инвалидируем кеш новых мастеров — новый мастер сразу появится в секции "Новые мастера"
       // + кеш категорий — обновится количество мастеров в категории
       await Promise.all([
-        this.cache.invalidate('cache:masters:new:*'),
-        this.cache.invalidate('cache:categories:all:*'),
+        this.cache.invalidate(this.cache.patterns.mastersNew()),
+        this.cache.invalidate(this.cache.patterns.categoriesAll()),
       ]);
     } else {
       // Регистрация обычного клиента

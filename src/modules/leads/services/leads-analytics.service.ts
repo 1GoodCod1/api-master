@@ -23,9 +23,7 @@ export class LeadsAnalyticsService {
       });
 
       // 2. Инвалидируем кеш (профиль мастера — responseRate, лиды, статистика)
-      await this.cache.invalidate(`cache:master:${masterId}:leads:*`);
-      await this.cache.del(this.cache.keys.masterStats(masterId));
-      await this.cache.invalidate(`cache:master:${masterId}:*`);
+      await this.cache.invalidateMasterData(masterId);
 
       // 3. Обновляем аналитическую таблицу за сегодня
       await this.updateDailyAnalytics(masterId);

@@ -234,9 +234,11 @@ export class CitiesService {
    */
   private async invalidateGlobalCaches() {
     await Promise.all([
-      this.cache.invalidate('cache:cities:all:*'),
-      this.cache.invalidate('cache:search:masters:*'),
-      this.cache.del(this.cache.keys.citiesAll()),
+      this.cache.invalidateWithLeafKey(
+        this.cache.keys.citiesAll(),
+        this.cache.patterns.citiesAll(),
+      ),
+      this.cache.invalidate(this.cache.patterns.searchMasters()),
     ]);
   }
 }

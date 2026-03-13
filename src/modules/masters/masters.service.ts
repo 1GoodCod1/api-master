@@ -17,6 +17,7 @@ import { MastersProfileService } from './services/masters-profile.service';
 import { MastersPhotosService } from './services/masters-photos.service';
 import { MastersStatsService } from './services/masters-stats.service';
 import { MastersTariffService } from './services/masters-tariff.service';
+import { MastersAvailabilityService } from './services/masters-availability.service';
 import { decodeId, encodeId } from '../shared/utils/id-encoder';
 import { getEffectiveTariff } from '../../common/helpers/plans';
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
@@ -42,6 +43,7 @@ export class MastersService {
     private readonly photosService: MastersPhotosService,
     private readonly statsService: MastersStatsService,
     private readonly tariffService: MastersTariffService,
+    private readonly availabilityService: MastersAvailabilityService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -545,12 +547,43 @@ export class MastersService {
       throw new NotFoundException('Master availability data not found');
     }
 
+    // Recalculate actual active leads (NEW + IN_PROGRESS) to fix drift
+    const actualActiveCount = await this.prisma.lead.count({
+      where: {
+        masterId: master.id,
+        status: { in: [LeadStatus.NEW, LeadStatus.IN_PROGRESS] },
+      },
+    });
+
+    let result = { ...data };
+    if (actualActiveCount !== data.currentActiveLeads) {
+      this.logger.warn(
+        `Syncing currentActiveLeads for master ${master.id}: stored=${data.currentActiveLeads} actual=${actualActiveCount}`,
+      );
+      await this.prisma.master.update({
+        where: { id: master.id },
+        data: { currentActiveLeads: actualActiveCount },
+      });
+      await this.availabilityService.syncAvailabilityStatus(master.id);
+      const updated = await this.prisma.master.findUnique({
+        where: { id: master.id },
+        select: {
+          availabilityStatus: true,
+          maxActiveLeads: true,
+          currentActiveLeads: true,
+          isOnline: true,
+          lastActivityAt: true,
+        },
+      });
+      if (updated) result = updated;
+    }
+
     return {
       success: true,
-      ...data,
+      ...result,
       canAcceptLeads:
-        data.availabilityStatus === 'AVAILABLE' &&
-        data.currentActiveLeads < data.maxActiveLeads,
+        result.availabilityStatus === 'AVAILABLE' &&
+        result.currentActiveLeads < result.maxActiveLeads,
     };
   }
 

@@ -357,6 +357,6 @@ export class PromotionsService {
   }
 
   private async invalidatePromotionCache() {
-    await this.cache.invalidate('cache:promotions:*');
+    await this.cache.invalidate(this.cache.patterns.promotions());
   }
 }

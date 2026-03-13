@@ -389,24 +389,9 @@ export class MastersProfileService {
     oldSlug?: string | null,
     newSlug?: string | null,
   ) {
-    // Инвалидируем профиль мастера
-    await this.cache.del(this.cache.keys.masterFull(masterId));
-    if (oldSlug) await this.cache.del(this.cache.keys.masterFull(oldSlug));
-    if (newSlug && newSlug !== oldSlug)
-      await this.cache.del(this.cache.keys.masterFull(newSlug));
-
-    // Инвалидируем статистику
-    await this.cache.del(this.cache.keys.masterStats(masterId));
-
-    // Инвалидируем все кеши мастера
-    await this.cache.invalidate(`cache:master:${masterId}:*`);
-
-    // Инвалидируем поиск, топ, популярных и новых мастеров (так как данные изменились)
-    await this.cache.invalidate('cache:search:masters:*');
-    await this.cache.invalidate('cache:masters:top:*');
-    await this.cache.invalidate('cache:masters:popular:*');
-    await this.cache.invalidate('cache:masters:new:*');
-    // Инвалидируем фильтры поиска (так как количество мастеров может измениться)
-    await this.cache.del(this.cache.keys.searchFilters());
+    await this.cache.invalidateMasterRelated(masterId, {
+      old: oldSlug,
+      new: newSlug,
+    });
   }
 }

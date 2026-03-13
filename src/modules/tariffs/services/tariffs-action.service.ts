@@ -102,6 +102,6 @@ export class TariffsActionService {
     await this.cache.del(this.cache.keys.tariffById(id));
     await this.cache.del(this.cache.keys.tariffByType(oldType));
     if (newType) await this.cache.del(this.cache.keys.tariffByType(newType));
-    await this.cache.invalidate('cache:tariffs:all:*');
+    await this.cache.invalidate(this.cache.patterns.tariffsAll());
   }
 }

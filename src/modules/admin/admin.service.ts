@@ -203,7 +203,9 @@ export class AdminService {
 
   /** Сброс кэша тарифов (после сида или если список пустой из кэша) */
   async invalidateTariffsCache(): Promise<{ invalidated: number }> {
-    const invalidated = await this.cache.invalidate('cache:tariffs:all:*');
+    const invalidated = await this.cache.invalidate(
+      this.cache.patterns.tariffsAll(),
+    );
     this.logger.log(`Tariffs cache invalidated, keys removed: ${invalidated}`);
     return { invalidated };
   }

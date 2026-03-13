@@ -129,9 +129,7 @@ export class LeadsActionsService {
       }
     }
 
-    await this.cache.invalidate(`cache:master:${lead.masterId}:leads:*`);
-    await this.cache.del(this.cache.keys.masterStats(lead.masterId));
-    await this.cache.invalidate(`cache:master:${lead.masterId}:*`);
+    await this.cache.invalidateMasterData(lead.masterId);
 
     return updated;
   }

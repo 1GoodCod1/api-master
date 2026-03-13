@@ -416,10 +416,6 @@ export class ReviewsActionService {
   }
 
   private async invalidateMasterCache(masterId: string) {
-    await this.cache.invalidate(`cache:master:${masterId}:*`);
-    await this.cache.del(this.cache.keys.masterStats(masterId));
-    await this.cache.invalidate('cache:search:masters:*');
-    await this.cache.invalidate('cache:masters:top:*');
-    await this.cache.invalidate(`cache:master:${masterId}:reviews:*`);
+    await this.cache.invalidateMasterRelated(masterId);
   }
 }

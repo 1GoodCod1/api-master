@@ -284,10 +284,12 @@ export class CategoriesService {
    */
   private async invalidateGlobalCaches() {
     await Promise.all([
-      this.cache.invalidate('cache:categories:all:*'),
-      this.cache.invalidate('cache:categories:statistics:*'),
-      this.cache.invalidate('cache:search:masters:*'),
-      this.cache.del(this.cache.keys.categoriesAll()),
+      this.cache.invalidateWithLeafKey(
+        this.cache.keys.categoriesAll(),
+        this.cache.patterns.categoriesAll(),
+      ),
+      this.cache.invalidate(this.cache.patterns.categoriesStatistics()),
+      this.cache.invalidate(this.cache.patterns.searchMasters()),
     ]);
   }
 }

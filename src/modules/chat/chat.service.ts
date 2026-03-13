@@ -829,13 +829,7 @@ export class ChatService {
         );
 
         // Инвалидация кеша (аналогично LeadsActionsService)
-        await this.cache.invalidate(
-          `cache:master:${conversation.masterId}:leads:*`,
-        );
-        await this.cache.del(
-          this.cache.keys.masterStats(conversation.masterId),
-        );
-        await this.cache.invalidate(`cache:master:${conversation.masterId}:*`);
+        await this.cache.invalidateMasterData(conversation.masterId);
 
         // Уведомление мастеру и клиенту — фронт инвалидирует Leads и обновит LeadDetailsPage
         const master = await this.prisma.master.findUnique({

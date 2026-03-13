@@ -114,8 +114,7 @@ export class AdminReviewsService {
     });
 
     // Invalidate reviews cache so master page shows updated data
-    await this.cache.invalidate(`cache:master:${review.masterId}:reviews:*`);
-    await this.cache.invalidate(`cache:master:${review.masterId}:*`);
+    await this.cache.invalidateMasterRelated(review.masterId);
 
     if (resolvedStatus === ReviewStatus.VISIBLE) {
       await this.updateMasterRating(review.masterId);
