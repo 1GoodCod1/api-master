@@ -20,6 +20,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { RequireAuthWhenNotForLeadGuard } from '../../common/guards/require-auth-when-not-for-lead.guard';
 import type {
   RequestWithOptionalUser,
   RequestWithUser,
@@ -46,7 +47,7 @@ export class FilesController {
 
   @Post('upload-many')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 batch uploads per minute
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard, RequireAuthWhenNotForLeadGuard)
   @UseInterceptors(FilesInterceptor('files', 10))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload up to 10 files (guest allowed)' })

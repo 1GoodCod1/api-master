@@ -11,6 +11,7 @@ import Redis, { RedisOptions } from 'ioredis';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis;
+  private isDestroyed = false;
 
   constructor(private configService: ConfigService) {
     const sentinels =
@@ -50,7 +51,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     this.client = new Redis(options);
 
-    this.client.on('error', (err: Error) => {
+    this.client.on('error', (err: Error & { code?: string }) => {
+      if (this.isDestroyed || err?.code === 'EPIPE') {
+        return;
+      }
       this.logger.error('Redis connection error', err);
     });
 
@@ -90,6 +94,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   getClient(): Redis {
     return this.client;
+  }
+
+  isAvailable(): boolean {
+    return (
+      !this.isDestroyed &&
+      (this.client?.status === 'ready' || this.client?.status === 'connect')
+    );
   }
 
   async set(key: string, value: any, ttl?: number): Promise<void> {
@@ -200,6 +211,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    this.isDestroyed = true;
     try {
       await this.client.quit().catch(() => {});
     } catch {

@@ -46,7 +46,7 @@ const FILE_FILTER = (
   file: Express.Multer.File,
   cb: (err: Error | null, ok: boolean) => void,
 ) => {
-  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
+  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
   const isValid = allowedTypes.test(getExt(file.originalname).toLowerCase());
   cb(isValid ? null : new Error('Invalid file type'), isValid);
 };

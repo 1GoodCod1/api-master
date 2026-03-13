@@ -79,20 +79,13 @@ export class WebsocketConnectionService implements OnModuleDestroy {
 
       // Обновляем статус в Redis (с защитой от ошибок)
       try {
-        const redisClient = this.redis.getClient();
-        if (
-          redisClient.status === 'ready' ||
-          redisClient.status === 'connect'
-        ) {
+        if (this.redis.isAvailable()) {
+          const redisClient = this.redis.getClient();
           await redisClient.sadd('online:users', userId);
           await redisClient.hset(`user:${userId}:status`, {
             online: 'true',
             lastSeen: new Date().toISOString(),
           });
-        } else {
-          this.logger.warn(
-            `Redis not ready, skipping status update for user ${userId}`,
-          );
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -130,11 +123,8 @@ export class WebsocketConnectionService implements OnModuleDestroy {
 
         // Обновляем статус оффлайн в Redis (с защитой от ошибок)
         try {
-          const redisClient = this.redis.getClient();
-          if (
-            redisClient.status === 'ready' ||
-            redisClient.status === 'connect'
-          ) {
+          if (this.redis.isAvailable()) {
+            const redisClient = this.redis.getClient();
             await redisClient.srem('online:users', userId);
             await redisClient.hset(`user:${userId}:status`, {
               online: 'false',
@@ -142,6 +132,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
             });
           }
         } catch (error: unknown) {
+          if (!this.redis.isAvailable()) return;
           const msg = error instanceof Error ? error.message : String(error);
           this.logger.warn(
             `Failed to update Redis offline status for user ${userId}:`,
@@ -172,11 +163,10 @@ export class WebsocketConnectionService implements OnModuleDestroy {
    */
   async getOnlineUsers() {
     try {
-      const redisClient = this.redis.getClient();
-      if (redisClient.status !== 'ready' && redisClient.status !== 'connect') {
-        this.logger.warn('Redis not ready, returning empty online users list');
+      if (!this.redis.isAvailable()) {
         return [];
       }
+      const redisClient = this.redis.getClient();
 
       const userIds = await redisClient.smembers('online:users');
 
