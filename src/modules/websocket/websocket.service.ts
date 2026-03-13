@@ -7,8 +7,7 @@ import {
 import { WebsocketConnectionService } from './services/websocket-connection.service';
 import { WebsocketMessagingService } from './services/websocket-messaging.service';
 import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
-import Redis from 'ioredis';
-import { RedisService } from '../shared/redis/redis.service';
+import { RedisService, RedisClient } from '../shared/redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import {
   sanitizeNotificationData,
@@ -24,7 +23,7 @@ import {
 @Injectable()
 export class WebsocketService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WebsocketService.name);
-  private redisSubscriber: Redis | null = null;
+  private redisSubscriber: RedisClient | null = null;
 
   constructor(
     private readonly connectionService: WebsocketConnectionService,
@@ -337,9 +336,9 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      let redisSub: Redis;
+      let redisSub: RedisClient;
       try {
-        redisSub = redisClient.duplicate();
+        redisSub = redisClient.duplicate() as RedisClient;
         this.redisSubscriber = redisSub;
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -355,8 +354,9 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
       ];
 
       // Обрабатываем ошибки подключения Redis subscriber
-      redisSub.on('error', (err) => {
-        this.logger.error(`Redis subscriber error: ${err.message}`);
+      redisSub.on('error', (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Redis subscriber error: ${msg}`);
       });
 
       redisSub.on('ready', () => {
@@ -367,7 +367,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         );
       });
 
-      redisSub.on('message', (channel, message) => {
+      redisSub.on('message', (channel: string, message: string) => {
         void (async () => {
           try {
             // Безопасный парсинг JSON с обработкой ошибок

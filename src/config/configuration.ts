@@ -26,6 +26,17 @@ export default () => ({
         })
       : null,
     sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
+    /** Redis Cluster: set REDIS_CLUSTER=true and REDIS_CLUSTER_NODES=host1:port1,host2:port2,... */
+    cluster: process.env.REDIS_CLUSTER === 'true',
+    clusterNodes: process.env.REDIS_CLUSTER_NODES
+      ? process.env.REDIS_CLUSTER_NODES.split(',').map((s) => {
+          const parts = s.trim().split(':');
+          return {
+            host: parts[0],
+            port: parseInt(parts[1] || '6379', 10),
+          };
+        })
+      : null,
   },
 
   jwt: {
