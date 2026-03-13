@@ -4,7 +4,6 @@ export interface MasterAnalyticsItem {
   viewsCount: number;
   reviewsCount: number;
   rating: number;
-  revenue: number;
 }
 
 export interface FilledAnalyticsItem {
@@ -13,7 +12,6 @@ export interface FilledAnalyticsItem {
   viewsCount: number;
   reviewsCount: number;
   rating: number;
-  revenue: number;
 }
 
 export interface AnalyticsSummary {
@@ -21,7 +19,8 @@ export interface AnalyticsSummary {
   totalViews: number;
   totalReviews: number;
   avgRating: number;
-  totalRevenue: number;
+  masterRating?: number;
+  masterTotalReviews?: number;
 }
 
 export interface MasterAnalyticsResponse {
@@ -32,7 +31,6 @@ export interface MasterAnalyticsResponse {
     viewsCount: number;
     reviewsCount: number;
     rating: number;
-    revenue: number;
   }>;
   summary: AnalyticsSummary;
 }
@@ -41,7 +39,6 @@ export interface DailyStat {
   date: string;
   leads: number;
   reviews: number;
-  revenue: number;
 }
 
 export interface CategoryStat {
@@ -67,7 +64,6 @@ export interface BusinessAnalyticsResponse {
     users: number;
     leads: number;
     reviews: number;
-    revenue: number;
   };
   dailyStats: DailyStat[];
   categoryStats: CategoryStat[];
@@ -120,10 +116,8 @@ export interface ConversionMetrics {
 export interface TrendAnalysis {
   leadsTrend: 'up' | 'down' | 'stable';
   viewsTrend: 'up' | 'down' | 'stable';
-  revenueTrend: 'up' | 'down' | 'stable';
   leadsChangePercent: number;
   viewsChangePercent: number;
-  revenueChangePercent: number;
 }
 
 export interface ComparisonData {
@@ -131,11 +125,13 @@ export interface ComparisonData {
     avgLeads: number;
     avgViews: number;
     avgRating: number;
+    mastersCount: number;
   };
   cityAvg: {
     avgLeads: number;
     avgViews: number;
     avgRating: number;
+    mastersCount: number;
   };
   position: {
     inCategory: number;
@@ -146,7 +142,6 @@ export interface ComparisonData {
 export interface ForecastData {
   nextWeekLeads: number;
   nextWeekViews: number;
-  nextWeekRevenue: number;
   confidence: number; // 0-100%
 }
 
@@ -171,10 +166,5 @@ export interface AdvancedAnalyticsResponse extends MasterAnalyticsResponse {
     leads: number;
     views: number;
   }>;
-  roi: {
-    spent: number;
-    earned: number;
-    roiPercent: number;
-  };
-  insights: string[];
+  insights: Array<{ key: string; params?: Record<string, number | string> }>;
 }

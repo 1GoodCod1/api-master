@@ -24,14 +24,18 @@ export class AnalyticsMasterService {
   ): Promise<MasterAnalyticsResponse> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
 
-    const analytics = await this.prisma.masterAnalytics.findMany({
-      where: {
-        masterId,
-        date: { gte: startDate },
-      },
-      orderBy: { date: 'asc' },
-    });
+    const [analytics, master] = await Promise.all([
+      this.prisma.masterAnalytics.findMany({
+        where: { masterId, date: { gte: startDate } },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.master.findUnique({
+        where: { id: masterId },
+        select: { rating: true, totalReviews: true },
+      }),
+    ]);
 
     const typedAnalytics: MasterAnalyticsItem[] = analytics.map((item) => ({
       date: item.date,
@@ -39,23 +43,114 @@ export class AnalyticsMasterService {
       viewsCount: item.viewsCount,
       reviewsCount: item.reviewsCount,
       rating: decimalToNumber(item.rating),
-      revenue: decimalToNumber(item.revenue),
     }));
 
     const filledAnalytics = this.fillMissingDates(typedAnalytics, days);
+    const dataWithToday = await this.augmentTodayWithRealtimeStats(
+      masterId,
+      filledAnalytics,
+    );
+
+    const summary = this.calculateSummary(dataWithToday);
+    let masterRating = master?.rating ?? 0;
+    let masterTotalReviews = master?.totalReviews ?? 0;
+
+    // Fallback: если Master устарел (кроны не отработали), считаем из Review
+    if (masterTotalReviews === 0 || masterRating === 0) {
+      const realReviews = await this.prisma.review.aggregate({
+        where: { masterId, status: 'VISIBLE' },
+        _count: true,
+        _avg: { rating: true },
+      });
+      if (realReviews._count > 0) {
+        masterTotalReviews = realReviews._count;
+        masterRating = Number(realReviews._avg.rating ?? 0);
+      }
+    }
+    summary.masterRating = masterRating;
+    summary.masterTotalReviews = masterTotalReviews;
 
     return {
       period: `${days} days`,
-      data: filledAnalytics.map((item) => ({
+      data: dataWithToday.map((item) => ({
         date: item.date.toISOString().split('T')[0],
         leadsCount: item.leadsCount,
         viewsCount: item.viewsCount,
         reviewsCount: item.reviewsCount,
         rating: item.rating,
-        revenue: item.revenue,
       })),
-      summary: this.calculateSummary(filledAnalytics),
+      summary,
     };
+  }
+
+  /**
+   * Augments today's analytics with real-time counts from UserActivity and Lead,
+   * since aggregateAnalytics runs only for yesterday.
+   */
+  private async augmentTodayWithRealtimeStats(
+    masterId: string,
+    analytics: FilledAnalyticsItem[],
+  ): Promise<FilledAnalyticsItem[]> {
+    if (analytics.length === 0) return analytics;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastItem = analytics[analytics.length - 1];
+    const lastDate = new Date(lastItem.date);
+    lastDate.setHours(0, 0, 0, 0);
+
+    if (lastDate.getTime() !== today.getTime()) return analytics;
+
+    const master = await this.prisma.master.findUnique({
+      where: { id: masterId },
+      select: { userId: true },
+    });
+    const masterUserId = master?.userId ?? null;
+    const viewsWhere = {
+      masterId,
+      action: 'view' as const,
+      ...(masterUserId && {
+        OR: [{ userId: null }, { userId: { not: masterUserId } }],
+      }),
+    };
+
+    const todayFilter = { gte: today };
+
+    const [viewsToday, leadsToday, reviewsAgg] = await Promise.all([
+      this.prisma.userActivity.count({
+        where: { ...viewsWhere, createdAt: todayFilter },
+      }),
+      this.prisma.lead.count({
+        where: { masterId, createdAt: todayFilter },
+      }),
+      this.prisma.review.aggregate({
+        where: {
+          masterId,
+          status: 'VISIBLE',
+          OR: [
+            { moderatedAt: todayFilter },
+            { moderatedAt: null, createdAt: todayFilter },
+          ],
+        },
+        _count: true,
+        _avg: { rating: true },
+      }),
+    ]);
+
+    const reviewsToday = reviewsAgg._count;
+    const ratingToday = reviewsAgg._avg.rating
+      ? Number(reviewsAgg._avg.rating)
+      : 0;
+
+    const result = [...analytics];
+    result[result.length - 1] = {
+      ...lastItem,
+      viewsCount: Math.max(lastItem.viewsCount, viewsToday),
+      leadsCount: Math.max(lastItem.leadsCount, leadsToday),
+      reviewsCount: Math.max(lastItem.reviewsCount, reviewsToday),
+      rating: ratingToday > 0 ? ratingToday : lastItem.rating,
+    };
+    return result;
   }
 
   async getAdvancedMasterAnalytics(
@@ -64,6 +159,7 @@ export class AnalyticsMasterService {
   ): Promise<AdvancedAnalyticsResponse> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
 
     const basicAnalytics = await this.getMasterAnalytics(masterId, days);
 
@@ -83,11 +179,6 @@ export class AnalyticsMasterService {
       where: { masterId, createdAt: { gte: startDate } },
     });
 
-    const totalSpent = await this.prisma.payment.aggregate({
-      where: { masterId, status: 'SUCCESS' },
-      _sum: { amount: true },
-    });
-
     const conversion = this.calculateConversion(basicAnalytics, bookingsCount);
     const trends = this.calculateTrends(basicAnalytics.data);
     const comparison = await this.calculateComparison(
@@ -101,11 +192,6 @@ export class AnalyticsMasterService {
     const heatmap = await this.getActivityHeatmap(masterId, days);
     const topSources = await this.getTopSources(masterId, days);
 
-    // ROI Calculation
-    const revenue = basicAnalytics.summary.totalRevenue;
-    const spent = decimalToNumber(totalSpent._sum.amount || 0);
-    const roi = spent > 0 ? ((revenue - spent) / spent) * 100 : 0;
-
     return {
       ...basicAnalytics,
       bookingsCount,
@@ -116,11 +202,6 @@ export class AnalyticsMasterService {
       peakHours,
       heatmap,
       topSources,
-      roi: {
-        spent,
-        earned: revenue,
-        roiPercent: Math.round(roi * 100) / 100,
-      },
       insights: this.generateInsights(basicAnalytics, trends, conversion),
     };
   }
@@ -149,7 +230,6 @@ export class AnalyticsMasterService {
           viewsCount: 0,
           reviewsCount: 0,
           rating: 0,
-          revenue: 0,
         },
       );
     }
@@ -158,21 +238,20 @@ export class AnalyticsMasterService {
   }
 
   private calculateSummary(analytics: FilledAnalyticsItem[]): AnalyticsSummary {
-    const totalItems = analytics.length;
     const totals = analytics.reduce(
       (acc, item) => ({
         totalLeads: acc.totalLeads + item.leadsCount,
         totalViews: acc.totalViews + item.viewsCount,
         totalReviews: acc.totalReviews + item.reviewsCount,
         totalRating: acc.totalRating + item.rating,
-        totalRevenue: acc.totalRevenue + item.revenue,
+        ratedDays: acc.ratedDays + (item.rating > 0 ? 1 : 0),
       }),
       {
         totalLeads: 0,
         totalViews: 0,
         totalReviews: 0,
         totalRating: 0,
-        totalRevenue: 0,
+        ratedDays: 0,
       },
     );
 
@@ -180,8 +259,8 @@ export class AnalyticsMasterService {
       totalLeads: totals.totalLeads,
       totalViews: totals.totalViews,
       totalReviews: totals.totalReviews,
-      avgRating: totalItems > 0 ? totals.totalRating / totalItems : 0,
-      totalRevenue: totals.totalRevenue,
+      avgRating:
+        totals.ratedDays > 0 ? totals.totalRating / totals.ratedDays : 0,
     };
   }
 
@@ -214,10 +293,8 @@ export class AnalyticsMasterService {
       return {
         leadsTrend: 'stable',
         viewsTrend: 'stable',
-        revenueTrend: 'stable',
         leadsChangePercent: 0,
         viewsChangePercent: 0,
-        revenueChangePercent: 0,
       };
     }
 
@@ -225,10 +302,7 @@ export class AnalyticsMasterService {
     const secondHalf = data.slice(Math.floor(data.length / 2));
 
     type DataItem = MasterAnalyticsResponse['data'][number];
-    type NumericKey = keyof Pick<
-      DataItem,
-      'leadsCount' | 'viewsCount' | 'revenue'
-    >;
+    type NumericKey = keyof Pick<DataItem, 'leadsCount' | 'viewsCount'>;
     const getAvg = (arr: DataItem[], key: NumericKey): number =>
       arr.length === 0
         ? 0
@@ -237,12 +311,10 @@ export class AnalyticsMasterService {
     const firstAvg = {
       leads: getAvg(firstHalf, 'leadsCount'),
       views: getAvg(firstHalf, 'viewsCount'),
-      revenue: getAvg(firstHalf, 'revenue'),
     };
     const secondAvg = {
       leads: getAvg(secondHalf, 'leadsCount'),
       views: getAvg(secondHalf, 'viewsCount'),
-      revenue: getAvg(secondHalf, 'revenue'),
     };
 
     const calcChange = (oldVal: number, newVal: number) =>
@@ -250,22 +322,14 @@ export class AnalyticsMasterService {
 
     const leadsChange = calcChange(firstAvg.leads, secondAvg.leads);
     const viewsChange = calcChange(firstAvg.views, secondAvg.views);
-    const revenueChange = calcChange(firstAvg.revenue, secondAvg.revenue);
 
     return {
       leadsTrend:
         Math.abs(leadsChange) < 5 ? 'stable' : leadsChange > 0 ? 'up' : 'down',
       viewsTrend:
         Math.abs(viewsChange) < 5 ? 'stable' : viewsChange > 0 ? 'up' : 'down',
-      revenueTrend:
-        Math.abs(revenueChange) < 5
-          ? 'stable'
-          : revenueChange > 0
-            ? 'up'
-            : 'down',
       leadsChangePercent: Math.round(leadsChange * 100) / 100,
       viewsChangePercent: Math.round(viewsChange * 100) / 100,
-      revenueChangePercent: Math.round(revenueChange * 100) / 100,
     };
   }
 
@@ -284,8 +348,9 @@ export class AnalyticsMasterService {
         include: { analytics: { where: { date: { gte: startDate } } } },
       });
 
-      if (masters.length === 0)
-        return { avgLeads: 0, avgViews: 0, avgRating: 0 };
+      const mastersCount = masters.length;
+      if (mastersCount === 0)
+        return { avgLeads: 0, avgViews: 0, avgRating: 0, mastersCount: 0 };
 
       const totalLeads = masters.reduce(
         (sum, m) => sum + m.analytics.reduce((s, a) => s + a.leadsCount, 0),
@@ -301,19 +366,22 @@ export class AnalyticsMasterService {
       );
 
       return {
-        avgLeads: totalLeads / masters.length,
-        avgViews: totalViews / masters.length,
-        avgRating: totalRating / masters.length,
+        avgLeads: totalLeads / mastersCount,
+        avgViews: totalViews / mastersCount,
+        avgRating: totalRating / mastersCount,
+        mastersCount,
       };
     };
 
+    const emptyAvg = {
+      avgLeads: 0,
+      avgViews: 0,
+      avgRating: 0,
+      mastersCount: 0,
+    };
     return {
-      categoryAvg: categoryId
-        ? await getAvgMetrics({ categoryId })
-        : { avgLeads: 0, avgViews: 0, avgRating: 0 },
-      cityAvg: cityId
-        ? await getAvgMetrics({ cityId })
-        : { avgLeads: 0, avgViews: 0, avgRating: 0 },
+      categoryAvg: categoryId ? await getAvgMetrics({ categoryId }) : emptyAvg,
+      cityAvg: cityId ? await getAvgMetrics({ cityId }) : emptyAvg,
       position: {
         inCategory: categoryId
           ? await this.getMasterPosition(masterId, categoryId, 'category')
@@ -358,16 +426,12 @@ export class AnalyticsMasterService {
       return {
         nextWeekLeads: 0,
         nextWeekViews: 0,
-        nextWeekRevenue: 0,
         confidence: 0,
       };
 
     const lastWeek = data.slice(-7);
     type DataItem = MasterAnalyticsResponse['data'][number];
-    type NumericKey = keyof Pick<
-      DataItem,
-      'leadsCount' | 'viewsCount' | 'revenue'
-    >;
+    type NumericKey = keyof Pick<DataItem, 'leadsCount' | 'viewsCount'>;
     const getAvg = (key: NumericKey): number =>
       lastWeek.length === 0
         ? 0
@@ -375,7 +439,6 @@ export class AnalyticsMasterService {
 
     const avgLeads = getAvg('leadsCount');
     const avgViews = getAvg('viewsCount');
-    const avgRevenue = getAvg('revenue');
 
     const values = lastWeek.map((d) => d.leadsCount);
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -390,7 +453,6 @@ export class AnalyticsMasterService {
     return {
       nextWeekLeads: Math.round(avgLeads * 7),
       nextWeekViews: Math.round(avgViews * 7),
-      nextWeekRevenue: Math.round(avgRevenue * 7),
       confidence: Math.round(confidence),
     };
   }
@@ -473,42 +535,43 @@ export class AnalyticsMasterService {
     analytics: MasterAnalyticsResponse,
     trends: TrendAnalysis,
     conversion: ConversionMetrics,
-  ): string[] {
-    const insights: string[] = [];
+  ): Array<{ key: string; params?: Record<string, number | string> }> {
+    const insights: Array<{
+      key: string;
+      params?: Record<string, number | string>;
+    }> = [];
 
     if (trends.leadsChangePercent > 20) {
-      insights.push(
-        `Ваши лиды выросли на ${trends.leadsChangePercent}% по сравнению с прошлым периодом! 🔥`,
-      );
+      insights.push({
+        key: 'insights.leadsGrowth',
+        params: { percent: Math.round(trends.leadsChangePercent * 100) / 100 },
+      });
     } else if (trends.leadsChangePercent < -20) {
-      insights.push(
-        `Количество лидов снизилось на ${Math.abs(trends.leadsChangePercent)}%. Попробуйте обновить портфолио или добавить акцию.`,
-      );
+      insights.push({
+        key: 'insights.leadsDecline',
+        params: {
+          percent: Math.round(Math.abs(trends.leadsChangePercent) * 100) / 100,
+        },
+      });
     }
 
     if (conversion.viewsToLeads < 2) {
-      insights.push(
-        'Низкая конверсия из просмотров в лиды. Возможно, стоит улучшить описание профиля или главное фото.',
-      );
+      insights.push({ key: 'insights.lowConversion' });
     }
 
     if (conversion.leadsToBookings > 50) {
-      insights.push(
-        'У вас отличная конверсия из лидов в запись! Клиенты высоко ценят ваше общение.',
-      );
+      insights.push({ key: 'insights.highConversion' });
     }
 
     if (
       analytics.summary.avgRating < 4.5 &&
       analytics.summary.totalReviews > 0
     ) {
-      insights.push(
-        'Ваш средний рейтинг ниже 4.5. Обратите внимание на отзывы и постарайтесь улучшить качество сервиса.',
-      );
+      insights.push({ key: 'insights.lowRating' });
     }
 
     if (insights.length === 0) {
-      insights.push('Ваша статистика стабильна. Продолжайте в том же духе!');
+      insights.push({ key: 'insights.stable' });
     }
 
     return insights;

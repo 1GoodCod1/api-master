@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PaymentStatus, ReviewStatus } from '../../../common/constants';
+import { ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -27,52 +27,41 @@ export class TasksAnalyticsService {
       select: { id: true, userId: true },
     });
 
+    const dayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
+
     for (const master of masters) {
-      const [leads, reviews, payments, views] = await Promise.all([
+      const dateRange = { gte: yesterday, lt: dayEnd };
+
+      const [leads, reviewsAgg, views] = await Promise.all([
         this.prisma.lead.count({
-          where: {
-            masterId: master.id,
-            createdAt: {
-              gte: yesterday,
-              lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
-            },
-          },
+          where: { masterId: master.id, createdAt: dateRange },
         }),
-        this.prisma.review.count({
+        this.prisma.review.aggregate({
           where: {
             masterId: master.id,
-            createdAt: {
-              gte: yesterday,
-              lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
-            },
             status: ReviewStatus.VISIBLE,
+            OR: [
+              { moderatedAt: dateRange },
+              { moderatedAt: null, createdAt: dateRange },
+            ],
           },
-        }),
-        this.prisma.payment.aggregate({
-          where: {
-            masterId: master.id,
-            createdAt: {
-              gte: yesterday,
-              lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
-            },
-            status: PaymentStatus.SUCCESS,
-          },
-          _sum: { amount: true },
+          _count: true,
+          _avg: { rating: true },
         }),
         this.prisma.userActivity.count({
           where: {
             masterId: master.id,
             action: 'view',
-            createdAt: {
-              gte: yesterday,
-              lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
-            },
+            createdAt: dateRange,
             ...(master.userId && {
               OR: [{ userId: null }, { userId: { not: master.userId } }],
             }),
           },
         }),
       ]);
+
+      const reviewsCount = reviewsAgg._count;
+      const avgRating = reviewsAgg._avg.rating ?? 0;
 
       await this.prisma.masterAnalytics.upsert({
         where: {
@@ -81,16 +70,18 @@ export class TasksAnalyticsService {
         update: {
           leadsCount: leads,
           viewsCount: views,
-          reviewsCount: reviews,
-          revenue: payments._sum.amount || 0,
+          reviewsCount,
+          rating: avgRating,
+          revenue: 0,
         },
         create: {
           masterId: master.id,
           date: yesterday,
           leadsCount: leads,
           viewsCount: views,
-          reviewsCount: reviews,
-          revenue: payments._sum.amount || 0,
+          reviewsCount,
+          rating: avgRating,
+          revenue: 0,
         },
       });
     }
@@ -101,7 +92,6 @@ export class TasksAnalyticsService {
       totalMasters,
       totalLeads,
       totalReviews,
-      totalRevenue,
       activeUsers,
       redisKeys,
     ] = await Promise.all([
@@ -123,16 +113,6 @@ export class TasksAnalyticsService {
           },
         },
       }),
-      this.prisma.payment.aggregate({
-        where: {
-          createdAt: {
-            gte: yesterday,
-            lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
-          },
-          status: PaymentStatus.SUCCESS,
-        },
-        _sum: { amount: true },
-      }),
       this.prisma.user.count({
         where: {
           lastLoginAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
@@ -148,7 +128,7 @@ export class TasksAnalyticsService {
         totalMasters,
         totalLeads,
         totalReviews,
-        totalRevenue: totalRevenue._sum.amount || 0,
+        totalRevenue: 0,
         activeUsers,
         redisKeys,
       },

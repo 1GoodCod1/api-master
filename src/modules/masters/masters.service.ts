@@ -91,6 +91,7 @@ export class MastersService {
       req.socket?.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
+    const userRole = req.user?.role;
     const onViewIncrement = (
       masterId: string,
       uid?: string,
@@ -99,7 +100,17 @@ export class MastersService {
       ua?: string,
       catId?: string,
       cityId?: string,
-    ) => this.handleViewIncrement(masterId, uid, sid, ip, ua, catId, cityId);
+    ) =>
+      this.handleViewIncrement(
+        masterId,
+        uid,
+        sid,
+        ip,
+        ua,
+        catId,
+        cityId,
+        userRole,
+      );
     return this.profileService.findOne(
       identifier,
       incrementViews,
@@ -668,8 +679,10 @@ export class MastersService {
 
   /**
    * Обработка инкремента просмотров с отслеживанием активности.
-   * Учитываются только клиентские просмотры:
-   * - исключены просмотры самого себя и других мастеров;
+   * Учитываются только просмотры от клиентов (role=CLIENT):
+   * - анонимные просмотры не учитываются (невозможно проверить, что это клиент);
+   * - исключены владелец профиля и другие мастера;
+   * - исключены админы;
    * - 1 запись на клиента в день (повторные просмотры не учитываются).
    */
   private async handleViewIncrement(
@@ -680,33 +693,35 @@ export class MastersService {
     userAgent?: string,
     categoryId?: string,
     cityId?: string,
+    userRole?: string,
   ) {
+    // Только авторизованные клиенты — анонимные и не-клиенты не учитываются
+    if (!userId || userRole !== 'CLIENT') return;
+
     const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
 
-    if (userId) {
-      // Cache 'is viewer a master?' for 60s to avoid 2 DB queries on every profile view
-      const viewerCacheKey = `cache:viewer:${userId}:is-master`;
-      let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
+    // Cache 'is viewer a master?' for 60s to avoid 2 DB queries on every profile view
+    const viewerCacheKey = `cache:viewer:${userId}:is-master`;
+    let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
 
-      if (viewerIsMaster === null) {
-        const [profileMaster, viewerMaster] = await Promise.all([
-          this.prisma.master.findUnique({
-            where: { id: masterId },
-            select: { userId: true },
-          }),
-          this.prisma.master.findUnique({
-            where: { userId },
-            select: { id: true },
-          }),
-        ]);
-        // If the viewer is the profile owner or another master — skip
-        if (profileMaster?.userId === userId) return;
-        viewerIsMaster = !!viewerMaster;
-        await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
-      }
-
-      if (viewerIsMaster) return;
+    if (viewerIsMaster === null) {
+      const [profileMaster, viewerMaster] = await Promise.all([
+        this.prisma.master.findUnique({
+          where: { id: masterId },
+          select: { userId: true },
+        }),
+        this.prisma.master.findUnique({
+          where: { userId },
+          select: { id: true },
+        }),
+      ]);
+      // If the viewer is the profile owner or another master — skip
+      if (profileMaster?.userId === userId) return;
+      viewerIsMaster = !!viewerMaster;
+      await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
     }
+
+    if (viewerIsMaster) return;
 
     const viewerIdent = userId
       ? { userId }

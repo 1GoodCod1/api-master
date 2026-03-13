@@ -67,10 +67,11 @@ export class AnalyticsService {
       throw new Error('Master profile not found');
     }
 
-    const isPremium = this.isTariffActive(
+    const isActive = this.isTariffActive(
       master.tariffType,
       master.tariffExpiresAt,
     );
+    const isPremium = isActive && master.tariffType === 'PREMIUM';
     const maxDays = isPremium ? 30 : 14;
     const days = requestedDays ? Math.min(requestedDays, maxDays) : maxDays;
 

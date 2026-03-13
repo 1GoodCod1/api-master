@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PaymentStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
 import * as fs from 'fs';
@@ -37,7 +36,6 @@ export interface SystemStats {
     newUsers: number;
     newLeads: number;
     newReviews: number;
-    revenue: number;
   };
 }
 
@@ -65,7 +63,6 @@ export class AdminSystemService {
       newUsersToday,
       newLeadsToday,
       newReviewsToday,
-      revenueToday,
       redisInfo,
       systemMetrics,
     ] = await Promise.all([
@@ -95,15 +92,6 @@ export class AdminSystemService {
           },
         },
       }),
-      this.prisma.payment.aggregate({
-        where: {
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
-          status: PaymentStatus.SUCCESS,
-        },
-        _sum: { amount: true },
-      }),
       this.getRedisInfo(),
       this.getSystemMetrics(),
     ]);
@@ -122,7 +110,6 @@ export class AdminSystemService {
         newUsers: newUsersToday,
         newLeads: newLeadsToday,
         newReviews: newReviewsToday,
-        revenue: Number(revenueToday._sum.amount) || 0,
       },
     };
   }

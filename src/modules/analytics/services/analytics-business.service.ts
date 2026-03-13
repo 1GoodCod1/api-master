@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus, ReviewStatus } from '../../../common/constants';
+import { ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
@@ -24,7 +24,6 @@ export class AnalyticsBusinessService {
       totalUsers,
       totalLeads,
       totalReviews,
-      totalRevenue,
       dailyStats,
       categoryStats,
       cityStats,
@@ -34,10 +33,6 @@ export class AnalyticsBusinessService {
       this.prisma.lead.count({ where: { createdAt: { gte: startDate } } }),
       this.prisma.review.count({
         where: { createdAt: { gte: startDate }, status: ReviewStatus.VISIBLE },
-      }),
-      this.prisma.payment.aggregate({
-        where: { createdAt: { gte: startDate }, status: PaymentStatus.SUCCESS },
-        _sum: { amount: true },
       }),
       this.getDailyStats(days),
       this.getCategoryStats(),
@@ -51,7 +46,6 @@ export class AnalyticsBusinessService {
         users: totalUsers,
         leads: totalLeads,
         reviews: totalReviews,
-        revenue: decimalToNumber(totalRevenue._sum.amount),
       },
       dailyStats,
       categoryStats,
@@ -69,7 +63,7 @@ export class AnalyticsBusinessService {
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      const [leads, reviews, payments] = await Promise.all([
+      const [leads, reviews] = await Promise.all([
         this.prisma.lead.count({
           where: { createdAt: { gte: date, lt: nextDate } },
         }),
@@ -79,20 +73,12 @@ export class AnalyticsBusinessService {
             status: ReviewStatus.VISIBLE,
           },
         }),
-        this.prisma.payment.aggregate({
-          where: {
-            createdAt: { gte: date, lt: nextDate },
-            status: PaymentStatus.SUCCESS,
-          },
-          _sum: { amount: true },
-        }),
       ]);
 
       stats.push({
         date: date.toISOString().split('T')[0],
         leads,
         reviews,
-        revenue: decimalToNumber(payments._sum.amount),
       });
     }
     return stats;

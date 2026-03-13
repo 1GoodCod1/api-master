@@ -12,9 +12,6 @@ export class AnalyticsSummaryDto {
 
   @ApiProperty()
   avgRating: number;
-
-  @ApiProperty()
-  totalRevenue: number;
 }
 
 export class DailyAnalyticsItemDto {
@@ -32,9 +29,6 @@ export class DailyAnalyticsItemDto {
 
   @ApiProperty()
   rating: number;
-
-  @ApiProperty()
-  revenue: number;
 }
 
 export class MasterAnalyticsResponseDto {
