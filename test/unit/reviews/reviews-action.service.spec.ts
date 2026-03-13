@@ -64,6 +64,7 @@ describe('ReviewsActionService', () => {
   const cache = {
     invalidate: jest.fn(),
     del: jest.fn(),
+    invalidateMasterRelated: jest.fn().mockResolvedValue(undefined),
     keys: { masterStats: jest.fn((id: string) => `cache:master:${id}:stats`) },
   } as unknown as jest.Mocked<CacheService>;
 

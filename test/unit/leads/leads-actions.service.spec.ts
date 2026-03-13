@@ -43,6 +43,7 @@ describe('LeadsActionsService', () => {
   const cache = {
     invalidate: jest.fn(),
     del: jest.fn(),
+    invalidateMasterData: jest.fn().mockResolvedValue(undefined),
     keys: {
       masterStats: jest.fn(
         (masterId: string) => `cache:master:${masterId}:stats`,
@@ -149,8 +150,7 @@ describe('LeadsActionsService', () => {
     await service.updateStatus('lead-1', masterUser, { status: 'CLOSED' });
 
     expect(availabilityService.decrementActiveLeads).toHaveBeenCalledWith('m1');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:master:m1:leads:*');
-    expect(cache.del).toHaveBeenCalledWith('cache:master:m1:stats');
+    expect(cache.invalidateMasterData).toHaveBeenCalledWith('m1');
     expect(inAppNotifications.notifyMasterAvailable).toHaveBeenCalledWith(
       'c1',
       {

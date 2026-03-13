@@ -33,9 +33,15 @@ describe('CategoriesService', () => {
     getOrSet: jest.fn(),
     del: jest.fn(),
     invalidate: jest.fn(),
+    invalidateWithLeafKey: jest.fn().mockResolvedValue(0),
     keys: {
       categoryWithStats: jest.fn((id: string) => `cache:category:${id}:stats`),
       categoriesAll: jest.fn(() => 'cache:categories:all'),
+    },
+    patterns: {
+      categoriesAll: jest.fn(() => 'cache:categories:all:*'),
+      categoriesStatistics: jest.fn(() => 'cache:categories:statistics:*'),
+      searchMasters: jest.fn(() => 'cache:search:masters:*'),
     },
     ttl: { categories: 300 },
   } as unknown as jest.Mocked<CacheService>;
@@ -109,6 +115,10 @@ describe('CategoriesService', () => {
         where: { id: 'c1' },
       });
       expect(cache.del).toHaveBeenCalledWith('cache:category:c1:stats');
+      expect(cache.invalidateWithLeafKey).toHaveBeenCalledWith(
+        'cache:categories:all',
+        'cache:categories:all:*',
+      );
       expect(cache.invalidate).toHaveBeenCalled();
     });
   });

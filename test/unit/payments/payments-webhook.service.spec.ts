@@ -33,6 +33,7 @@ describe('PaymentsWebhookService', () => {
   const cache = {
     del: jest.fn(),
     invalidate: jest.fn(),
+    invalidateMasterRelated: jest.fn().mockResolvedValue(undefined),
     keys: {
       userMasterProfile: jest.fn(
         (userId: string) => `cache:user:${userId}:master-profile`,
@@ -112,12 +113,7 @@ describe('PaymentsWebhookService', () => {
 
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:master-profile');
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:profile');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:master:m1:*');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:search:masters:*');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:masters:top:*');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:masters:popular:*');
-    expect(cache.invalidate).toHaveBeenCalledWith('cache:masters:new:*');
-
+    expect(cache.invalidateMasterRelated).toHaveBeenCalledWith('m1');
     expect(inAppNotifications.notifyPaymentSuccess).toHaveBeenCalledWith('u1', {
       paymentId: 'p1',
       tariffType: 'VIP',
