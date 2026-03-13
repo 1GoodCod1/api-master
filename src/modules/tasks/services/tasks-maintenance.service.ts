@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LeadStatus, ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { RedisService, RedisClient } from '../../shared/redis/redis.service';
+import type Redis from 'ioredis';
+import { RedisService } from '../../shared/redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 interface QueueStats {
@@ -174,7 +175,7 @@ export class TasksMaintenanceService {
   }
 
   private async getQueueStats(
-    redis: RedisClient,
+    redis: Redis,
   ): Promise<Record<string, QueueStats>> {
     const queues = ['sms', 'telegram'];
     const stats: Record<string, QueueStats> = {};

@@ -7,7 +7,8 @@ import {
 import { WebsocketConnectionService } from './services/websocket-connection.service';
 import { WebsocketMessagingService } from './services/websocket-messaging.service';
 import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
-import { RedisService, RedisClient } from '../shared/redis/redis.service';
+import Redis from 'ioredis';
+import { RedisService } from '../shared/redis/redis.service';
 import { Server, Socket } from 'socket.io';
 import {
   sanitizeNotificationData,
@@ -23,7 +24,7 @@ import {
 @Injectable()
 export class WebsocketService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WebsocketService.name);
-  private redisSubscriber: RedisClient | null = null;
+  private redisSubscriber: Redis | null = null;
 
   constructor(
     private readonly connectionService: WebsocketConnectionService,
@@ -336,9 +337,9 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      let redisSub: RedisClient;
+      let redisSub: Redis;
       try {
-        redisSub = redisClient.duplicate() as RedisClient;
+        redisSub = redisClient.duplicate();
         this.redisSubscriber = redisSub;
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : 'Unknown error';

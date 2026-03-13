@@ -6,69 +6,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis, { RedisOptions } from 'ioredis';
-import { Cluster, ClusterOptions } from 'ioredis';
-
-export type RedisClient = Redis | Cluster;
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private client: RedisClient;
-  private readonly isClusterMode: boolean;
+  private client: Redis;
 
   constructor(private configService: ConfigService) {
-    const cluster = this.configService.get<boolean>('redis.cluster', false);
-    const clusterNodes = this.configService.get<
-      { host: string; port: number }[] | null
-    >('redis.clusterNodes', null);
-
-    if (cluster && clusterNodes && clusterNodes.length > 0) {
-      this.client = this.createClusterClient(clusterNodes);
-      this.isClusterMode = true;
-      this.logger.log('Redis Cluster mode enabled');
-    } else {
-      this.client = this.createStandaloneClient();
-      this.isClusterMode = false;
-    }
-
-    this.client.on('error', (err: Error) => {
-      this.logger.error('Redis connection error', err);
-    });
-
-    this.client.on('connect', () => {
-      this.logger.log('Redis connected successfully');
-    });
-
-    this.client.on('ready', () => {
-      this.logger.log('Redis is ready to accept commands');
-    });
-
-    this.client.on('reconnecting', () => {
-      this.logger.warn('Redis reconnecting...');
-    });
-  }
-
-  private createClusterClient(
-    nodes: { host: string; port: number }[],
-  ): Cluster {
-    const password = this.configService.get<string>('redis.password', '');
-    const options: ClusterOptions = {
-      redisOptions: {
-        password,
-        connectTimeout: 10000,
-        maxRetriesPerRequest: 3,
-        enableReadyCheck: true,
-        lazyConnect: true,
-      },
-      clusterRetryStrategy: (times: number) => {
-        if (times > 10) return null;
-        return Math.min(times * 50, 2000);
-      },
-    };
-    return new Cluster(nodes, options);
-  }
-
-  private createStandaloneClient(): Redis {
     const sentinels =
       this.configService.get<{ host: string; port: number }[]>(
         'redis.sentinels',
@@ -104,7 +48,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       options.port = this.configService.get<number>('redis.port', 6379);
     }
 
-    return new Redis(options);
+    this.client = new Redis(options);
+
+    this.client.on('error', (err: Error) => {
+      this.logger.error('Redis connection error', err);
+    });
+
+    this.client.on('connect', () => {
+      this.logger.log('Redis connected successfully');
+    });
+
+    this.client.on('ready', () => {
+      this.logger.log('Redis is ready to accept commands');
+    });
+
+    this.client.on('reconnecting', () => {
+      this.logger.warn('Redis reconnecting...');
+    });
   }
 
   async onModuleInit() {
@@ -128,13 +88,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  getClient(): RedisClient {
+  getClient(): Redis {
     return this.client;
-  }
-
-  /** True when REDIS_CLUSTER=true and REDIS_CLUSTER_NODES is set */
-  isCluster(): boolean {
-    return this.isClusterMode;
   }
 
   async set(key: string, value: any, ttl?: number): Promise<void> {

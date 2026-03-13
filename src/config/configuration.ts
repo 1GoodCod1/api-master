@@ -19,24 +19,17 @@ export default () => ({
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
+    /** Prod: REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379 */
     sentinels: process.env.REDIS_SENTINELS
       ? process.env.REDIS_SENTINELS.split(',').map((s) => {
-          const parts = s.split(':');
-          return { host: parts[0], port: parseInt(parts[1] || '26379', 10) };
-        })
-      : null,
-    sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
-    /** Redis Cluster: set REDIS_CLUSTER=true and REDIS_CLUSTER_NODES=host1:port1,host2:port2,... */
-    cluster: process.env.REDIS_CLUSTER === 'true',
-    clusterNodes: process.env.REDIS_CLUSTER_NODES
-      ? process.env.REDIS_CLUSTER_NODES.split(',').map((s) => {
           const parts = s.trim().split(':');
           return {
             host: parts[0],
-            port: parseInt(parts[1] || '6379', 10),
+            port: parseInt(parts[1] || '26379', 10),
           };
         })
       : null,
+    sentinelName: process.env.REDIS_SENTINEL_NAME || 'mymaster',
   },
 
   jwt: {

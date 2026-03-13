@@ -169,13 +169,12 @@ export class AppService {
         const info = await redis.info();
         const connectedClients =
           info.match(/connected_clients:(\d+)/)?.[1] || '0';
-        const mode = this.redis.isCluster() ? 'Cluster' : 'standalone';
 
         return {
           name: 'Redis',
           status: 'up',
           responseTime: Date.now() - start,
-          message: `Redis ${mode} connected (${connectedClients} clients)`,
+          message: `Redis connected (${connectedClients} clients)`,
         };
       } else {
         return {

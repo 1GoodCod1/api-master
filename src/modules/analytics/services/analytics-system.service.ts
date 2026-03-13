@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { RedisService, RedisClient } from '../../shared/redis/redis.service';
+import Redis from 'ioredis';
+import { RedisService } from '../../shared/redis/redis.service';
 import * as os from 'os';
 import { SystemAnalyticsResponse } from '../../shared/types/analytics.types';
 
@@ -53,7 +54,7 @@ export class AnalyticsSystemService {
   }
 
   private async getQueueStats(
-    redisClient: RedisClient,
+    redisClient: Redis,
   ): Promise<Record<string, QueueStats>> {
     const queues = ['sms', 'telegram', 'email'];
     const stats: Record<string, QueueStats> = {};
