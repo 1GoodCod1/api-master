@@ -10,6 +10,7 @@ import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
+import { buildAnalyticsPdf } from './analytics-pdf-builder';
 
 /** RFC 4180 compliant CSV escape */
 function csvEscape(val: string): string {
@@ -326,11 +327,13 @@ export class ExportService {
 
   /**
    * Экспорт аналитики в PDF
+   * @param locale — язык отчёта (en|ru), по умолчанию en
    */
   async exportAnalyticsToPDF(
     masterId: string,
     user: JwtUser,
     res: Response,
+    locale: string = 'en',
   ): Promise<void> {
     try {
       await this.validateExportAccess(masterId, user);
@@ -348,7 +351,6 @@ export class ExportService {
         throw new BadRequestException('Master not found');
       }
 
-      // Получаем статистику
       const [leadsStats, reviewsStats, bookingsStats, analytics] =
         await Promise.all([
           this.prisma.lead.groupBy({
@@ -383,71 +385,26 @@ export class ExportService {
       const doc = new PDFDocument({ margin: 50 });
       doc.pipe(res);
 
-      // Header
-      doc.fontSize(20).text('Analytics Report', { align: 'center' });
-      doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(
-          `Master: ${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim(),
-          {
-            align: 'center',
-          },
-        );
-      doc.text(`Generated: ${new Date().toLocaleString()}`, {
-        align: 'center',
-      });
-      doc.moveDown(2);
+      const pdfData = {
+        masterName:
+          `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() ||
+          'Master',
+        categoryName: master.category?.name ?? '',
+        cityName: master.city?.name ?? '',
+        rating: master.rating,
+        totalReviews: master.totalReviews ?? 0,
+        totalLeads: master.leadsCount ?? 0,
+        leadsStats,
+        reviewsStats,
+        bookingsStats,
+        analytics: analytics.map((a) => ({
+          date: a.date,
+          leadsCount: a.leadsCount ?? 0,
+          viewsCount: a.viewsCount ?? 0,
+        })),
+      };
 
-      // Profile Info
-      doc.fontSize(16).text('Profile Information', { underline: true });
-      doc.moveDown();
-      doc.fontSize(12);
-      doc.text(`Category: ${master.category?.name || 'N/A'}`);
-      doc.text(`City: ${master.city?.name || 'N/A'}`);
-      doc.text(`Rating: ${master.rating?.toFixed(2) || 'N/A'}`);
-      doc.text(`Total Reviews: ${master.totalReviews || 0}`);
-      doc.text(`Total Leads: ${master.leadsCount || 0}`);
-      doc.moveDown();
-
-      // Leads Statistics
-      doc.fontSize(16).text('Leads Statistics', { underline: true });
-      doc.moveDown();
-      leadsStats.forEach((stat) => {
-        doc.text(`${stat.status}: ${stat._count}`);
-      });
-      doc.moveDown();
-
-      // Reviews Statistics
-      doc.fontSize(16).text('Reviews Statistics', { underline: true });
-      doc.moveDown();
-      reviewsStats.forEach((stat) => {
-        doc.text(`${stat.status}: ${stat._count}`);
-      });
-      doc.moveDown();
-
-      // Bookings Statistics
-      doc.fontSize(16).text('Bookings Statistics', { underline: true });
-      doc.moveDown();
-      bookingsStats.forEach((stat) => {
-        doc.text(`${stat.status}: ${stat._count}`);
-      });
-      doc.moveDown();
-
-      // Recent Analytics
-      if (analytics.length > 0) {
-        doc
-          .fontSize(16)
-          .text('Recent Analytics (Last 30 Days)', { underline: true });
-        doc.moveDown();
-        doc.fontSize(10);
-        analytics.forEach((day) => {
-          doc.text(
-            `${day.date.toLocaleDateString()}: ${day.leadsCount || 0} leads, ${day.viewsCount || 0} views`,
-          );
-        });
-      }
-
+      buildAnalyticsPdf(doc, pdfData, locale);
       doc.end();
     } catch (err) {
       if (err instanceof BadRequestException) {
@@ -621,10 +578,12 @@ export class ExportService {
   /**
    * Generate analytics PDF as an in-memory Buffer.
    * Does NOT write to HTTP response — safe to call from a background job.
+   * @param locale — язык отчёта (en|ru), по умолчанию en
    */
   async exportAnalyticsToBuffer(
     masterId: string,
     user: JwtUser,
+    locale: string = 'en',
   ): Promise<Buffer> {
     try {
       await this.validateExportAccess(masterId, user);
@@ -659,58 +618,32 @@ export class ExportService {
           }),
         ]);
 
+      const pdfData = {
+        masterName:
+          `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() ||
+          'Master',
+        categoryName: master.category?.name ?? '',
+        cityName: master.city?.name ?? '',
+        rating: master.rating,
+        totalReviews: master.totalReviews ?? 0,
+        totalLeads: master.leadsCount ?? 0,
+        leadsStats,
+        reviewsStats,
+        bookingsStats,
+        analytics: analytics.map((a) => ({
+          date: a.date,
+          leadsCount: a.leadsCount ?? 0,
+          viewsCount: a.viewsCount ?? 0,
+        })),
+      };
+
       return new Promise<Buffer>((resolve, reject) => {
         const doc = new PDFDocument({ margin: 50 });
         const chunks: Buffer[] = [];
         doc.on('data', (chunk: Buffer) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
-
-        doc.fontSize(20).text('Analytics Report', { align: 'center' });
-        doc.moveDown();
-        doc
-          .fontSize(12)
-          .text(
-            `Master: ${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim(),
-            { align: 'center' },
-          );
-        doc.text(`Generated: ${new Date().toLocaleString()}`, {
-          align: 'center',
-        });
-        doc.moveDown(2);
-        doc.fontSize(16).text('Profile Information', { underline: true });
-        doc.moveDown();
-        doc.fontSize(12);
-        doc.text(`Category: ${master.category?.name || 'N/A'}`);
-        doc.text(`City: ${master.city?.name || 'N/A'}`);
-        doc.text(`Rating: ${master.rating?.toFixed(2) || 'N/A'}`);
-        doc.text(`Total Reviews: ${master.totalReviews || 0}`);
-        doc.text(`Total Leads: ${master.leadsCount || 0}`);
-        doc.moveDown();
-        doc.fontSize(16).text('Leads Statistics', { underline: true });
-        doc.moveDown();
-        leadsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
-        doc.moveDown();
-        doc.fontSize(16).text('Reviews Statistics', { underline: true });
-        doc.moveDown();
-        reviewsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
-        doc.moveDown();
-        doc.fontSize(16).text('Bookings Statistics', { underline: true });
-        doc.moveDown();
-        bookingsStats.forEach((s) => doc.text(`${s.status}: ${s._count}`));
-        doc.moveDown();
-        if (analytics.length > 0) {
-          doc
-            .fontSize(16)
-            .text('Recent Analytics (Last 30 Days)', { underline: true });
-          doc.moveDown();
-          doc.fontSize(10);
-          analytics.forEach((day) => {
-            doc.text(
-              `${day.date.toLocaleDateString()}: ${day.leadsCount || 0} leads, ${day.viewsCount || 0} views`,
-            );
-          });
-        }
+        buildAnalyticsPdf(doc, pdfData, locale);
         doc.end();
       });
     } catch (err) {

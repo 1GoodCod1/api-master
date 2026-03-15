@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { UpdateMasterDto } from '../dto/update-master.dto';
-import { ReviewStatus } from '../../../common/constants';
+import { LeadStatus, ReviewStatus } from '../../../common/constants';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -170,7 +170,8 @@ export class MastersProfileService {
     }
 
     // Response rate: % of leads that master responded to (IN_PROGRESS or CLOSED vs NEW)
-    const [respondedCount, totalLeads] = await Promise.all([
+    // Completed projects: only CLOSED leads (excludes SPAM, NEW, IN_PROGRESS)
+    const [respondedCount, totalLeads, closedLeadsCount] = await Promise.all([
       this.prisma.lead.count({
         where: {
           masterId: master.id,
@@ -178,6 +179,9 @@ export class MastersProfileService {
         },
       }),
       this.prisma.lead.count({ where: { masterId: master.id } }),
+      this.prisma.lead.count({
+        where: { masterId: master.id, status: LeadStatus.CLOSED },
+      }),
     ]);
     const responseRate =
       totalLeads > 0 ? Math.round((respondedCount / totalLeads) * 100) : 100;
@@ -194,6 +198,7 @@ export class MastersProfileService {
       avatarUrl: avatarFile?.path ?? null,
       photos: photos.map((p) => p.file),
       responseRate,
+      leadsCount: closedLeadsCount,
       ...(!isVerified && { services: [] }),
     };
 

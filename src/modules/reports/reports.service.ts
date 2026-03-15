@@ -79,6 +79,14 @@ export class ReportsService {
   }
 
   /**
+   * Количество жалоб на мастера (для предупреждения на странице мастера)
+   * @param masterId ID мастера
+   */
+  async getReportsAgainstMasterCount(masterId: string): Promise<number> {
+    return this.queryService.countByMasterId(masterId);
+  }
+
+  /**
    * Обновление статуса жалобы и выполнение связанных действий (Админ)
    */
   async updateStatus(

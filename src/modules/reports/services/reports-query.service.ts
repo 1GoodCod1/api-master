@@ -22,6 +22,16 @@ export class ReportsQueryService {
   }
 
   /**
+   * Получить количество жалоб на мастера (для предупреждения)
+   * @param masterId ID мастера
+   */
+  async countByMasterId(masterId: string): Promise<number> {
+    return this.prisma.report.count({
+      where: { masterId },
+    });
+  }
+
+  /**
    * Получить список жалоб, поданных конкретным клиентом
    * @param clientId ID пользователя-клиента
    */

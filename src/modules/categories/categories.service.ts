@@ -31,6 +31,7 @@ export class CategoriesService {
 
   /**
    * Получение всех категорий с учетом фильтров.
+   * Считает только верифицированных и не забаненных мастеров (как в getMasters).
    * Результаты кешируются для снижения нагрузки на БД.
    */
   async findAll(filters: Prisma.CategoryWhereInput = {}): Promise<Category[]> {
@@ -44,16 +45,48 @@ export class CategoriesService {
 
     return this.cache.getOrSet(
       cacheKey,
-      () =>
-        this.prisma.category.findMany({
-          where: filters,
-          include: {
-            _count: {
-              select: { masters: true },
-            },
-          },
-          orderBy: { sortOrder: 'asc' },
-        }),
+      async () => {
+        type Row = Category & { mastersCount: number };
+        const whereParts: Prisma.Sql[] = [];
+        if (filters.isActive !== undefined) {
+          whereParts.push(Prisma.sql`c."isActive" = ${filters.isActive}`);
+        }
+        const whereClause =
+          whereParts.length > 0
+            ? Prisma.sql`WHERE ${Prisma.join(whereParts, ' AND ')}`
+            : Prisma.empty;
+
+        const rows = await this.prisma.$queryRaw<Row[]>`
+          SELECT
+            c."id",
+            c."name",
+            c."slug",
+            c."description",
+            c."icon",
+            c."isActive",
+            c."sortOrder",
+            c."createdAt",
+            c."updatedAt",
+            COUNT(m."id") FILTER (
+              WHERE u."isBanned" = false AND u."isVerified" = true
+            )::int AS "mastersCount"
+          FROM "categories" c
+          LEFT JOIN "masters" m ON m."categoryId" = c."id"
+          LEFT JOIN "users" u ON u."id" = m."userId"
+          ${whereClause}
+          GROUP BY c."id", c."name", c."slug", c."description", c."icon",
+            c."isActive", c."sortOrder", c."createdAt", c."updatedAt"
+          ORDER BY c."sortOrder" ASC
+        `;
+
+        return rows.map((row) => {
+          const { mastersCount, ...cat } = row;
+          return {
+            ...cat,
+            _count: { masters: mastersCount },
+          } as Category & { _count: { masters: number } };
+        });
+      },
       this.cache.ttl.categories,
     );
   }

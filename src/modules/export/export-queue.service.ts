@@ -10,6 +10,8 @@ export interface ExportJob {
   type: ExportJobType;
   masterId: string;
   userId: string;
+  /** PDF report locale (en|ru), used when type = 'pdf' */
+  locale?: string;
   status: 'queued' | 'processing' | 'done' | 'error';
   error?: string;
   /** Serialized file content as a Buffer, available when status = 'done' */
@@ -57,13 +59,25 @@ export class ExportQueueService {
   /**
    * Enqueue an export job and return its ID immediately.
    * The actual work runs off the request path.
+   * @param locale — PDF report language (en|ru), used when type = 'pdf'
    */
-  enqueue(type: ExportJobType, masterId: string, user: JwtUser): ExportJob {
+  enqueue(
+    type: ExportJobType,
+    masterId: string,
+    user: JwtUser,
+    locale?: string,
+  ): ExportJob {
     const job: ExportJob = {
       id: randomUUID(),
       type,
       masterId,
       userId: user.id,
+      locale:
+        type === 'pdf'
+          ? locale?.toLowerCase().startsWith('ru')
+            ? 'ru'
+            : 'en'
+          : undefined,
       status: 'queued',
       queuedAt: new Date(),
     };
@@ -155,6 +169,7 @@ export class ExportQueueService {
       const data = await this.exportService.exportAnalyticsToBuffer(
         job.masterId,
         user,
+        job.locale ?? 'en',
       );
       return {
         data,

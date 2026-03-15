@@ -46,6 +46,19 @@ export class ReportsController {
     return this.reportsService.findByClient(req.user.id);
   }
 
+  @Get('reports-against-me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MASTER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get count of reports against master (for self)' })
+  async getReportsAgainstMeCount(@Req() req: RequestWithUser) {
+    const masterId = req.user.masterProfile?.id;
+    if (!masterId) return { count: 0 };
+    const count =
+      await this.reportsService.getReportsAgainstMasterCount(masterId);
+    return { count };
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

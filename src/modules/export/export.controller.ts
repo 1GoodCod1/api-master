@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Param,
+  Query,
   Res,
   UseGuards,
   Req,
@@ -80,6 +81,7 @@ export class ExportController {
     @Param('type') type: string,
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
+    @Query('locale') locale?: string,
   ) {
     if (!['csv', 'excel', 'pdf'].includes(type)) {
       throw new BadRequestException(
@@ -90,6 +92,7 @@ export class ExportController {
       type as 'csv' | 'excel' | 'pdf',
       masterId,
       req.user,
+      locale,
     );
     return {
       jobId: job.id,
@@ -168,7 +171,14 @@ export class ExportController {
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
     @Res() res: Response,
+    @Query('locale') locale?: string,
   ) {
-    await this.exportService.exportAnalyticsToPDF(masterId, req.user, res);
+    const lang = locale?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    await this.exportService.exportAnalyticsToPDF(
+      masterId,
+      req.user,
+      res,
+      lang,
+    );
   }
 }

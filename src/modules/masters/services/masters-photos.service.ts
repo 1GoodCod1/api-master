@@ -100,16 +100,24 @@ export class MastersPhotosService {
         where: { masterId: master.id, fileId },
       });
 
+      // Если удалили аватар — ставим первое оставшееся фото
+      if (master.avatarFileId === fileId) {
+        const remainingPhotos = await this.prisma.masterPhoto.findMany({
+          where: { masterId: master.id },
+          orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+          take: 1,
+          select: { fileId: true },
+        });
+        const newAvatarFileId = remainingPhotos[0]?.fileId ?? null;
+        await this.prisma.master.update({
+          where: { id: master.id },
+          data: { avatarFileId: newAvatarFileId },
+        });
+      }
+
       // Инвалидируем кеш профиля (фото изменились)
       if (onCacheInvalidate) {
         await onCacheInvalidate(master.id, master.slug);
-      }
-
-      if (master.avatarFileId === fileId) {
-        await this.prisma.master.update({
-          where: { id: master.id },
-          data: { avatarFileId: null },
-        });
       }
 
       return { ok: true };
