@@ -106,7 +106,7 @@
     "rxjs": "^7.8.2",
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.3",
-    "twilio": "^5.12.1",
+    "twilio": "^5.13.0",
     "uuid": "^13.0.0",
     "web-push": "^3.6.7",
     "winston": "^3.19.0",
