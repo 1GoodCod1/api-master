@@ -19,7 +19,7 @@ import {
   CHAT_BROADCAST_EVENT,
   type ChatBroadcastPayload,
 } from './chat-broadcast.service';
-import { SendMessageWsDto, TypingDto } from './dto';
+import { SendMessageWsDto, ChatTypingDto } from './dto';
 import type {
   JwtPayload,
   OutgoingChatMessage,
@@ -27,12 +27,11 @@ import type {
 } from './chat.types';
 import { getChatUserFromSocket } from './utils/chat-gateway.utils';
 import { ChatGatewayNotificationService } from './services/chat-gateway-notification.service';
+import { getCorsOrigins } from '../../../config';
 
 @WebSocketGateway({
   cors: {
-    origin:
-      process.env.FRONTEND_URL ||
-      (process.env.NODE_ENV === 'production' ? '*' : 'http://localhost:3000'),
+    origin: getCorsOrigins(),
     credentials: true,
   },
   namespace: 'chat',
@@ -181,7 +180,7 @@ export class ChatGateway
   @UseGuards(WsJwtGuard)
   handleTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: TypingDto,
+    @MessageBody() data: ChatTypingDto,
   ) {
     const user = getChatUserFromSocket(client);
     client.to(`conversation:${data.conversationId}`).emit('chat:typing', {

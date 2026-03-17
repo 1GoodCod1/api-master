@@ -4,8 +4,8 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { ReportStatus } from '../../../../common/constants';
-import { PrismaService } from '../../../shared/database/prisma.service';
+import { ReportStatus } from '../../../common/constants';
+import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateReportDto } from '../dto/create-report.dto';
 
 @Injectable()

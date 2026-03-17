@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../../shared/database/prisma.service';
-import { decimalToNumber } from '../../../shared/utils/decimal.utils';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
   getDayInMoldova,
   getHourInMoldova,
   getStartOfTodayInMoldova,
   toDateStringMoldova,
-} from '../../../shared/utils/timezone.util';
+} from '../../shared/utils/timezone.util';
 import {
   MasterAnalyticsItem,
   FilledAnalyticsItem,
@@ -18,7 +18,7 @@ import {
   TrendAnalysis,
   ComparisonData,
   ForecastData,
-} from '../../../shared/types/analytics.types';
+} from '../../shared/types/analytics.types';
 
 @Injectable()
 export class AnalyticsMasterService {

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ReportStatus } from '../../../common/constants';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
+import { ReportStatus } from '../../common/constants';
+import { PrismaService } from '../shared/database/prisma.service';
+import { InAppNotificationService } from '../notifications/notifications/services/in-app-notification.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { ReportsValidationService } from './services/reports-validation.service';

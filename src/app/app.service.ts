@@ -85,7 +85,7 @@ export class AppService {
     return {
       name: 'Master-Hub API',
       version: this.configService.get('npm_package_version') || '1.0.0',
-      build: process.env.BUILD_ID || 'local',
+      build: this.configService.get<string>('buildId', 'local'),
     };
   }
 

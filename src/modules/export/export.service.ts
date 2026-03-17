@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
-import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
+import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './services/export-access.service';
 import { ExportLeadsService } from './services/export-leads.service';
 import { ExportAnalyticsService } from './services/export-analytics.service';

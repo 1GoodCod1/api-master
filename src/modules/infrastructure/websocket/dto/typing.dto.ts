@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsBoolean } from 'class-validator';
 
-export class TypingDto {
+export class WsTypingDto {
   @ApiProperty()
   @IsString()
   masterId: string;

@@ -5,8 +5,8 @@ import * as os from 'os';
 import { randomUUID } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
-import { PrismaService } from '../../../shared/database/prisma.service';
-import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
+import { PrismaService } from '../../shared/database/prisma.service';
+import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
 import { buildAnalyticsPdf } from '../analytics-pdf-builder';
 

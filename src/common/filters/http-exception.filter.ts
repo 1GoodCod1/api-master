@@ -6,28 +6,39 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  constructor(private readonly configService?: ConfigService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status: number;
+    let message: string | object;
 
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : { statusCode: status, message: 'Internal server error' };
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      const prismaResult = this.mapPrismaError(exception);
+      status = prismaResult.status;
+      message = prismaResult.message;
+    } else if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      message = exception.getResponse();
+    } else {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = { statusCode: status, message: 'Internal server error' };
+    }
 
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = this.configService
+      ? this.configService.get<string>('nodeEnv') === 'production'
+      : process.env.NODE_ENV === 'production';
     const safeMessage =
       isProd && status >= 500
         ? { statusCode: status, message: 'Internal server error' }
@@ -60,5 +71,46 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     response.status(status).json(errorResponse);
+  }
+
+  private mapPrismaError(exception: Prisma.PrismaClientKnownRequestError): {
+    status: number;
+    message: object;
+  } {
+    switch (exception.code) {
+      case 'P2002':
+        return {
+          status: HttpStatus.CONFLICT,
+          message: {
+            statusCode: HttpStatus.CONFLICT,
+            message: 'Unique constraint violation',
+            fields: exception.meta?.target,
+          },
+        };
+      case 'P2025':
+        return {
+          status: HttpStatus.NOT_FOUND,
+          message: {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'Record not found',
+          },
+        };
+      case 'P2003':
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: {
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Foreign key constraint failed',
+          },
+        };
+      default:
+        return {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: {
+            statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: 'Internal server error',
+          },
+        };
+    }
   }
 }

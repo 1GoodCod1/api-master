@@ -4,9 +4,9 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../shared/database/prisma.service';
-import { getEffectiveTariff } from '../../../../common/helpers/plans';
-import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { getEffectiveTariff } from '../../../common/helpers/plans';
+import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
 @Injectable()
 export class ExportAccessService {

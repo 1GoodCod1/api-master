@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -37,8 +38,11 @@ function attachKeepAliveToPool(pool: PgPool): void {
   });
 }
 
-function createPgPool(connectionString: string): PgPool {
-  const isTest = process.env.NODE_ENV === 'test';
+function createPgPool(
+  connectionString: string,
+  nodeEnv: string = process.env.NODE_ENV || 'development',
+): PgPool {
+  const isTest = nodeEnv === 'test';
   // pg Pool types may not resolve in eslint's type-aware analysis
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Pool from pg
   const rawPool: unknown = new Pool({
@@ -76,36 +80,37 @@ export class PrismaService
   private replicaPools: PgPool[] = [];
   private replicaClients: PrismaClient[] = [];
   private readonly extendedClient: PrismaClient;
+  private readonly nodeEnv: string;
 
-  constructor() {
-    const connectionString = process.env.DATABASE_URL;
+  constructor(configService: ConfigService) {
+    const connectionString = configService.get<string>('database.url');
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set');
     }
-    const pool = createPgPool(connectionString);
+    const nodeEnv = configService.get<string>('nodeEnv', 'development');
+    const pool = createPgPool(connectionString, nodeEnv);
 
     const adapter = new PrismaPg(pool);
 
     super({
       adapter,
       log:
-        process.env.NODE_ENV === 'development'
+        nodeEnv === 'development'
           ? ['query', 'info', 'warn', 'error']
           : ['error'],
     });
 
     this.pool = pool;
+    this.nodeEnv = nodeEnv;
 
-    if (process.env.DATABASE_READ_URL) {
-      const poolReplica = createPgPool(process.env.DATABASE_READ_URL);
+    const readUrl = configService.get<string>('database.readUrl');
+    if (readUrl) {
+      const poolReplica = createPgPool(readUrl, nodeEnv);
 
       const adapterReplica = new PrismaPg(poolReplica);
       const replicaClient = new PrismaClient({
         adapter: adapterReplica,
-        log:
-          process.env.NODE_ENV === 'development'
-            ? ['error', 'warn']
-            : ['error'],
+        log: nodeEnv === 'development' ? ['error', 'warn'] : ['error'],
       });
 
       this.replicaPools.push(poolReplica);
@@ -133,7 +138,7 @@ export class PrismaService
       });
       await Promise.race([connectPromise, timeoutPromise]);
     } catch (error) {
-      if (process.env.NODE_ENV === 'production') {
+      if (this.nodeEnv === 'production') {
         throw error;
       }
       console.warn(
@@ -166,7 +171,7 @@ export class PrismaService
   }
 
   async cleanDatabase(): Promise<void> {
-    if (process.env.NODE_ENV === 'production') return;
+    if (this.nodeEnv === 'production') return;
 
     const models = Reflect.ownKeys(this).filter((key) => key[0] !== '_');
 

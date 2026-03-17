@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Report } from '@prisma/client';
-import { PrismaService } from '../../../shared/database/prisma.service';
+import { PrismaService } from '../../shared/database/prisma.service';
 import { ReportAction } from '../dto/update-report-status.dto';
 
 @Injectable()

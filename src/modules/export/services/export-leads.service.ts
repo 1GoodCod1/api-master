@@ -1,8 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import ExcelJS from 'exceljs';
-import { PrismaService } from '../../../shared/database/prisma.service';
-import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
+import { PrismaService } from '../../shared/database/prisma.service';
+import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
 import { LEADS_EXPORT_COLUMNS } from '../constants/export.constants';
 import { csvEscape } from '../utils/csv-escape.util';

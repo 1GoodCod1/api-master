@@ -1,5 +1,6 @@
 export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
+  buildId: process.env.BUILD_ID || 'local',
   port: parseInt(process.env.PORT || '4000', 10),
   apiUrl: process.env.API_URL || 'http://localhost:4000',
   frontendUrl:
@@ -13,6 +14,7 @@ export default () => ({
     url:
       process.env.DATABASE_URL ||
       'postgresql://postgres:password@localhost:5432/master-hub',
+    readUrl: process.env.DATABASE_READ_URL || undefined,
   },
 
   redis: {

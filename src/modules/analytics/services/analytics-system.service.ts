@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../shared/database/prisma.service';
+import { PrismaService } from '../../shared/database/prisma.service';
 import Redis from 'ioredis';
-import { RedisService } from '../../../shared/redis/redis.service';
+import { RedisService } from '../../shared/redis/redis.service';
 import * as os from 'os';
-import { SystemAnalyticsResponse } from '../../../shared/types/analytics.types';
+import { SystemAnalyticsResponse } from '../../shared/types/analytics.types';
 
 type QueueStats = {
   waiting: number;

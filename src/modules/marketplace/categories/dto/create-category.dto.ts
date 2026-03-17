@@ -6,26 +6,31 @@ import {
   IsBoolean,
   IsNumber,
 } from 'class-validator';
+import { SanitizedString } from '../../../../common/dto/sanitized-string.dto';
 
 export class CreateCategoryDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  @SanitizedString()
   name: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  @SanitizedString()
   slug: string;
 
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
+  @SanitizedString()
   description?: string;
 
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
+  @SanitizedString()
   icon?: string;
 
   @ApiProperty({ required: false, default: true })

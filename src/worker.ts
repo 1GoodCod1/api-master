@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/winston.config';
 import { WorkerModule } from './worker.module';
@@ -29,7 +30,8 @@ async function bootstrapWorker() {
 
     app.enableShutdownHooks();
 
-    if (process.env.NODE_ENV === 'production') {
+    const configService = app.get(ConfigService);
+    if (configService.get<string>('nodeEnv') === 'production') {
       logger.log('[PRODUCTION] Worker started with NODE_ENV=production');
     }
     logger.log(

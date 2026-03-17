@@ -62,7 +62,7 @@ async function bootstrap() {
       }),
     );
 
-    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalFilters(new HttpExceptionFilter(configService));
     app.useGlobalInterceptors(new CacheControlInterceptor());
     app.useGlobalInterceptors(new TransformInterceptor());
     app.useGlobalInterceptors(

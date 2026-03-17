@@ -106,7 +106,7 @@ export function createMulterOptions(configService: ConfigService) {
     };
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (configService.get<string>('nodeEnv') === 'production') {
     logger.error(
       '🚨 CRITICAL: B2 storage is NOT configured in PRODUCTION. Local diskStorage will cause data loss across pods. Set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET.',
     );

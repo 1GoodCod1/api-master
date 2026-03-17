@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../shared/database/prisma.service';
+import { PrismaService } from '../shared/database/prisma.service';
 import { AnalyticsMasterService } from './services/analytics-master.service';
 import { AnalyticsBusinessService } from './services/analytics-business.service';
 import { AnalyticsSystemService } from './services/analytics-system.service';
@@ -8,8 +8,8 @@ import {
   BusinessAnalyticsResponse,
   SystemAnalyticsResponse,
   AdvancedAnalyticsResponse,
-} from '../../shared/types/analytics.types';
-import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
+} from '../shared/types/analytics.types';
+import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 
 @Injectable()
 export class AnalyticsService {

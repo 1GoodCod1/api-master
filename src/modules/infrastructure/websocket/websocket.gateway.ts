@@ -18,28 +18,12 @@ import { WebsocketErrorHandlerService } from './services/websocket-error-handler
 import { PrismaService } from '../../shared/database/prisma.service';
 import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
 import type { SocketData } from './services/websocket-connection.service';
-
-/**
- * Парсит FRONTEND_URL так же как getCorsOrigins() в main.ts.
- * Поддерживает несколько origins через запятую:
- *   FRONTEND_URL=https://master-hub.md,https://www.master-hub.md
- * Вызывается один раз при загрузке модуля (декораторы вычисляются при старте).
- */
-function resolveWsCorsOrigins(): string | string[] {
-  const isProd = process.env.NODE_ENV === 'production';
-  const fallback = isProd ? '' : 'http://localhost:3000';
-  const raw = process.env.FRONTEND_URL || fallback;
-  const origins = raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (origins.length === 0) return fallback || '*';
-  return origins.length === 1 ? origins[0] : origins;
-}
+import { WsTypingDto } from './dto/typing.dto';
+import { getCorsOrigins } from '../../../config';
 
 @NestWebSocketGateway({
   cors: {
-    origin: resolveWsCorsOrigins(),
+    origin: getCorsOrigins(),
     credentials: true,
   },
   namespace: 'notifications',
@@ -238,7 +222,7 @@ export class WebsocketGateway
   @SubscribeMessage('typing')
   handleTyping(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { masterId: string; isTyping: boolean },
+    @MessageBody() data: WsTypingDto,
   ) {
     const userId = (client.data as SocketData).userId;
     this.server.to(`master:${data.masterId}`).emit('user:typing', {

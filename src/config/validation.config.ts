@@ -4,7 +4,7 @@ import type { ConfigService } from '@nestjs/config';
  * Validates required production secrets. Exits process if any are missing.
  */
 export function validateProductionSecrets(config: ConfigService): void {
-  if (process.env.NODE_ENV !== 'production') return;
+  if (config.get<string>('nodeEnv', 'development') !== 'production') return;
 
   const access = config.get<string>('jwt.accessSecret', '');
   const refresh = config.get<string>('jwt.refreshSecret', '');

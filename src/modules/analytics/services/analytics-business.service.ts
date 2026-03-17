@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { ReviewStatus } from '../../../../common/constants';
-import { PrismaService } from '../../../shared/database/prisma.service';
-import { decimalToNumber } from '../../../shared/utils/decimal.utils';
+import { ReviewStatus } from '../../../common/constants';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
   BusinessAnalyticsResponse,
   DailyStat,
   CategoryStat,
   CityStat,
-} from '../../../shared/types/analytics.types';
+} from '../../shared/types/analytics.types';
 
 @Injectable()
 export class AnalyticsBusinessService {

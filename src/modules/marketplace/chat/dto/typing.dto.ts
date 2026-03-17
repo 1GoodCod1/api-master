@@ -1,7 +1,7 @@
 import { IsString, IsUUID, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class TypingDto {
+export class ChatTypingDto {
   @ApiProperty({ description: 'Conversation ID' })
   @IsString()
   @IsUUID()

@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import { stat } from 'fs/promises';
 import type { Response } from 'express';
-import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
+import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ExportService } from './export.service';
 
 export type ExportJobType = 'csv' | 'excel' | 'pdf';

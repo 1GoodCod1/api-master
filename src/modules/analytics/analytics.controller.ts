@@ -6,13 +6,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { Plans } from '../../../common/decorators/plans.decorator';
-import { PlansGuard } from '../../../common/guards/plans.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Plans } from '../../common/decorators/plans.decorator';
+import { PlansGuard } from '../../common/guards/plans.guard';
 import { TariffType } from '@prisma/client';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
 
 @ApiTags('Analytics')
 @Controller('analytics')
