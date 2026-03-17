@@ -4,11 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-jest.mock('../../../src/modules/referrals/referrals.service', () => ({
-  ReferralsService: jest.fn().mockImplementation(() => ({
-    qualifyReferral: jest.fn().mockResolvedValue(undefined),
-  })),
-}));
+jest.mock(
+  '../../../src/modules/engagement/referrals/referrals.service',
+  () => ({
+    ReferralsService: jest.fn().mockImplementation(() => ({
+      qualifyReferral: jest.fn().mockResolvedValue(undefined),
+    })),
+  }),
+);
 
 import { LeadsActionsService } from '../../../src/modules/marketplace/leads/services/leads-actions.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';

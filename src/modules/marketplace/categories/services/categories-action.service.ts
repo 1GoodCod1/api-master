@@ -1,114 +1,65 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { CreateCategoryDto } from '../dto/create-category.dto';
 import { UpdateCategoryDto } from '../dto/update-category.dto';
 import { Category } from '@prisma/client';
 import { CategoriesQueryService } from './categories-query.service';
+import {
+  CrudCacheableEntityActionService,
+  CrudCacheableEntityConfig,
+} from '../../../shared/services/crud-cacheable-entity-action.service';
+
+function buildCategoriesConfig(
+  prisma: PrismaService,
+  cache: CacheService,
+  queryService: CategoriesQueryService,
+): CrudCacheableEntityConfig<Category, CreateCategoryDto, UpdateCategoryDto> {
+  return {
+    entityName: CategoriesActionService.name,
+    entityNameSingular: 'категория',
+    entityNameAccusative: 'категорию',
+    notFoundSuffix: 'не найдена',
+    inWhich: 'в которой',
+    getEntityCacheKey: (id) => cache.keys.categoryWithStats(id),
+    invalidateGlobalCaches: async () => {
+      await Promise.all([
+        cache.invalidateWithLeafKey(
+          cache.keys.categoriesAll(),
+          cache.patterns.categoriesAll(),
+        ),
+        cache.invalidate(cache.patterns.categoriesStatistics()),
+        cache.invalidate(cache.patterns.searchMasters()),
+      ]);
+    },
+    createEntity: (dto) => prisma.category.create({ data: dto }),
+    updateEntity: (id, dto) =>
+      prisma.category.update({ where: { id }, data: dto }),
+    findWithMastersCount: (id) =>
+      prisma.category.findUnique({
+        where: { id },
+        include: { _count: { select: { masters: true } } },
+      }),
+    deleteEntity: (id) => prisma.category.delete({ where: { id } }),
+    findOneForToggle: async (id) => {
+      const category = await queryService.findOne(id);
+      return { isActive: category.isActive };
+    },
+    ensureExists: (id) => queryService.findOne(id).then(() => {}),
+  };
+}
 
 @Injectable()
-export class CategoriesActionService {
-  private readonly logger = new Logger(CategoriesActionService.name);
-
+export class CategoriesActionService extends CrudCacheableEntityActionService<
+  Category,
+  CreateCategoryDto,
+  UpdateCategoryDto
+> {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly cache: CacheService,
-    private readonly queryService: CategoriesQueryService,
-  ) {}
-
-  /**
-   * Создание новой категории.
-   */
-  async create(dto: CreateCategoryDto): Promise<Category> {
-    try {
-      const category = await this.prisma.category.create({
-        data: dto,
-      });
-
-      await this.invalidateGlobalCaches();
-      return category;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Ошибка при создании категории: ${message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Обновление данных категории.
-   */
-  async update(id: string, dto: UpdateCategoryDto): Promise<Category> {
-    await this.queryService.findOne(id);
-
-    const updated = await this.prisma.category.update({
-      where: { id },
-      data: dto,
-    });
-
-    await this.invalidateCategoryCache(id);
-    await this.invalidateGlobalCaches();
-
-    return updated;
-  }
-
-  /**
-   * Удаление категории (только если в ней нет мастеров).
-   */
-  async remove(id: string): Promise<Category> {
-    const category = await this.prisma.category.findUnique({
-      where: { id },
-      include: { _count: { select: { masters: true } } },
-    });
-
-    if (!category) {
-      throw new NotFoundException(`Категория с ID "${id}" не найдена`);
-    }
-
-    if (category._count.masters > 0) {
-      throw new BadRequestException(
-        'Нельзя удалить категорию, в которой есть активные мастера',
-      );
-    }
-
-    const deleted = await this.prisma.category.delete({
-      where: { id },
-    });
-
-    await this.invalidateCategoryCache(id);
-    await this.invalidateGlobalCaches();
-
-    return deleted;
-  }
-
-  /**
-   * Переключение активности категории.
-   * Если isActive передан — устанавливает значение; иначе инвертирует текущее.
-   */
-  async toggleActive(id: string, isActive?: boolean): Promise<Category> {
-    if (typeof isActive === 'boolean') {
-      return this.update(id, { isActive });
-    }
-    const current = await this.queryService.findOne(id);
-    return this.update(id, { isActive: !current.isActive });
-  }
-
-  private async invalidateCategoryCache(id: string): Promise<void> {
-    await this.cache.del(this.cache.keys.categoryWithStats(id));
-  }
-
-  private async invalidateGlobalCaches(): Promise<void> {
-    await Promise.all([
-      this.cache.invalidateWithLeafKey(
-        this.cache.keys.categoriesAll(),
-        this.cache.patterns.categoriesAll(),
-      ),
-      this.cache.invalidate(this.cache.patterns.categoriesStatistics()),
-      this.cache.invalidate(this.cache.patterns.searchMasters()),
-    ]);
+    prisma: PrismaService,
+    cache: CacheService,
+    queryService: CategoriesQueryService,
+  ) {
+    super(cache, buildCategoriesConfig(prisma, cache, queryService));
   }
 }
