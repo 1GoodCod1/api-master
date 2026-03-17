@@ -53,6 +53,8 @@ describe('LeadsActionsService', () => {
 
   const inAppNotifications = {
     notifyMasterAvailable: jest.fn(),
+    notifyLeadStatusUpdated: jest.fn().mockResolvedValue(undefined),
+    notify: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<InAppNotificationService>;
 
   const availabilityService = {

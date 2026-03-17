@@ -18,29 +18,28 @@ describe('EncryptionService', () => {
   });
 
   describe('encrypt/decrypt', () => {
-    it('encrypts and decrypts text correctly', () => {
+    it('encrypts and decrypts text correctly', async () => {
       const text = 'sensitive-data-123';
-      const encrypted = service.encrypt(text);
-      const decrypted = service.decrypt(encrypted);
+      const encrypted = await service.encrypt(text);
+      const decrypted = await service.decrypt(encrypted);
       expect(decrypted).toBe(text);
       expect(encrypted).not.toBe(text);
     });
 
-    it('returns empty string for empty input', () => {
-      expect(service.encrypt('')).toBe('');
-      expect(service.decrypt('')).toBe('');
+    it('returns empty string for empty input', async () => {
+      expect(await service.encrypt('')).toBe('');
+      expect(await service.decrypt('')).toBe('');
     });
 
-    it('throws for invalid encrypted format', () => {
+    it('throws for invalid encrypted format', async () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      try {
-        expect(() => service.decrypt('invalid')).toThrow(
-          'Failed to decrypt data',
-        );
-        expect(() => service.decrypt('a:b')).toThrow();
-      } finally {
-        spy.mockRestore();
-      }
+
+      await expect(service.decrypt('invalid')).rejects.toThrow(
+        'Failed to decrypt data',
+      );
+      await expect(service.decrypt('a:b')).rejects.toThrow();
+
+      spy.mockRestore();
     });
   });
 

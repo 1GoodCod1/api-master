@@ -7,6 +7,13 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "collectCoverageFrom": ["src/**/*.(t|j)s"],
-  "coverageDirectory": "coverage"
+  "collectCoverageFrom": [
+    "<rootDir>/src/**/*.ts",
+    "!<rootDir>/src/main.ts",
+    "!<rootDir>/src/**/*.module.ts",
+    "!<rootDir>/src/**/*.dto.ts",
+    "!<rootDir>/src/**/*.interface.ts"
+  ],
+  "coverageDirectory": "coverage",
+  "coverageProvider": "v8"
 }
