@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { Cacheable } from '../../shared/cache/cacheable.decorator';
 import { TariffType } from '@prisma/client';
 
 @Injectable()
@@ -69,18 +70,11 @@ export class TariffsQueryService {
    * Получить тариф по ID
    * @param id ID тарифа
    */
+  @Cacheable((id: string) => `cache:tariff:${id}`, 86400)
   async findOne(id: string) {
-    const cacheKey = this.cache.keys.tariffById(id);
-
-    return this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-        if (!tariff) throw new NotFoundException('Тариф не найден');
-        return tariff;
-      },
-      this.cache.ttl.tariffs,
-    );
+    const tariff = await this.prisma.tariff.findUnique({ where: { id } });
+    if (!tariff) throw new NotFoundException('Тариф не найден');
+    return tariff;
   }
 
   /**

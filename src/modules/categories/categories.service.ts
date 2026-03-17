@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { CacheService } from '../shared/cache/cache.service';
+import { Cacheable } from '../shared/cache/cacheable.decorator';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from '@prisma/client';
@@ -34,94 +35,76 @@ export class CategoriesService {
    * Считает только верифицированных и не забаненных мастеров (как в getMasters).
    * Результаты кешируются для снижения нагрузки на БД.
    */
+  @Cacheable(
+    (filters: Prisma.CategoryWhereInput) =>
+      `cache:categories:all:${JSON.stringify(filters ?? {})}`,
+    3600,
+  )
   async findAll(filters: Prisma.CategoryWhereInput = {}): Promise<Category[]> {
-    const filterKey = JSON.stringify(filters);
-    const cacheKey = this.cache.buildKey([
-      'cache',
-      'categories',
-      'all',
-      filterKey,
-    ]);
+    type Row = Category & { mastersCount: number };
+    const whereParts: Prisma.Sql[] = [];
+    if (filters.isActive !== undefined) {
+      whereParts.push(Prisma.sql`c."isActive" = ${filters.isActive}`);
+    }
+    const whereClause =
+      whereParts.length > 0
+        ? Prisma.sql`WHERE ${Prisma.join(whereParts, ' AND ')}`
+        : Prisma.empty;
 
-    return this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        type Row = Category & { mastersCount: number };
-        const whereParts: Prisma.Sql[] = [];
-        if (filters.isActive !== undefined) {
-          whereParts.push(Prisma.sql`c."isActive" = ${filters.isActive}`);
-        }
-        const whereClause =
-          whereParts.length > 0
-            ? Prisma.sql`WHERE ${Prisma.join(whereParts, ' AND ')}`
-            : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<Row[]>`
+      SELECT
+        c."id",
+        c."name",
+        c."slug",
+        c."description",
+        c."icon",
+        c."isActive",
+        c."sortOrder",
+        c."createdAt",
+        c."updatedAt",
+        COUNT(m."id") FILTER (
+          WHERE u."isBanned" = false AND u."isVerified" = true
+        )::int AS "mastersCount"
+      FROM "categories" c
+      LEFT JOIN "masters" m ON m."categoryId" = c."id"
+      LEFT JOIN "users" u ON u."id" = m."userId"
+      ${whereClause}
+      GROUP BY c."id", c."name", c."slug", c."description", c."icon",
+        c."isActive", c."sortOrder", c."createdAt", c."updatedAt"
+      ORDER BY c."sortOrder" ASC
+    `;
 
-        const rows = await this.prisma.$queryRaw<Row[]>`
-          SELECT
-            c."id",
-            c."name",
-            c."slug",
-            c."description",
-            c."icon",
-            c."isActive",
-            c."sortOrder",
-            c."createdAt",
-            c."updatedAt",
-            COUNT(m."id") FILTER (
-              WHERE u."isBanned" = false AND u."isVerified" = true
-            )::int AS "mastersCount"
-          FROM "categories" c
-          LEFT JOIN "masters" m ON m."categoryId" = c."id"
-          LEFT JOIN "users" u ON u."id" = m."userId"
-          ${whereClause}
-          GROUP BY c."id", c."name", c."slug", c."description", c."icon",
-            c."isActive", c."sortOrder", c."createdAt", c."updatedAt"
-          ORDER BY c."sortOrder" ASC
-        `;
-
-        return rows.map((row) => {
-          const { mastersCount, ...cat } = row;
-          return {
-            ...cat,
-            _count: { masters: mastersCount },
-          } as Category & { _count: { masters: number } };
-        });
-      },
-      this.cache.ttl.categories,
-    );
+    return rows.map((row) => {
+      const { mastersCount, ...cat } = row;
+      return {
+        ...cat,
+        _count: { masters: mastersCount },
+      } as Category & { _count: { masters: number } };
+    });
   }
 
   /**
    * Поиск одной категории по ID.
    * Включает статистику количества мастеров и использует кеш.
    */
+  @Cacheable((id: string) => `cache:category:${id}:with-stats`, 3600)
   async findOne(
     id: string,
   ): Promise<Category & { _count: { masters: number } }> {
-    const cacheKey = this.cache.keys.categoryWithStats(id);
-
-    const category = await this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        const found = await this.prisma.category.findUnique({
-          where: { id },
-          include: {
-            _count: {
-              select: { masters: true },
-            },
-          },
-        });
-
-        if (!found) {
-          throw new NotFoundException(`Категория с ID "${id}" не найдена`);
-        }
-
-        return found;
+    const found = await this.prisma.category.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { masters: true },
+        },
       },
-      this.cache.ttl.categories,
-    );
+    });
 
-    return category as Category & { _count: { masters: number } };
+    if (!found) {
+      throw new NotFoundException(`Категория с ID "${id}" не найдена`);
+    }
+
+    return found;
   }
 
   /**

@@ -7,6 +7,7 @@ import {
 import { ReviewStatus } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { CacheService } from '../shared/cache/cache.service';
+import { Cacheable } from '../shared/cache/cacheable.decorator';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
 import { City, Prisma } from '@prisma/client';
@@ -28,50 +29,38 @@ export class CitiesService {
    * Получение списка всех городов с поддержкой фильтрации.
    * Данные кешируются для оптимизации производительности.
    */
+  @Cacheable(
+    (filters: Prisma.CityWhereInput) =>
+      `cache:cities:all:${JSON.stringify(filters ?? {})}`,
+    7200,
+  )
   async findAll(filters: Prisma.CityWhereInput = {}): Promise<City[]> {
-    const filterKey = JSON.stringify(filters);
-    const cacheKey = this.cache.buildKey(['cache', 'cities', 'all', filterKey]);
-
-    return this.cache.getOrSet(
-      cacheKey,
-      () =>
-        this.prisma.city.findMany({
-          where: filters,
-          orderBy: { name: 'asc' },
-        }),
-      this.cache.ttl.cities,
-    );
+    return this.prisma.city.findMany({
+      where: filters,
+      orderBy: { name: 'asc' },
+    });
   }
 
   /**
    * Поиск конкретного города по его уникальному ID.
    * Возвращает данные города вместе с количеством зарегистрированных в нем мастеров.
    */
+  @Cacheable((id: string) => `cache:city:${id}:with-stats`, 7200)
   async findOne(id: string): Promise<City & { _count: { masters: number } }> {
-    const cacheKey = this.cache.keys.cityWithStats(id);
-
-    const city = await this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        const found = await this.prisma.city.findUnique({
-          where: { id },
-          include: {
-            _count: {
-              select: { masters: true },
-            },
-          },
-        });
-
-        if (!found) {
-          throw new NotFoundException(`Город с ID "${id}" не найден`);
-        }
-
-        return found;
+    const found = await this.prisma.city.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { masters: true },
+        },
       },
-      this.cache.ttl.cities,
-    );
+    });
 
-    return city as City & { _count: { masters: number } };
+    if (!found) {
+      throw new NotFoundException(`Город с ID "${id}" не найден`);
+    }
+
+    return found;
   }
 
   /**
