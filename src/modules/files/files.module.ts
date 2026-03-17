@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { S3Client } from '@aws-sdk/client-s3';
 import multerS3 from 'multer-s3';
 import { FilesService } from './files.service';
+import { PrismaModule } from '../shared/database/prisma.module';
+import { FilesController } from './files.controller';
 
 const getExt = (p: string): string => extname(p);
 const nextUuid = (): string => (uuidv4 as () => string)();
@@ -37,9 +39,6 @@ function getValidB2Endpoint(custom: unknown, fallback: string): string {
     return fallback;
   }
 }
-
-import { FilesController } from './files.controller';
-import { PrismaModule } from 'src/modules/shared/database/prisma.module';
 
 const FILE_FILTER = (
   req: unknown,

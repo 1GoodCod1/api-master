@@ -313,4 +313,25 @@ export class LeadsQueryService {
       },
     };
   }
+
+  /**
+   * Проверка наличия активной заявки от клиента к мастеру
+   */
+  async getActiveLeadToMaster(clientId: string, masterId: string) {
+    return this.prisma.lead.findFirst({
+      where: {
+        clientId,
+        masterId,
+        status: { in: ['NEW', 'IN_PROGRESS'] },
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        message: true,
+        conversation: { select: { id: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

@@ -3,6 +3,7 @@ import { ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { getStartOfTodayInMoldova } from '../../shared/utils/timezone.util';
 
 @Injectable()
 export class TasksAnalyticsService {
@@ -15,19 +16,18 @@ export class TasksAnalyticsService {
   ) {}
 
   /**
-   * Агрегация аналитики за прошедшие сутки (для мастеров и системы)
+   * Агрегация аналитики за прошедшие сутки (для мастеров и системы).
+   * Использует timezone Moldova (Europe/Chisinau) для корректных границ "вчера".
    */
   async aggregateAnalytics() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+    const todayStart = getStartOfTodayInMoldova();
+    const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    const dayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
 
     // Получаем всех мастеров
     const masters = await this.prisma.master.findMany({
       select: { id: true, userId: true },
     });
-
-    const dayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
 
     for (const master of masters) {
       const dateRange = { gte: yesterday, lt: dayEnd };
@@ -101,7 +101,7 @@ export class TasksAnalyticsService {
         where: {
           createdAt: {
             gte: yesterday,
-            lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
+            lt: dayEnd,
           },
         },
       }),
@@ -109,7 +109,7 @@ export class TasksAnalyticsService {
         where: {
           createdAt: {
             gte: yesterday,
-            lt: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000),
+            lt: dayEnd,
           },
         },
       }),
@@ -138,11 +138,12 @@ export class TasksAnalyticsService {
   }
 
   /**
-   * Отправка ежедневного отчета администраторам (в Telegram)
+   * Отправка ежедневного отчета администраторам (в Telegram).
+   * Ищет запись за вчера (Moldova timezone).
    */
   async sendDailyReports() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    const todayStart = getStartOfTodayInMoldova();
+    const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
 
     const stats = await this.prisma.systemAnalytics.findFirst({
       where: { date: { gte: yesterday } },

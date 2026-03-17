@@ -3,12 +3,14 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { LeadStatus } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { decodeId } from '../../shared/utils/id-encoder';
 import { CacheService } from '../../shared/cache/cache.service';
+import { formatUserName } from '../../shared/utils/format-name.util';
 import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
 import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
 import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
@@ -31,6 +33,8 @@ const VALID_LEAD_STATUS_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
  */
 @Injectable()
 export class LeadsActionsService {
+  private readonly logger = new Logger(LeadsActionsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
@@ -111,27 +115,61 @@ export class LeadsActionsService {
           where: { id: lead.masterId },
           select: { user: { select: { firstName: true, lastName: true } } },
         });
-        const masterName = master?.user
-          ? [master.user.firstName, master.user.lastName]
-              .filter(Boolean)
-              .join(' ')
-              .trim() || undefined
-          : undefined;
+        const masterName =
+          formatUserName(master?.user?.firstName, master?.user?.lastName) ||
+          undefined;
 
         this.referralsService
           .qualifyReferral(lead.clientId)
-          .catch((e) => console.error(e));
+          .catch((e) => this.logger.error('qualifyReferral failed', e));
         this.emailDripService
-          .startChain(lead.clientId, 'lead_closed', {
-            masterName,
-          })
-          .catch((e) => console.error(e));
+          .startChain(lead.clientId, 'lead_closed', { masterName })
+          .catch((e) => this.logger.error('lead_closed drip failed', e));
       }
     }
 
     await this.cache.invalidateMasterData(lead.masterId);
 
+    await this.sendStatusUpdateNotifications(updated);
+
     return updated;
+  }
+
+  private async sendStatusUpdateNotifications(updated: {
+    id: string;
+    masterId: string;
+    clientId: string | null;
+    clientName: string | null;
+    status: string;
+  }) {
+    try {
+      const [master] = await Promise.all([
+        this.prisma.master.findUnique({
+          where: { id: updated.masterId },
+          select: { userId: true },
+        }),
+        updated.clientId
+          ? this.inAppNotifications.notify({
+              userId: updated.clientId,
+              category: 'LEAD_STATUS_UPDATED',
+              title: 'Статус заявки обновлён',
+              message: `Ваша заявка — ${updated.status}`,
+              messageKey: 'notifications.messages.leadStatusUpdated',
+              messageParams: { status: updated.status },
+              metadata: { leadId: updated.id, status: updated.status },
+            })
+          : Promise.resolve(),
+      ]);
+      if (master) {
+        await this.inAppNotifications.notifyLeadStatusUpdated(master.userId, {
+          leadId: updated.id,
+          status: updated.status,
+          clientName: updated.clientName ?? undefined,
+        });
+      }
+    } catch (err) {
+      this.logger.error('Failed to send lead status notification', err);
+    }
   }
 
   /**
@@ -147,12 +185,10 @@ export class LeadsActionsService {
           user: { select: { firstName: true, lastName: true } },
         },
       });
-      const masterName =
-        master?.user &&
-        [master.user.firstName, master.user.lastName]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
+      const masterName = formatUserName(
+        master?.user?.firstName,
+        master?.user?.lastName,
+      );
 
       const subscriptions =
         await this.prisma.masterAvailabilitySubscription.findMany({
@@ -171,8 +207,8 @@ export class LeadsActionsService {
             masterName: masterName || undefined,
           })
           .catch((err) => {
-            console.error(
-              `Failed to send master-available notification to client ${subscription.clientId}:`,
+            this.logger.error(
+              `Failed to send master-available notification to client ${subscription.clientId}`,
               err,
             );
           });
@@ -183,7 +219,7 @@ export class LeadsActionsService {
         });
       }
     } catch (error) {
-      console.error('Error notifying subscribers:', error);
+      this.logger.error('Error notifying subscribers', error);
     }
   }
 }

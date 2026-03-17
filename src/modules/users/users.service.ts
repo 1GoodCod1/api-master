@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Response } from 'express';
+import PDFDocument from 'pdfkit';
 import { UsersQueryService } from './services/users-query.service';
 import { UsersManageService } from './services/users-manage.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  buildPersonalDataPdf,
+  type PersonalDataPdfData,
+} from './services/personal-data-pdf.builder';
 
 /**
  * UsersService — координатор модуля пользователей.
@@ -104,9 +110,21 @@ export class UsersService {
   }
 
   /**
-   * GDPR: Экспорт персональных данных
+   * GDPR: Экспорт персональных данных в PDF
    */
-  async exportPersonalData(userId: string) {
-    return this.manageService.exportPersonalData(userId);
+  async exportPersonalDataPdf(
+    userId: string,
+    res: Response,
+    locale: string = 'en',
+  ): Promise<void> {
+    const data: PersonalDataPdfData =
+      await this.manageService.getPersonalDataForPdf(userId);
+    const filename = `my-data-${new Date().toISOString().split('T')[0]}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    const doc = new PDFDocument({ margin: 50 });
+    doc.pipe(res);
+    buildPersonalDataPdf(doc, data, locale);
+    doc.end();
   }
 }

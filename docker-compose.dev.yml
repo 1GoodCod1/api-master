@@ -6,6 +6,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-project3}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bacardi}
+      TZ: Europe/Chisinau
     ports:
       - "5432:5432"
     volumes:
@@ -77,6 +78,8 @@ services:
     container_name: masterhub-api-dev
     ports:
       - "4000:4000"
+    environment:
+      TZ: Europe/Chisinau
     env_file:
       - .env.docker
     volumes:

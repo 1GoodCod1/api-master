@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { getStartOfTodayInMoldova } from '../../shared/utils/timezone.util';
 
 @Injectable()
 export class LeadsAnalyticsService {
@@ -34,8 +35,7 @@ export class LeadsAnalyticsService {
   }
 
   private async updateDailyAnalytics(masterId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getStartOfTodayInMoldova();
 
     await this.prisma.masterAnalytics.upsert({
       where: {

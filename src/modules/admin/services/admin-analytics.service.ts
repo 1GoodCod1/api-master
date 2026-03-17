@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import {
+  getStartOfDateInMoldova,
+  getStartOfTodayInMoldova,
+  toDateStringMoldova,
+} from '../../shared/utils/timezone.util';
 
 /**
  * Сервис для аналитики и статистики
@@ -14,16 +19,19 @@ export class AdminAnalyticsService {
 
     switch (timeframe) {
       case 'day':
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 1);
+        startDate = getStartOfDateInMoldova(
+          new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        );
         break;
       case 'week':
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 7);
+        startDate = getStartOfDateInMoldova(
+          new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        );
         break;
       case 'month':
         startDate = new Date(now);
         startDate.setMonth(startDate.getMonth() - 1);
+        startDate = getStartOfDateInMoldova(startDate);
         break;
     }
 
@@ -97,18 +105,20 @@ export class AdminAnalyticsService {
     model: 'User' | 'Lead' | 'Review',
     startDate: Date,
   ) {
+    const todayStart = getStartOfTodayInMoldova();
     const days = Math.ceil(
-      (Date.now() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+      (todayStart.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
     );
     const stats: Array<{ date: string; count: number }> = [];
 
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
+      const date = getStartOfDateInMoldova(
+        new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000),
+      );
 
-      const nextDate = new Date(date);
-      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDate = getStartOfDateInMoldova(
+        new Date(date.getTime() + 24 * 60 * 60 * 1000),
+      );
 
       let count = 0;
       switch (model) {
@@ -130,7 +140,7 @@ export class AdminAnalyticsService {
       }
 
       stats.push({
-        date: date.toISOString().split('T')[0],
+        date: toDateStringMoldova(date),
         count,
       });
     }

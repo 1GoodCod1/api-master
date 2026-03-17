@@ -325,6 +325,43 @@ export class MastersProfileService {
       }
     }
 
+    const rawCityId = (data as Record<string, unknown>).cityId as
+      | string
+      | undefined;
+    const rawCategoryId = (data as Record<string, unknown>).categoryId as
+      | string
+      | undefined;
+
+    if (rawCityId && rawCityId !== '' && rawCityId !== master.cityId) {
+      const cityExists = await this.prisma.city.findUnique({
+        where: { id: rawCityId },
+        select: { id: true },
+      });
+      if (!cityExists) {
+        delete (data as Record<string, unknown>).cityId;
+        this.logger.warn(
+          `Master ${master.id}: city "${rawCityId}" not found, skipping cityId update`,
+        );
+      }
+    }
+
+    if (
+      rawCategoryId &&
+      rawCategoryId !== '' &&
+      rawCategoryId !== master.categoryId
+    ) {
+      const categoryExists = await this.prisma.category.findUnique({
+        where: { id: rawCategoryId },
+        select: { id: true },
+      });
+      if (!categoryExists) {
+        delete (data as Record<string, unknown>).categoryId;
+        this.logger.warn(
+          `Master ${master.id}: category "${rawCategoryId}" not found, skipping categoryId update`,
+        );
+      }
+    }
+
     // Если обновляется имя, обновляем User и генерируем новый slug
     if (firstName || lastName) {
       const userUpdateData: { firstName?: string; lastName?: string } = {};

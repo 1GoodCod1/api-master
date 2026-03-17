@@ -1,7 +1,18 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { Payment, TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { CacheService } from '../../shared/cache/cache.service';
+
+export type InvalidateMasterCacheFn = (
+  masterId: string,
+  slug?: string | null,
+) => Promise<void>;
 
 export type GetTariffResult = {
   tariffType: TariffType;
@@ -21,7 +32,12 @@ export type GetTariffResult = {
 export class MastersTariffService {
   private readonly logger = new Logger(MastersTariffService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  private static readonly DAYS_FREE_PLAN = 30;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async getTariff(userId: string): Promise<GetTariffResult> {
     try {
@@ -199,5 +215,41 @@ export class MastersTariffService {
       this.logger.error('extendTariffByDays failed', err);
       throw err;
     }
+  }
+
+  /**
+   * Верифицированный мастер получает любой тариф бесплатно 1 кликом (до настройки оплаты).
+   */
+  async claimFreePlan(
+    userId: string,
+    tariffType: 'VIP' | 'PREMIUM',
+    onInvalidate?: InvalidateMasterCacheFn,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { masterProfile: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role !== 'MASTER')
+      throw new BadRequestException('Only masters can claim a free plan');
+    if (!user.isVerified)
+      throw new BadRequestException(
+        'Verification required. Complete verification to claim a free plan.',
+      );
+    if (!user.masterProfile)
+      throw new NotFoundException('Master profile not found');
+
+    const result = await this.updateTariff(
+      user.masterProfile.id,
+      tariffType,
+      MastersTariffService.DAYS_FREE_PLAN,
+      onInvalidate,
+    );
+
+    await Promise.all([
+      this.cache.del(this.cache.keys.userProfile(userId)),
+      this.cache.del(this.cache.keys.userMasterProfile(userId)),
+    ]);
+    return result;
   }
 }

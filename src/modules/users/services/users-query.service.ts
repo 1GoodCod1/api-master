@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { getStartOfTodayInMoldova } from '../../shared/utils/timezone.util';
 
 @Injectable()
 export class UsersQueryService {
@@ -71,7 +72,7 @@ export class UsersQueryService {
       this.prisma.user.count({
         where: {
           createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: getStartOfTodayInMoldova(),
           },
         },
       }),
@@ -92,7 +93,7 @@ export class UsersQueryService {
       this.prisma.user.count({
         where: {
           lastLoginAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: getStartOfTodayInMoldova(),
           },
         },
       }),

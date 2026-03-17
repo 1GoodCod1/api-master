@@ -1,51 +1,62 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
-import { LeadStatus, VerificationStatus } from '../../common/constants';
+import { Injectable, Logger } from '@nestjs/common';
 import type { RequestWithOptionalUser } from '../../common/decorators/get-user.decorator';
-import { PrismaService } from '../shared/database/prisma.service';
-import { CacheService } from '../shared/cache/cache.service';
-import { SearchMastersDto } from './dto/search-masters.dto';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityEvent } from '../recommendations/events/activity.events';
-import { MastersSearchService } from './services/masters-search.service';
-import { MastersProfileService } from './services/masters-profile.service';
-import { MastersPhotosService } from './services/masters-photos.service';
-import { MastersStatsService } from './services/masters-stats.service';
-import { MastersTariffService } from './services/masters-tariff.service';
-import { MastersAvailabilityService } from './services/masters-availability.service';
 import { decodeId, encodeId } from '../shared/utils/id-encoder';
-import { getEffectiveTariff } from '../../common/helpers/plans';
+import { SearchMastersDto } from './dto/search-masters.dto';
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
 import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
-import type { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
 import type { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
 import type { UpdateMasterDto } from './dto/update-master.dto';
 import type { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
+import type { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
+import { MastersAvailabilityService } from './services/masters-availability.service';
+import { MastersLandingStatsService } from './services/masters-landing-stats.service';
+import { MastersNotificationSettingsService } from './services/masters-notification-settings.service';
+import { MastersPhotosService } from './services/masters-photos.service';
+import { MastersProfileService } from './services/masters-profile.service';
+import { MastersPublicProfileService } from './services/masters-public-profile.service';
+import { MastersQuickRepliesService } from './services/masters-quick-replies.service';
+import { MastersScheduleService } from './services/masters-schedule.service';
+import { MastersSearchService } from './services/masters-search.service';
+import { MastersStatsService } from './services/masters-stats.service';
+import { MastersTariffService } from './services/masters-tariff.service';
+
+/** Тип callback для инвалидации кеша при обновлении мастера */
+type InvalidateCacheFn = (
+  masterId: string,
+  slug?: string | null,
+) => Promise<void>;
 
 /**
- * Главный сервис мастеров - координатор для специализированных сервисов.
- * Делегирует вызовы соответствующим сервисам, обрабатывая валидацию и права доступа.
+ * Центральный координатор мастеров. Делегирует вызовы специализированным сервисам.
+ * @see MastersSearchService — поиск и фильтрация
+ * @see MastersProfileService — профили
+ * @see MastersPhotosService — фото
+ * @see MastersStatsService — статистика
+ * @see MastersAvailabilityService — онлайн/доступность
+ * @see MastersTariffService — тарифы
  */
 @Injectable()
 export class MastersService {
   private readonly logger = new Logger(MastersService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly cache: CacheService,
     private readonly searchService: MastersSearchService,
     private readonly profileService: MastersProfileService,
+    private readonly publicProfileService: MastersPublicProfileService,
     private readonly photosService: MastersPhotosService,
     private readonly statsService: MastersStatsService,
     private readonly tariffService: MastersTariffService,
     private readonly availabilityService: MastersAvailabilityService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly notificationSettingsService: MastersNotificationSettingsService,
+    private readonly scheduleService: MastersScheduleService,
+    private readonly quickRepliesService: MastersQuickRepliesService,
+    private readonly landingStatsService: MastersLandingStatsService,
   ) {}
+
+  /** Callback для инвалидации кеша — используется методами, обновляющими данные мастера */
+  private get onInvalidate(): InvalidateCacheFn {
+    return (masterId, slug) => this.invalidateMasterCache(masterId, slug);
+  }
 
   // ==================== ПОИСК И ФИЛЬТРАЦИЯ ====================
 
@@ -67,61 +78,13 @@ export class MastersService {
 
   // ==================== ПРОФИЛИ ====================
 
-  /**
-   * Публичный профиль мастера по slug или encodedId
-   */
+  /** Публичный профиль мастера по slug или encodedId с трекингом просмотров */
   async findOne(
     slugOrId: string,
     req: RequestWithOptionalUser,
     incrementViews = false,
   ): Promise<unknown> {
-    const decodedId = decodeId(slugOrId);
-    const identifier = decodedId || slugOrId;
-
-    const userId = req.user?.id;
-    const reqWithSession = req as RequestWithOptionalUser & {
-      sessionID?: string;
-    };
-    const sessionId =
-      reqWithSession.sessionID ||
-      (req.headers['x-session-id'] as string | undefined);
-    const ipAddress =
-      req.ip ||
-      (req.headers['x-forwarded-for'] as string | undefined) ||
-      req.socket?.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-
-    const userRole = req.user?.role;
-    const onViewIncrement = (
-      masterId: string,
-      uid?: string,
-      sid?: string,
-      ip?: string,
-      ua?: string,
-      catId?: string,
-      cityId?: string,
-    ) =>
-      this.handleViewIncrement(
-        masterId,
-        uid,
-        sid,
-        ip,
-        ua,
-        catId,
-        cityId,
-        userRole,
-      );
-    return this.profileService.findOne(
-      identifier,
-      incrementViews,
-      userId,
-      sessionId,
-      ipAddress,
-      userAgent,
-      undefined,
-      undefined,
-      onViewIncrement,
-    );
+    return this.publicProfileService.findOne(slugOrId, req, incrementViews);
   }
 
   async getProfile(userId: string) {
@@ -149,208 +112,60 @@ export class MastersService {
   }
 
   async getNotificationSettings(userId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: {
-        telegramChatId: true,
-        whatsappPhone: true,
-        leadNotifyChannel: true,
-        notifyTariffSms: true,
-        notifyTariffInApp: true,
-      },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-    return master;
+    return this.notificationSettingsService.getNotificationSettings(userId);
   }
 
   async updateNotificationSettings(
     userId: string,
     dto: UpdateNotificationSettingsDto,
   ) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: { id: true, tariffType: true },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-
-    const isPremium =
-      master.tariffType === 'VIP' || master.tariffType === 'PREMIUM';
-    const data: {
-      telegramChatId?: string | null;
-      whatsappPhone?: string | null;
-      leadNotifyChannel?: string | null;
-      notifyTariffSms?: boolean;
-      notifyTariffInApp?: boolean;
-    } = {};
-
-    if (isPremium) {
-      if (dto.telegramChatId !== undefined)
-        data.telegramChatId = dto.telegramChatId;
-      if (dto.whatsappPhone !== undefined)
-        data.whatsappPhone = dto.whatsappPhone;
-      if (dto.leadNotifyChannel !== undefined) {
-        data.leadNotifyChannel = dto.leadNotifyChannel;
-      }
-    }
-    if (dto.notifyTariffSms !== undefined)
-      data.notifyTariffSms = dto.notifyTariffSms;
-    if (dto.notifyTariffInApp !== undefined)
-      data.notifyTariffInApp = dto.notifyTariffInApp;
-
-    return this.prisma.master.update({
-      where: { userId },
-      data,
-    });
+    return this.notificationSettingsService.updateNotificationSettings(
+      userId,
+      dto,
+    );
   }
 
   // ==================== РАСПИСАНИЕ ====================
 
   async getScheduleSettings(userId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: {
-        workStartHour: true,
-        workEndHour: true,
-        slotDurationMinutes: true,
-      },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-    return master;
+    return this.scheduleService.getScheduleSettings(userId);
   }
 
   async updateScheduleSettings(userId: string, dto: UpdateScheduleSettingsDto) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: { id: true, workStartHour: true, workEndHour: true, slug: true },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-
-    const startHour = dto.workStartHour ?? master.workStartHour;
-    const endHour = dto.workEndHour ?? master.workEndHour;
-
-    if (startHour >= endHour) {
-      throw new ForbiddenException(
-        'Work start hour must be less than work end hour',
-      );
-    }
-
-    const data: {
-      workStartHour?: number;
-      workEndHour?: number;
-      slotDurationMinutes?: number;
-    } = {};
-    if (dto.workStartHour !== undefined) data.workStartHour = dto.workStartHour;
-    if (dto.workEndHour !== undefined) data.workEndHour = dto.workEndHour;
-    if (dto.slotDurationMinutes !== undefined)
-      data.slotDurationMinutes = dto.slotDurationMinutes;
-
-    const updated = await this.prisma.master.update({
-      where: { userId },
-      data,
-      select: {
-        workStartHour: true,
-        workEndHour: true,
-        slotDurationMinutes: true,
-      },
-    });
-
-    await this.invalidateMasterCache(master.id, master.slug);
-
-    return { success: true, ...updated };
+    return this.scheduleService.updateScheduleSettings(
+      userId,
+      dto,
+      this.onInvalidate,
+    );
   }
 
   // ==================== ЧАТ: ШАБЛОНЫ И АВТООТВЕТЧИК ====================
 
   async getQuickReplies(userId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-
-    const items = await this.prisma.quickReply.findMany({
-      where: { masterId: master.id },
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, text: true, order: true },
-    });
-
-    return { items };
+    return this.quickRepliesService.getQuickReplies(userId);
   }
 
   async replaceQuickReplies(userId: string, dto: UpdateQuickRepliesDto) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: { id: true, slug: true },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-
-    const itemsWithOrder = dto.items.map((it, index) => ({
-      text: it.text,
-      order: it.order ?? index,
-    }));
-
-    await this.prisma.$transaction([
-      this.prisma.quickReply.deleteMany({ where: { masterId: master.id } }),
-      this.prisma.quickReply.createMany({
-        data: itemsWithOrder.map((it) => ({
-          masterId: master.id,
-          text: it.text,
-          order: it.order,
-        })),
-      }),
-    ]);
-
-    const updated = await this.prisma.quickReply.findMany({
-      where: { masterId: master.id },
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, text: true, order: true },
-    });
-
-    await this.invalidateMasterCache(master.id, master.slug);
-
-    return { success: true, items: updated };
+    return this.quickRepliesService.replaceQuickReplies(
+      userId,
+      dto,
+      this.onInvalidate,
+    );
   }
 
   async getAutoresponderSettings(userId: string) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: {
-        autoresponderEnabled: true,
-        autoresponderMessage: true,
-        workStartHour: true,
-        workEndHour: true,
-      },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-    return master;
+    return this.quickRepliesService.getAutoresponderSettings(userId);
   }
 
   async updateAutoresponderSettings(
     userId: string,
     dto: UpdateAutoresponderSettingsDto,
   ) {
-    const master = await this.prisma.master.findUnique({
-      where: { userId },
-      select: { id: true, slug: true },
-    });
-    if (!master) throw new NotFoundException('Master profile not found');
-
-    const data: {
-      autoresponderEnabled?: boolean;
-      autoresponderMessage?: string | null;
-    } = {};
-    if (dto.enabled !== undefined) data.autoresponderEnabled = dto.enabled;
-    if (dto.message !== undefined) data.autoresponderMessage = dto.message;
-
-    const updated = await this.prisma.master.update({
-      where: { userId },
-      data,
-      select: { autoresponderEnabled: true, autoresponderMessage: true },
-    });
-
-    await this.invalidateMasterCache(master.id, master.slug);
-
-    return { success: true, ...updated };
+    return this.quickRepliesService.updateAutoresponderSettings(
+      userId,
+      dto,
+      this.onInvalidate,
+    );
   }
 
   // ==================== ФОТОГРАФИИ ====================
@@ -366,84 +181,17 @@ export class MastersService {
   }
 
   async removeMyPhoto(userId: string, fileId: string) {
-    const onInvalidate = (masterId: string, slug: string | null) =>
-      this.invalidateMasterCache(masterId, slug);
-    return this.photosService.removeMyPhoto(userId, fileId, onInvalidate);
+    return this.photosService.removeMyPhoto(userId, fileId, this.onInvalidate);
   }
 
   async setMyAvatar(userId: string, fileId: string) {
-    const onInvalidate = (masterId: string, slug: string | null) =>
-      this.invalidateMasterCache(masterId, slug);
-    return this.photosService.setMyAvatar(userId, fileId, onInvalidate);
+    return this.photosService.setMyAvatar(userId, fileId, this.onInvalidate);
   }
 
   // ==================== СТАТИСТИКА ====================
 
-  /**
-   * Публичная статистика для лендинга (hero): верифицированные мастера, закрытые заявки, средний рейтинг.
-   * Кешируется для снижения нагрузки — данные обновляются каждые 10 минут.
-   */
-  async getLandingStats(): Promise<{
-    verifiedMastersCount: number;
-    verifiedOnlineMastersCount: number;
-    completedProjectsCount: number;
-    averageRating: number;
-    support24_7: true;
-  }> {
-    const cacheKey = 'cache:landing:stats';
-
-    const cached = await this.cache.get<{
-      verifiedMastersCount: number;
-      verifiedOnlineMastersCount: number;
-      completedProjectsCount: number;
-      averageRating: number;
-      support24_7: true;
-    }>(cacheKey);
-
-    if (cached) return cached;
-
-    const verifiedWhere = {
-      OR: [
-        { user: { isVerified: true } },
-        { verification: { status: VerificationStatus.APPROVED } },
-      ],
-    };
-    const [
-      verifiedMastersCount,
-      verifiedOnlineMastersCount,
-      completedProjectsCount,
-      ratingAgg,
-    ] = await Promise.all([
-      this.prisma.master.count({ where: verifiedWhere }),
-      this.prisma.master.count({
-        where: {
-          ...verifiedWhere,
-          isOnline: true,
-        },
-      }),
-      this.prisma.lead.count({ where: { status: LeadStatus.CLOSED } }),
-      this.prisma.master.aggregate({
-        _avg: { rating: true },
-        where: { rating: { gt: 0 } },
-      }),
-    ]);
-    const averageRating =
-      ratingAgg._avg.rating != null
-        ? Math.round(ratingAgg._avg.rating * 10) / 10
-        : 4.9;
-
-    const result = {
-      verifiedMastersCount,
-      verifiedOnlineMastersCount,
-      completedProjectsCount,
-      averageRating,
-      support24_7: true as const,
-    };
-
-    // Cache for 10 minutes
-    await this.cache.set(cacheKey, result, 600);
-
-    return result;
+  async getLandingStats() {
+    return this.landingStatsService.getLandingStats();
   }
 
   async getStats(userId: string) {
@@ -459,161 +207,30 @@ export class MastersService {
   // ==================== ОНЛАЙН СТАТУС ====================
 
   async updateOnlineStatus(userId: string, isOnline: boolean) {
-    const master = await this.profileService.getProfile(userId);
-
-    const updated = await this.prisma.master.update({
-      where: { id: master.id },
-      data: {
-        isOnline,
-        lastActivityAt: new Date(),
-      },
-      select: {
-        id: true,
-        isOnline: true,
-        lastActivityAt: true,
-      },
-    });
-
-    // Инвалидируем кеш профиля
-    await this.invalidateMasterCache(master.id, master.slug);
-
-    return {
-      success: true,
-      isOnline: updated.isOnline,
-      lastActivityAt: updated.lastActivityAt,
-    };
+    return this.availabilityService.updateOnlineStatus(
+      userId,
+      isOnline,
+      this.onInvalidate,
+    );
   }
 
   async updateAvailabilityStatus(
     userId: string,
     dto: UpdateAvailabilityStatusDto,
   ) {
-    const master = await this.profileService.getProfile(userId);
-    const isPremium = getEffectiveTariff(master) === 'PREMIUM';
-    if (!isPremium) {
-      throw new ForbiddenException(
-        'Availability status (Available/Busy) and max leads limit are PREMIUM features.',
-      );
-    }
-
-    const updateData: {
-      availabilityStatus: UpdateAvailabilityStatusDto['availabilityStatus'];
-      lastActivityAt: Date;
-      maxActiveLeads?: number;
-    } = {
-      availabilityStatus: dto.availabilityStatus,
-      lastActivityAt: new Date(),
-    };
-
-    if (dto.maxActiveLeads !== undefined) {
-      updateData.maxActiveLeads = dto.maxActiveLeads;
-    }
-
-    // Если статус меняется на AVAILABLE и есть подписчики, отправим уведомления
-    const needsNotification =
-      dto.availabilityStatus === 'AVAILABLE' &&
-      master.availabilityStatus !== 'AVAILABLE';
-
-    const updated = await this.prisma.master.update({
-      where: { id: master.id },
-      data: updateData,
-      select: {
-        id: true,
-        availabilityStatus: true,
-        maxActiveLeads: true,
-        currentActiveLeads: true,
-        lastActivityAt: true,
-      },
-    });
-
-    // Инвалидируем кеш профиля
-    await this.invalidateMasterCache(master.id, master.slug);
-
-    // Отправка уведомлений подписчикам
-    if (needsNotification) {
-      this.eventEmitter.emit('master.available', { masterId: master.id });
-    }
-
-    return {
-      success: true,
-      ...updated,
-    };
+    return this.availabilityService.updateAvailabilityStatus(
+      userId,
+      dto,
+      this.onInvalidate,
+    );
   }
 
   async getAvailabilityStatus(userId: string) {
-    const master = await this.profileService.getProfile(userId);
-
-    const data = await this.prisma.master.findUnique({
-      where: { id: master.id },
-      select: {
-        availabilityStatus: true,
-        maxActiveLeads: true,
-        currentActiveLeads: true,
-        isOnline: true,
-        lastActivityAt: true,
-      },
-    });
-
-    if (!data) {
-      throw new NotFoundException('Master availability data not found');
-    }
-
-    // Recalculate actual active leads (NEW + IN_PROGRESS) to fix drift
-    const actualActiveCount = await this.prisma.lead.count({
-      where: {
-        masterId: master.id,
-        status: { in: [LeadStatus.NEW, LeadStatus.IN_PROGRESS] },
-      },
-    });
-
-    let result = { ...data };
-    if (actualActiveCount !== data.currentActiveLeads) {
-      this.logger.warn(
-        `Syncing currentActiveLeads for master ${master.id}: stored=${data.currentActiveLeads} actual=${actualActiveCount}`,
-      );
-      await this.prisma.master.update({
-        where: { id: master.id },
-        data: { currentActiveLeads: actualActiveCount },
-      });
-      await this.availabilityService.syncAvailabilityStatus(master.id);
-      const updated = await this.prisma.master.findUnique({
-        where: { id: master.id },
-        select: {
-          availabilityStatus: true,
-          maxActiveLeads: true,
-          currentActiveLeads: true,
-          isOnline: true,
-          lastActivityAt: true,
-        },
-      });
-      if (updated) result = updated;
-    }
-
-    return {
-      success: true,
-      ...result,
-      canAcceptLeads:
-        result.availabilityStatus === 'AVAILABLE' &&
-        result.currentActiveLeads < result.maxActiveLeads,
-    };
+    return this.availabilityService.getAvailabilityStatus(userId);
   }
 
   async updateLastActivity(userId: string) {
-    try {
-      const master = await this.prisma.master.findFirst({
-        where: { userId },
-        select: { id: true },
-      });
-
-      if (master) {
-        await this.prisma.master.update({
-          where: { id: master.id },
-          data: { lastActivityAt: new Date() },
-        });
-      }
-    } catch {
-      // Игнорируем ошибки обновления активности
-    }
+    return this.availabilityService.updateLastActivity(userId);
   }
 
   // ==================== ТАРИФЫ ====================
@@ -623,145 +240,38 @@ export class MastersService {
   }
 
   async updateTariff(masterId: string, tariffTypeStr: string, days: number) {
-    const onInvalidate = (mid: string, slug: string | null) =>
-      this.invalidateMasterCache(mid, slug);
     return this.tariffService.updateTariff(
       masterId,
       tariffTypeStr,
       days,
-      onInvalidate,
+      this.onInvalidate,
     );
   }
 
   /**
-   * Extend current tariff by days (e.g. referral reward).
-   * For BASIC/expired: grants days of VIP. For VIP/PREMIUM: adds days to expiry.
+   * Продлить тариф на N дней (например, награда за реферала).
+   * BASIC/истёкший → выдаёт VIP. VIP/PREMIUM → добавляет дни к expiry.
    */
   async extendTariffByDays(masterId: string, days: number) {
-    const onInvalidate = (mid: string, slug: string | null) =>
-      this.invalidateMasterCache(mid, slug);
-    return this.tariffService.extendTariffByDays(masterId, days, onInvalidate);
+    return this.tariffService.extendTariffByDays(
+      masterId,
+      days,
+      this.onInvalidate,
+    );
   }
 
-  /**
-   * Верифицированный мастер получает любой тариф бесплатно 1 кликом (до настройки оплаты).
-   */
+  /** Верифицированный мастер получает тариф бесплатно 1 кликом */
   async claimFreePlan(userId: string, tariffType: 'VIP' | 'PREMIUM') {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { masterProfile: true },
-    });
-    if (!user) throw new NotFoundException('User not found');
-    if (user.role !== 'MASTER')
-      throw new BadRequestException('Only masters can claim a free plan');
-    if (!user.isVerified)
-      throw new BadRequestException(
-        'Verification required. Complete verification to claim a free plan.',
-      );
-    if (!user.masterProfile)
-      throw new NotFoundException('Master profile not found');
-
-    const DAYS_FREE = 30;
-    const result = await this.updateTariff(
-      user.masterProfile.id,
+    return this.tariffService.claimFreePlan(
+      userId,
       tariffType,
-      DAYS_FREE,
+      this.onInvalidate,
     );
-    // Инвалидируем кеш пользователя, чтобы JWT и auth/me вернули новый тариф
-    await Promise.all([
-      this.cache.del(this.cache.keys.userProfile(userId)),
-      this.cache.del(this.cache.keys.userMasterProfile(userId)),
-    ]);
-    return result;
   }
 
   // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
 
-  /**
-   * Обработка инкремента просмотров с отслеживанием активности.
-   * Учитываются только просмотры от клиентов (role=CLIENT):
-   * - анонимные просмотры не учитываются (невозможно проверить, что это клиент);
-   * - исключены владелец профиля и другие мастера;
-   * - исключены админы;
-   * - 1 запись на клиента в день (повторные просмотры не учитываются).
-   */
-  private async handleViewIncrement(
-    masterId: string,
-    userId?: string,
-    sessionId?: string,
-    ipAddress?: string,
-    userAgent?: string,
-    categoryId?: string,
-    cityId?: string,
-    userRole?: string,
-  ) {
-    // Только авторизованные клиенты — анонимные и не-клиенты не учитываются
-    if (!userId || userRole !== 'CLIENT') return;
-
-    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
-
-    // Cache 'is viewer a master?' for 60s to avoid 2 DB queries on every profile view
-    const viewerCacheKey = `cache:viewer:${userId}:is-master`;
-    let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
-
-    if (viewerIsMaster === null) {
-      const [profileMaster, viewerMaster] = await Promise.all([
-        this.prisma.master.findUnique({
-          where: { id: masterId },
-          select: { userId: true },
-        }),
-        this.prisma.master.findUnique({
-          where: { userId },
-          select: { id: true },
-        }),
-      ]);
-      // If the viewer is the profile owner or another master — skip
-      if (profileMaster?.userId === userId) return;
-      viewerIsMaster = !!viewerMaster;
-      await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
-    }
-
-    if (viewerIsMaster) return;
-
-    const viewerIdent = userId
-      ? { userId }
-      : sessionId
-        ? { sessionId }
-        : ipAddress
-          ? { ipAddress }
-          : null;
-    if (viewerIdent) {
-      const alreadyViewedToday = await this.prisma.userActivity.findFirst({
-        where: {
-          masterId,
-          action: 'view',
-          createdAt: { gte: todayStart },
-          ...viewerIdent,
-        },
-      });
-      if (alreadyViewedToday) return;
-    }
-
-    await this.prisma.master.update({
-      where: { id: masterId },
-      data: { views: { increment: 1 } },
-    });
-
-    this.eventEmitter.emit(ActivityEvent.TRACKED, {
-      userId,
-      sessionId,
-      action: 'view',
-      masterId,
-      categoryId,
-      cityId,
-      ipAddress,
-      userAgent,
-    });
-  }
-
-  /**
-   * Инвалидация кеша мастера
-   */
+  /** Инвалидация кеша мастера */
   private async invalidateMasterCache(masterId: string, slug?: string | null) {
     await this.profileService.invalidateMasterCache(
       masterId,

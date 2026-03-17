@@ -6,9 +6,12 @@ import {
   Delete,
   Body,
   Param,
+  Query,
+  Res,
   UseGuards,
   Req,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
 import { UsersService } from './users.service';
@@ -98,10 +101,20 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Экспорт персональных данных (GDPR Art. 20 — Data Portability)',
+    summary:
+      'Экспорт персональных данных в PDF (GDPR Art. 20 — Data Portability)',
   })
-  async exportPersonalData(@Req() req: RequestWithUser) {
-    return this.usersService.exportPersonalData(req.user.id);
+  async exportPersonalData(
+    @Req() req: RequestWithUser,
+    @Res() res: Response,
+    @Query('locale') locale?: string,
+  ) {
+    const lang = locale?.toLowerCase().startsWith('ru')
+      ? 'ru'
+      : locale?.toLowerCase().startsWith('ro')
+        ? 'ro'
+        : 'en';
+    await this.usersService.exportPersonalDataPdf(req.user.id, res, lang);
   }
 
   @Patch('me/preferred-language')

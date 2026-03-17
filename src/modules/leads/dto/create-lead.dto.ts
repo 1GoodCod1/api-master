@@ -51,14 +51,6 @@ export class CreateLeadDto {
 
   @ApiProperty({
     required: false,
-    description: 'Payment session or order ID for premium lead validation',
-  })
-  @IsString()
-  @IsOptional()
-  paymentSessionId?: string;
-
-  @ApiProperty({
-    required: false,
     description: 'reCAPTCHA token for bot protection',
   })
   @IsString()

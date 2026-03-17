@@ -1,9 +1,11 @@
+import { getHourInMoldova } from '../../shared/utils/timezone.util';
+
 export function isOutOfHours(
   workStartHour: number,
   workEndHour: number,
   now: Date = new Date(),
 ): boolean {
-  const hour = now.getHours(); // 0-23 (server/local timezone)
+  const hour = getHourInMoldova(now);
 
   // Normalize to 0..24 bounds defensively
   const start = Math.min(Math.max(workStartHour, 0), 23);

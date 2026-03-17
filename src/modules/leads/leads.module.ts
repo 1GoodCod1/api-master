@@ -10,8 +10,11 @@ import { LeadsSpamService } from './services/leads-spam.service';
 import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
+import { LeadsAvailabilitySubscriptionService } from './services/leads-availability-subscription.service';
+import { LeadsClientDataService } from './services/leads-client-data.service';
+import { LeadsCreateNotificationService } from './services/leads-create-notification.service';
+import { LeadsConversationService } from './services/leads-conversation.service';
 import { MasterAvailableListener } from './listeners/master-available.listener';
-
 import { MastersModule } from '../masters/masters.module';
 import { EmailModule } from '../email/email.module';
 import { ReferralsModule } from '../referrals/referrals.module';
@@ -30,10 +33,14 @@ import { ReferralsModule } from '../referrals/referrals.module';
     LeadsService,
     RecaptchaService,
     LeadsValidationService,
+    LeadsClientDataService,
     LeadsSpamService,
     LeadsAnalyticsService,
     LeadsQueryService,
     LeadsActionsService,
+    LeadsCreateNotificationService,
+    LeadsConversationService,
+    LeadsAvailabilitySubscriptionService,
     MasterAvailableListener,
   ],
   exports: [LeadsService],

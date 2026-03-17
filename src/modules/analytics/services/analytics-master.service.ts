@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
+  getDayInMoldova,
+  getHourInMoldova,
+  getStartOfTodayInMoldova,
+  toDateStringMoldova,
+} from '../../shared/utils/timezone.util';
+import {
   MasterAnalyticsItem,
   FilledAnalyticsItem,
   AnalyticsSummary,
@@ -22,9 +28,10 @@ export class AnalyticsMasterService {
     masterId: string,
     days: number = 7,
   ): Promise<MasterAnalyticsResponse> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
     const [analytics, master] = await Promise.all([
       this.prisma.masterAnalytics.findMany({
@@ -93,11 +100,9 @@ export class AnalyticsMasterService {
   ): Promise<FilledAnalyticsItem[]> {
     if (analytics.length === 0) return analytics;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getStartOfTodayInMoldova();
     const lastItem = analytics[analytics.length - 1];
     const lastDate = new Date(lastItem.date);
-    lastDate.setHours(0, 0, 0, 0);
 
     if (lastDate.getTime() !== today.getTime()) return analytics;
 
@@ -157,9 +162,10 @@ export class AnalyticsMasterService {
     masterId: string,
     days: number = 30,
   ): Promise<AdvancedAnalyticsResponse> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
     const basicAnalytics = await this.getMasterAnalytics(masterId, days);
 
@@ -212,15 +218,13 @@ export class AnalyticsMasterService {
     days: number,
   ): FilledAnalyticsItem[] {
     const result: FilledAnalyticsItem[] = [];
-    const today = new Date();
+    const todayStart = getStartOfTodayInMoldova();
 
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
+      const date = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000);
 
       const existing = analytics.find(
-        (a) => a.date.toDateString() === date.toDateString(),
+        (a) => toDateStringMoldova(a.date) === toDateStringMoldova(date),
       );
 
       result.push(
@@ -339,8 +343,10 @@ export class AnalyticsMasterService {
     cityId: string | null,
     days: number,
   ): Promise<ComparisonData> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
     const getAvgMetrics = async (where: Prisma.MasterWhereInput) => {
       const masters = await this.prisma.master.findMany({
@@ -458,8 +464,10 @@ export class AnalyticsMasterService {
   }
 
   private async getPeakHours(masterId: string, days: number) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
     const leads = await this.prisma.lead.findMany({
       where: { masterId, createdAt: { gte: startDate } },
@@ -470,7 +478,7 @@ export class AnalyticsMasterService {
     for (let i = 0; i < 24; i++) hourStats[i] = { leads: 0, views: 0 };
 
     leads.forEach((lead) => {
-      const hour = new Date(lead.createdAt).getHours();
+      const hour = getHourInMoldova(new Date(lead.createdAt));
       hourStats[hour].leads++;
     });
 
@@ -485,8 +493,10 @@ export class AnalyticsMasterService {
   }
 
   private async getTopSources(masterId: string, days: number) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
     const leads = await this.prisma.lead.count({
       where: { masterId, createdAt: { gte: startDate } },
@@ -500,18 +510,17 @@ export class AnalyticsMasterService {
   }
 
   private async getActivityHeatmap(masterId: string, days: number) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const todayStart = getStartOfTodayInMoldova();
+    const startDate = new Date(
+      todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+    );
 
-    // Get leads with their day and hour
     const leads = await this.prisma.lead.findMany({
       where: { masterId, createdAt: { gte: startDate } },
       select: { createdAt: true },
     });
 
     const heatmapData: Record<string, number> = {};
-
-    // Initialize
     for (let d = 0; d < 7; d++) {
       for (let h = 0; h < 24; h++) {
         heatmapData[`${d}-${h}`] = 0;
@@ -520,8 +529,8 @@ export class AnalyticsMasterService {
 
     leads.forEach((lead) => {
       const date = new Date(lead.createdAt);
-      const day = date.getDay(); // 0-6 (Sun-Sat)
-      const hour = date.getHours(); // 0-23
+      const day = getDayInMoldova(date);
+      const hour = getHourInMoldova(date);
       heatmapData[`${day}-${hour}`]++;
     });
 

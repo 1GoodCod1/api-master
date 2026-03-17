@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { getStartOfTodayInMoldova } from '../../shared/utils/timezone.util';
 import { RedisService } from '../../shared/redis/redis.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -74,21 +75,21 @@ export class AdminSystemService {
       this.prisma.user.count({
         where: {
           createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: getStartOfTodayInMoldova(),
           },
         },
       }),
       this.prisma.lead.count({
         where: {
           createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: getStartOfTodayInMoldova(),
           },
         },
       }),
       this.prisma.review.count({
         where: {
           createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: getStartOfTodayInMoldova(),
           },
         },
       }),

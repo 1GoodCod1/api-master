@@ -8,12 +8,14 @@ import type { PrismaService } from '../../../src/modules/shared/database/prisma.
 
 type PrismaLeadsValidationMock = {
   master: { findUnique: jest.Mock; update: jest.Mock };
+  lead: { findFirst: jest.Mock };
   file: { findMany: jest.Mock };
 };
 
 describe('LeadsValidationService', () => {
   const prisma: PrismaLeadsValidationMock = {
     master: { findUnique: jest.fn(), update: jest.fn() },
+    lead: { findFirst: jest.fn() },
     file: { findMany: jest.fn() },
   };
 
@@ -115,9 +117,24 @@ describe('LeadsValidationService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('throws BadRequestException when client has existing open lead', async () => {
+      prisma.master.findUnique.mockResolvedValue(validMaster);
+      prisma.master.update.mockResolvedValue(validMaster);
+      prisma.lead.findFirst.mockResolvedValue({ id: 'l1', status: 'NEW' });
+
+      await expect(
+        service.validateCreate('m1', {
+          id: 'c1',
+          role: 'CLIENT',
+          phoneVerified: true,
+        } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
     it('returns master when validation passes', async () => {
       prisma.master.findUnique.mockResolvedValue(validMaster);
       prisma.master.update.mockResolvedValue(validMaster);
+      prisma.lead.findFirst.mockResolvedValue(null);
 
       const result = await service.validateCreate('m1', {
         id: 'c1',
@@ -131,6 +148,7 @@ describe('LeadsValidationService', () => {
     it('throws BadRequestException when too many files', async () => {
       prisma.master.findUnique.mockResolvedValue(validMaster);
       prisma.master.update.mockResolvedValue(validMaster);
+      prisma.lead.findFirst.mockResolvedValue(null);
 
       await expect(
         service.validateCreate(

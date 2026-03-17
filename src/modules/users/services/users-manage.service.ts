@@ -7,6 +7,16 @@ import {
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import type {
+  PersonalDataPdfData,
+  PersonalDataPdfUser,
+  PersonalDataPdfMasterProfile,
+  PersonalDataPdfLead,
+  PersonalDataPdfReview,
+  PersonalDataPdfBooking,
+  PersonalDataPdfLoginEntry,
+  PersonalDataPdfNotification,
+} from './personal-data-pdf.builder';
 
 @Injectable()
 export class UsersManageService {
@@ -297,13 +307,12 @@ export class UsersManageService {
 
   /**
    * GDPR Art. 20 — право на переносимость данных.
-   * Возвращает все персональные данные пользователя в машинночитаемом формате.
+   * Возвращает данные для PDF-экспорта (без внутренних ID, с читаемыми названиями города/категории).
    */
-  async exportPersonalData(userId: string) {
+  async getPersonalDataForPdf(userId: string): Promise<PersonalDataPdfData> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
-        id: true,
         email: true,
         phone: true,
         firstName: true,
@@ -321,101 +330,192 @@ export class UsersManageService {
       throw new NotFoundException('User not found');
     }
 
-    const [
-      masterProfile,
-      leads,
-      reviews,
-      bookings,
-      loginHistory,
-      favorites,
-      notifications,
-    ] = await Promise.all([
-      this.prisma.master.findUnique({
-        where: { userId },
-        select: {
-          description: true,
-          experienceYears: true,
-          cityId: true,
-          categoryId: true,
-          telegramChatId: true,
-          whatsappPhone: true,
-          latitude: true,
-          longitude: true,
-          createdAt: true,
-        },
+    const masterProfile = await this.prisma.master.findUnique({
+      where: { userId },
+      include: {
+        city: { select: { name: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    const masterId = masterProfile?.id;
+    const isMaster = user.role === 'MASTER' && masterId;
+
+    const [leads, reviews, bookings, loginHistory, notifications] =
+      await Promise.all([
+        isMaster
+          ? this.prisma.lead.findMany({
+              where: { masterId },
+              select: {
+                message: true,
+                clientPhone: true,
+                clientName: true,
+                status: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          : this.prisma.lead.findMany({
+              where: { clientId: userId },
+              select: {
+                message: true,
+                clientPhone: true,
+                clientName: true,
+                status: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            }),
+        isMaster
+          ? this.prisma.review.findMany({
+              where: { masterId },
+              select: {
+                rating: true,
+                comment: true,
+                clientPhone: true,
+                clientName: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          : this.prisma.review.findMany({
+              where: { clientId: userId },
+              select: {
+                rating: true,
+                comment: true,
+                clientPhone: true,
+                clientName: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            }),
+        isMaster
+          ? this.prisma.booking.findMany({
+              where: { masterId },
+              select: {
+                clientPhone: true,
+                clientName: true,
+                startTime: true,
+                endTime: true,
+                status: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          : this.prisma.booking.findMany({
+              where: { clientId: userId },
+              select: {
+                clientPhone: true,
+                clientName: true,
+                startTime: true,
+                endTime: true,
+                status: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            }),
+        this.prisma.loginHistory.findMany({
+          where: { userId },
+          select: {
+            ipAddress: true,
+            userAgent: true,
+            location: true,
+            success: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        }),
+        this.prisma.notification.findMany({
+          where: { userId },
+          select: {
+            type: true,
+            message: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        }),
+      ]);
+
+    const exportDate = new Date().toISOString();
+
+    const pdfUser: PersonalDataPdfUser = {
+      email: user.email,
+      phone: user.phone,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isVerified: user.isVerified,
+      preferredLanguage: user.preferredLanguage,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    };
+
+    const pdfMasterProfile: PersonalDataPdfMasterProfile | null = masterProfile
+      ? {
+          description: masterProfile.description,
+          experienceYears: masterProfile.experienceYears ?? 0,
+          cityName: masterProfile.city?.name ?? null,
+          categoryName: masterProfile.category?.name ?? null,
+          whatsappPhone: masterProfile.whatsappPhone,
+          createdAt: masterProfile.createdAt.toISOString(),
+        }
+      : null;
+
+    const pdfLeads: PersonalDataPdfLead[] = leads.map((l) => ({
+      message: l.message,
+      clientPhone: l.clientPhone,
+      clientName: l.clientName,
+      status: l.status,
+      createdAt: l.createdAt.toISOString(),
+    }));
+
+    const pdfReviews: PersonalDataPdfReview[] = reviews.map((r) => ({
+      rating: r.rating,
+      comment: r.comment,
+      clientPhone: r.clientPhone,
+      clientName: r.clientName,
+      createdAt: r.createdAt.toISOString(),
+    }));
+
+    const pdfBookings: PersonalDataPdfBooking[] = bookings.map((b) => ({
+      clientPhone: b.clientPhone,
+      clientName: b.clientName,
+      startTime: b.startTime.toISOString(),
+      endTime: b.endTime.toISOString(),
+      status: b.status,
+      createdAt: b.createdAt.toISOString(),
+    }));
+
+    const pdfLoginHistory: PersonalDataPdfLoginEntry[] = loginHistory.map(
+      (h) => ({
+        ipAddress: h.ipAddress,
+        userAgent: h.userAgent,
+        location: h.location,
+        success: h.success,
+        createdAt: h.createdAt.toISOString(),
       }),
-      this.prisma.lead.findMany({
-        where: { clientId: userId },
-        select: {
-          id: true,
-          message: true,
-          clientPhone: true,
-          clientName: true,
-          status: true,
-          createdAt: true,
-        },
+    );
+
+    const pdfNotifications: PersonalDataPdfNotification[] = notifications.map(
+      (n) => ({
+        type: n.type,
+        message: n.message,
+        createdAt: n.createdAt.toISOString(),
       }),
-      this.prisma.review.findMany({
-        where: { clientId: userId },
-        select: {
-          id: true,
-          rating: true,
-          comment: true,
-          clientPhone: true,
-          clientName: true,
-          createdAt: true,
-        },
-      }),
-      this.prisma.booking.findMany({
-        where: { clientId: userId },
-        select: {
-          id: true,
-          clientPhone: true,
-          clientName: true,
-          startTime: true,
-          endTime: true,
-          status: true,
-          createdAt: true,
-        },
-      }),
-      this.prisma.loginHistory.findMany({
-        where: { userId },
-        select: {
-          ipAddress: true,
-          userAgent: true,
-          location: true,
-          success: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
-      }),
-      this.prisma.favorite.findMany({
-        where: { userId },
-        select: { masterId: true, createdAt: true },
-      }),
-      this.prisma.notification.findMany({
-        where: { userId },
-        select: {
-          type: true,
-          message: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 200,
-      }),
-    ]);
+    );
 
     return {
-      exportDate: new Date().toISOString(),
-      user,
-      masterProfile,
-      leads,
-      reviews,
-      bookings,
-      loginHistory,
-      favorites,
-      notifications,
+      exportDate,
+      user: pdfUser,
+      masterProfile: pdfMasterProfile,
+      leads: pdfLeads,
+      reviews: pdfReviews,
+      bookings: pdfBookings,
+      loginHistory: pdfLoginHistory,
+      notifications: pdfNotifications,
     };
   }
 

@@ -18,6 +18,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-project3}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}
+      TZ: Europe/Chisinau
     ports:
       - "5433:5432"
     volumes:
@@ -199,6 +200,7 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=Europe/Chisinau
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
       - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
@@ -246,6 +248,7 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=Europe/Chisinau
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
       - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379

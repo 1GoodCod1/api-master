@@ -5,7 +5,7 @@ import { PrismaModule } from '../shared/database/prisma.module';
 import { RedisModule } from '../shared/redis/redis.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { EncryptionService } from '../shared/utils/encryption.service';
+import { EncryptionModule } from '../shared/encryption/encryption.module';
 
 import { VerificationQueryService } from './services/verification-query.service';
 import { VerificationActionService } from './services/verification-action.service';
@@ -16,13 +16,13 @@ import { VerificationActionService } from './services/verification-action.servic
     RedisModule,
     PhoneVerificationModule,
     NotificationsModule,
+    EncryptionModule,
   ],
   controllers: [VerificationController],
   providers: [
     VerificationService,
     VerificationQueryService,
     VerificationActionService,
-    EncryptionService,
   ],
   exports: [VerificationService],
 })

@@ -119,6 +119,23 @@ export class LeadsValidationService {
         );
       }
 
+      // Проверка на существующую открытую заявку от этого клиента к этому мастеру
+      const clientId = authUser?.role === 'CLIENT' ? authUser.id : null;
+      if (clientId) {
+        const existingOpenLead = await this.prisma.lead.findFirst({
+          where: {
+            clientId,
+            masterId,
+            status: { in: ['NEW', 'IN_PROGRESS'] },
+          },
+        });
+        if (existingOpenLead) {
+          throw new BadRequestException(
+            'У вас уже есть активная заявка к этому мастеру. Дождитесь её завершения перед отправкой новой.',
+          );
+        }
+      }
+
       // Валидация файлов
       if (fileIds?.length) {
         if (fileIds.length > 10) {
