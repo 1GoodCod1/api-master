@@ -15,7 +15,6 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Prisma } from '@prisma/client';
 import { CitiesService } from './cities.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
@@ -32,11 +31,7 @@ export class CitiesController {
   @ApiOperation({ summary: 'Get all cities' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   async findAll(@Query('isActive') isActive?: string) {
-    const filters: Prisma.CityWhereInput = {};
-    if (isActive !== undefined) {
-      filters.isActive = isActive === 'true';
-    }
-    return this.citiesService.findAll(filters);
+    return this.citiesService.findAllFromQuery(isActive);
   }
 
   @Get(':id')
@@ -87,11 +82,7 @@ export class CitiesController {
     @Param('id') id: string,
     @Body('isActive') isActive?: boolean,
   ) {
-    if (typeof isActive === 'boolean') {
-      return this.citiesService.update(id, { isActive });
-    }
-    const current = await this.citiesService.findOne(id);
-    return this.citiesService.update(id, { isActive: !current.isActive });
+    return this.citiesService.toggleActive(id, isActive);
   }
 
   @Get('stats/overview')

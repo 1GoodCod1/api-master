@@ -4,6 +4,12 @@
  */
 export const APP_TIMEZONE = 'Europe/Chisinau';
 
+/**
+ * Локаль приложения для форматирования дат (Молдова).
+ * ro-MD — румынский (официальный), ru-MD — русский.
+ */
+export const APP_LOCALE = 'ro-MD';
+
 /** Hour (0–23) in Moldova for a given date. */
 export function getHourInMoldova(date: Date): number {
   return parseInt(

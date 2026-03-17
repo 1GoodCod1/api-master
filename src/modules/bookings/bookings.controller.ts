@@ -8,8 +8,6 @@ import {
   Query,
   UseGuards,
   Req,
-  BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -41,24 +39,7 @@ export class BookingsController {
   })
   @ApiResponse({ status: 201, description: 'Booking created' })
   async create(@Body() dto: CreateBookingDto, @Req() req: RequestWithUser) {
-    const user = req.user;
-
-    let phone: string;
-    let name: string | undefined;
-
-    if (user.role === 'CLIENT') {
-      phone = user.phone ?? '';
-      name = user.firstName ?? undefined;
-      if (!phone) {
-        throw new BadRequestException('Client phone is required');
-      }
-    } else {
-      // MASTER: service will resolve phone/name from lead
-      phone = '';
-      name = undefined;
-    }
-
-    return this.bookingsService.create(dto, phone, name, user);
+    return this.bookingsService.createFromRequest(dto, req.user);
   }
 
   @Get('master/:masterId')
@@ -72,15 +53,11 @@ export class BookingsController {
     @Req() req: RequestWithUser,
     @Query('status') status?: string,
   ) {
-    const user = req.user;
-    if (user.role !== 'ADMIN') {
-      const master = user.masterProfile;
-      if (!master || master.id !== masterId) {
-        throw new ForbiddenException('You can only view your own bookings');
-      }
-    }
-
-    return this.bookingsService.findAllForMaster(masterId, status);
+    return this.bookingsService.findAllForMasterWithAuth(
+      masterId,
+      status,
+      req.user,
+    );
   }
 
   @Get('master/:masterId/calendar')
@@ -100,16 +77,13 @@ export class BookingsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const user = req.user;
-    if (user.role !== 'ADMIN') {
-      const master = user.masterProfile;
-      if (!master || master.id !== masterId) {
-        throw new BadRequestException('You can only view your own calendar');
-      }
-    }
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
-    return this.bookingsService.getCalendar(masterId, status, start, end);
+    return this.bookingsService.getCalendarWithAuth(
+      masterId,
+      status,
+      startDate,
+      endDate,
+      req.user,
+    );
   }
 
   @Get('my-bookings')
@@ -117,12 +91,7 @@ export class BookingsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my bookings (for clients)' })
   async findAllForClient(@Req() req: RequestWithUser) {
-    const user = req.user;
-    if (user.role !== 'CLIENT') {
-      throw new BadRequestException('This endpoint is only for clients');
-    }
-    const phone = user.phone || '';
-    return this.bookingsService.findAllForClient(user.id, phone);
+    return this.bookingsService.findAllForClientWithAuth(req.user);
   }
 
   @Get('master/:masterId/available-slots')
@@ -145,11 +114,7 @@ export class BookingsController {
     @Body() dto: UpdateBookingStatusDto,
     @Req() req: RequestWithUser,
   ) {
-    const master = req.user.masterProfile;
-    if (!master) {
-      throw new ForbiddenException('Master profile not found');
-    }
-    return this.bookingsService.updateStatus(id, master.id, dto);
+    return this.bookingsService.updateStatusWithAuth(id, dto, req.user);
   }
 
   @Get(':id/rebook-info')

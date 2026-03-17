@@ -18,7 +18,6 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
-import { ChatGateway } from './chat.gateway';
 import { CreateConversationDto, SendMessageDto } from './dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -30,10 +29,7 @@ import type { RequestWithUser } from '../../common/decorators/get-user.decorator
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ChatController {
-  constructor(
-    private readonly chatService: ChatService,
-    private readonly chatGateway: ChatGateway,
-  ) {}
+  constructor(private readonly chatService: ChatService) {}
 
   @Get()
   @Roles('CLIENT', 'MASTER', 'ADMIN')
@@ -120,24 +116,8 @@ export class ChatController {
     @Body() dto: SendMessageDto,
     @Req() req: RequestWithUser,
   ) {
-    const { message: primary, autoReply } = await this.chatService.sendMessage(
-      id,
-      dto,
-      req.user,
-    );
-    this.chatGateway.emitToConversation(id, 'chat:message', {
-      ...primary,
-      conversationId: id,
-    });
-    this.chatGateway.notifyNewMessage(primary, id);
-    if (autoReply) {
-      this.chatGateway.emitToConversation(id, 'chat:message', {
-        ...autoReply,
-        conversationId: id,
-      });
-      this.chatGateway.notifyNewMessage(autoReply, id);
-    }
-    return primary;
+    const result = await this.chatService.sendMessage(id, dto, req.user);
+    return result.message;
   }
 
   @Patch(':id/read')

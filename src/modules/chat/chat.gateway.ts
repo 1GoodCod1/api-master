@@ -204,32 +204,9 @@ export class ChatGateway
         { content: data.content, fileIds: data.fileIds },
         user,
       );
-      const { message, autoReply } = result;
-
-      // Broadcast to all clients in the conversation room
-      this.server
-        .to(`conversation:${data.conversationId}`)
-        .emit('chat:message', {
-          ...message,
-          conversationId: data.conversationId,
-        });
-
-      // Send notification to offline users
-      await this.notifyOfflineUser(message, data.conversationId);
-
-      if (autoReply) {
-        this.server
-          .to(`conversation:${data.conversationId}`)
-          .emit('chat:message', {
-            ...autoReply,
-            conversationId: data.conversationId,
-          });
-        await this.notifyOfflineUser(autoReply, data.conversationId);
-      }
-
+      // Broadcast и уведомления выполняет ChatBroadcastService внутри sendMessage
       this.logger.log(`Message sent in conversation ${data.conversationId}`);
-
-      return { success: true, message };
+      return { success: true, message: result.message };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Error sending message: ${message}`);

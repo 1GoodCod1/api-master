@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
+import { ChatBroadcastService } from './chat-broadcast.service';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { RedisModule } from '../shared/redis/redis.module';
 import { WebSocketModule } from '../websocket/websocket.module';
@@ -27,7 +28,7 @@ import { CacheModule } from '../shared/cache/cache.module';
     forwardRef(() => NotificationsModule),
   ],
   controllers: [ChatController],
-  providers: [ChatService, ChatGateway],
+  providers: [ChatService, ChatGateway, ChatBroadcastService],
   exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

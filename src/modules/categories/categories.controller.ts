@@ -31,11 +31,7 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Get all categories' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   async findAll(@Query('isActive') isActive?: string) {
-    const filters: { isActive?: boolean } = {};
-    if (isActive !== undefined) {
-      filters.isActive = isActive === 'true';
-    }
-    return this.categoriesService.findAll(filters);
+    return this.categoriesService.findAllFromQuery(isActive);
   }
 
   @Get(':id')
@@ -55,11 +51,7 @@ export class CategoriesController {
     @Query('limit') limit?: string,
     @Query('cursor') cursor?: string,
   ) {
-    return this.categoriesService.getMasters(id, {
-      page: page ? Math.max(1, parseInt(page, 10) || 1) : 1,
-      limit: limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 20)) : 20,
-      cursor,
-    });
+    return this.categoriesService.getMastersFromQuery(id, page, limit, cursor);
   }
 
   @Post()
@@ -101,11 +93,7 @@ export class CategoriesController {
     @Param('id') id: string,
     @Body('isActive') isActive?: boolean,
   ) {
-    if (typeof isActive === 'boolean') {
-      return this.categoriesService.update(id, { isActive });
-    }
-    const current = await this.categoriesService.findOne(id);
-    return this.categoriesService.update(id, { isActive: !current.isActive });
+    return this.categoriesService.toggleActive(id, isActive);
   }
 
   @Get('stats/overview')

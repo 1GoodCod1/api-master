@@ -15,6 +15,7 @@ import { CacheService } from '../shared/cache/cache.service';
 import { sanitizeStrict } from '../shared/utils/sanitize-html.util';
 import { decodeId } from '../shared/utils/id-encoder';
 import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
+import { ChatBroadcastService } from './chat-broadcast.service';
 
 /** Minimal user for chat - HTTP has full JwtUser, WebSocket has { id, role } */
 type ChatUser = Pick<JwtUser, 'id' | 'role'>;
@@ -65,6 +66,7 @@ export class ChatService {
     private readonly redis: RedisService,
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
+    private readonly chatBroadcast: ChatBroadcastService,
   ) {}
 
   private readonly autoresponderWindowSeconds = 3 * 60 * 60; // 3h
@@ -536,11 +538,16 @@ export class ChatService {
             content,
             conversationInfo,
           );
+          this.chatBroadcast.broadcastMessages(conversationId, {
+            message: primary,
+            autoReply,
+          });
           return { message: primary, autoReply };
         }
       }
     }
 
+    this.chatBroadcast.broadcastMessages(conversationId, { message: primary });
     return { message: primary };
   }
 
