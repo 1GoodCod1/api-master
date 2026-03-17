@@ -32,7 +32,9 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         const duration = Date.now() - startTime;
-        void this.logAudit(data, duration, request, response, user);
+        void this.logAudit(data, duration, request, response, user).catch(
+          () => {},
+        );
       }),
     );
   }

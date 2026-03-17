@@ -9,49 +9,24 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
-import { Logger, UseGuards, Inject, forwardRef } from '@nestjs/common';
+import { Logger, UseGuards, OnModuleDestroy } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WsJwtGuard } from '../../common/guards/ws-jwt.guard';
-import { UserRole } from '@prisma/client';
 import { ChatService } from './chat.service';
+import {
+  CHAT_BROADCAST_EVENT,
+  type ChatBroadcastPayload,
+} from './chat-broadcast.service';
 import { SendMessageWsDto, TypingDto } from './dto';
-import { WebsocketService } from '../websocket/websocket.service';
-import { InAppNotificationService } from '../notifications/services/in-app-notification.service';
-import { NotificationsService } from '../notifications/notifications.service';
-
-/** Shape of client.data set by WsJwtGuard */
-interface SocketAuthData {
-  userId?: string;
-  userRole?: string;
-}
-
-interface JwtPayload {
-  sub: string;
-  role?: UserRole;
-}
-
-/** Shape of message returned from ChatService.sendMessage (for offline notification) */
-interface SendMessageResult {
-  id: string;
-  senderType: string;
-  conversation?: {
-    id: string;
-    clientId: string | null;
-    clientPhone?: string | null;
-    clientName?: string;
-    masterUserId?: string;
-    masterName?: string;
-  };
-}
-
-const USER_ROLES: UserRole[] = ['ADMIN', 'CLIENT', 'MASTER'];
-
-function parseUserRole(value: string): UserRole | undefined {
-  return USER_ROLES.includes(value as UserRole)
-    ? (value as UserRole)
-    : undefined;
-}
+import type {
+  JwtPayload,
+  OutgoingChatMessage,
+  SocketAuthData,
+} from './chat.types';
+import { getChatUserFromSocket } from './utils/chat-gateway.utils';
+import { ChatGatewayNotificationService } from './services/chat-gateway-notification.service';
 
 @WebSocketGateway({
   cors: {
@@ -65,51 +40,63 @@ function parseUserRole(value: string): UserRole | undefined {
   allowEIO3: true,
 })
 export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnModuleDestroy
 {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
 
+  private broadcastHandler = (payload: ChatBroadcastPayload) => {
+    const { conversationId, outcome } = payload;
+    this.emitToConversation(conversationId, 'chat:message', {
+      ...outcome.message,
+      conversationId,
+    });
+    this.notifyNewMessage(outcome.message, conversationId);
+    if (outcome.autoReply) {
+      this.emitToConversation(conversationId, 'chat:message', {
+        ...outcome.autoReply,
+        conversationId,
+      });
+      this.notifyNewMessage(outcome.autoReply, conversationId);
+    }
+  };
+
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    @Inject(forwardRef(() => WebsocketService))
-    private readonly websocketService: WebsocketService,
-    @Inject(forwardRef(() => InAppNotificationService))
-    private readonly inAppNotifications: InAppNotificationService,
-    private readonly notifications: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly notificationService: ChatGatewayNotificationService,
   ) {}
 
   afterInit(_server: Server) {
+    this.eventEmitter.on(CHAT_BROADCAST_EVENT, this.broadcastHandler);
     this.logger.log('Chat Gateway initialized');
+  }
+
+  onModuleDestroy() {
+    this.eventEmitter.off(CHAT_BROADCAST_EVENT, this.broadcastHandler);
   }
 
   async handleConnection(client: Socket) {
     try {
-      const token: string | undefined =
-        (typeof client.handshake.auth?.token === 'string'
-          ? client.handshake.auth.token
-          : undefined) ??
-        (typeof client.handshake.headers?.authorization === 'string'
-          ? client.handshake.headers.authorization.replace('Bearer ', '')
-          : undefined);
-
+      const token = this.extractToken(client);
       if (!token) {
         this.logger.warn(`Chat connection refused: No token. ID: ${client.id}`);
         client.disconnect(true);
         return;
       }
 
-      // SECURITY: Verify token immediately on connection to prevent DoS by unauth users
-      // This ensures only valid users can hold a connection open.
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.configService.get<string>('jwt.accessSecret'),
       });
 
-      // Save user data to socket for later use in SubscribeMessages
       const socketData = client.data as SocketAuthData;
       socketData.userId = payload.sub;
       socketData.userRole = payload.role;
@@ -135,27 +122,15 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
+    const user = getChatUserFromSocket(client);
+    if (!user) return { success: false, error: 'Unauthorized' };
+
     try {
-      const socketData = client.data as SocketAuthData;
-      const userId =
-        typeof socketData.userId === 'string' ? socketData.userId : undefined;
-      const userRole = parseUserRole(
-        typeof socketData.userRole === 'string' ? socketData.userRole : '',
-      );
-      if (!userId || !userRole) {
-        return { success: false, error: 'Unauthorized' };
-      }
-      const user = { id: userId, role: userRole };
-
-      // Verify user has access to this conversation in DB
       await this.chatService.getConversation(data.conversationId, user);
-
       void client.join(`conversation:${data.conversationId}`);
-
       this.logger.log(
-        `User ${userId} joined room: conversation:${data.conversationId}`,
+        `User ${user.id} joined room: conversation:${data.conversationId}`,
       );
-
       return { success: true, conversationId: data.conversationId };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -170,13 +145,10 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
-    const socketData = client.data as SocketAuthData;
-    const userId =
-      typeof socketData.userId === 'string' ? socketData.userId : undefined;
+    const user = getChatUserFromSocket(client);
     void client.leave(`conversation:${data.conversationId}`);
-
     this.logger.log(
-      `User ${userId ?? 'unknown'} left conversation ${data.conversationId}`,
+      `User ${user?.id ?? 'unknown'} left conversation ${data.conversationId}`,
     );
     return { success: true, conversationId: data.conversationId };
   }
@@ -187,24 +159,15 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SendMessageWsDto,
   ) {
-    try {
-      const socketData = client.data as SocketAuthData;
-      const userId =
-        typeof socketData.userId === 'string' ? socketData.userId : undefined;
-      const userRole = parseUserRole(
-        typeof socketData.userRole === 'string' ? socketData.userRole : '',
-      );
-      if (!userId || !userRole) {
-        return { success: false, error: 'Unauthorized' };
-      }
-      const user = { id: userId, role: userRole };
+    const user = getChatUserFromSocket(client);
+    if (!user) return { success: false, error: 'Unauthorized' };
 
+    try {
       const result = await this.chatService.sendMessage(
         data.conversationId,
         { content: data.content, fileIds: data.fileIds },
         user,
       );
-      // Broadcast и уведомления выполняет ChatBroadcastService внутри sendMessage
       this.logger.log(`Message sent in conversation ${data.conversationId}`);
       return { success: true, message: result.message };
     } catch (error) {
@@ -220,21 +183,14 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: TypingDto,
   ) {
-    const socketData = client.data as SocketAuthData;
-    const userId =
-      typeof socketData.userId === 'string' ? socketData.userId : undefined;
-    const userRole =
-      typeof socketData.userRole === 'string' ? socketData.userRole : undefined;
-
-    // Broadcast typing status to other users in the conversation
+    const user = getChatUserFromSocket(client);
     client.to(`conversation:${data.conversationId}`).emit('chat:typing', {
       conversationId: data.conversationId,
-      userId,
-      userRole,
+      userId: user?.id,
+      userRole: user?.role,
       isTyping: data.isTyping,
       timestamp: new Date().toISOString(),
     });
-
     return { success: true };
   }
 
@@ -244,30 +200,19 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
-    try {
-      const socketData = client.data as SocketAuthData;
-      const userId =
-        typeof socketData.userId === 'string' ? socketData.userId : undefined;
-      const userRole = parseUserRole(
-        typeof socketData.userRole === 'string' ? socketData.userRole : '',
-      );
-      if (!userId || !userRole) {
-        return { success: false, error: 'Unauthorized' };
-      }
-      const user = { id: userId, role: userRole };
+    const user = getChatUserFromSocket(client);
+    if (!user) return { success: false, error: 'Unauthorized' };
 
+    try {
       const result = await this.chatService.markAsRead(
         data.conversationId,
         user,
       );
-
-      // Notify other users in the conversation
       client.to(`conversation:${data.conversationId}`).emit('chat:read', {
         conversationId: data.conversationId,
-        readBy: userId,
+        readBy: user.id,
         timestamp: new Date().toISOString(),
       });
-
       return { success: true, ...result };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -276,72 +221,25 @@ export class ChatGateway
     }
   }
 
-  /**
-   * Send notification to offline user via main notification system (user room)
-   */
-  private async notifyOfflineUser(
-    message: SendMessageResult,
-    conversationId: string,
-  ) {
-    try {
-      const conversation = message.conversation;
-      if (!conversation) return;
-
-      const recipientUserId =
-        message.senderType === 'MASTER'
-          ? conversation.clientId
-          : (conversation.masterUserId ?? null);
-
-      if (recipientUserId) {
-        const senderName =
-          message.senderType === 'MASTER'
-            ? (conversation.masterName ?? undefined)
-            : (conversation.clientName ?? undefined);
-        await this.inAppNotifications
-          .notifyNewChatMessage(recipientUserId, {
-            conversationId,
-            messageId: message.id,
-            senderType: message.senderType,
-            senderName: senderName || undefined,
-          })
-          .catch((e: unknown) => {
-            const msg = e instanceof Error ? e.message : String(e);
-            this.logger.warn(`Failed to save in-app chat notification: ${msg}`);
-          });
-
-        // MASTER_RESPONDED: SMS клиенту, когда мастер отвечает
-        if (
-          message.senderType === 'MASTER' &&
-          conversation.clientId === recipientUserId &&
-          conversation.clientPhone
-        ) {
-          const masterName = conversation.masterName || 'Мастер';
-          const smsText = `${masterName} ответил вам в чате. Откройте приложение для просмотра.`;
-          await this.notifications
-            .sendSMS(conversation.clientPhone, smsText)
-            .catch((e: unknown) => {
-              const msg = e instanceof Error ? e.message : String(e);
-              this.logger.warn(`Failed to send MASTER_RESPONDED SMS: ${msg}`);
-            });
-        }
-      }
-    } catch (error) {
-      const errMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error notifying offline user: ${errMessage}`);
-    }
-  }
-
-  /**
-   * Emit event to specific conversation (for external use, e.g. after REST sendMessage)
-   */
   emitToConversation(conversationId: string, event: string, data: unknown) {
     this.server.to(`conversation:${conversationId}`).emit(event, data);
   }
 
-  /**
-   * Notify the other party about a new message (e.g. when sent via REST)
-   */
-  notifyNewMessage(message: SendMessageResult, conversationId: string) {
-    void this.notifyOfflineUser(message, conversationId);
+  notifyNewMessage(message: OutgoingChatMessage, conversationId: string) {
+    void this.notificationService
+      .notifyOfflineUser(message, conversationId)
+      .catch((e) => this.logger.error('notifyOfflineUser failed', e));
+  }
+
+  private extractToken(client: Socket): string | undefined {
+    const authToken =
+      typeof client.handshake.auth?.token === 'string'
+        ? client.handshake.auth.token
+        : undefined;
+    const headerAuth =
+      typeof client.handshake.headers?.authorization === 'string'
+        ? client.handshake.headers.authorization.replace('Bearer ', '')
+        : undefined;
+    return authToken ?? headerAuth;
   }
 }

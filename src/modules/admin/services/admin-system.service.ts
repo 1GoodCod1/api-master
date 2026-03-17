@@ -178,6 +178,9 @@ export class AdminSystemService {
 
   // ==================== БЭКАПЫ ====================
 
+  private static readonly BACKUP_PAGE_SIZE = 500;
+  private static readonly MAX_BACKUPS = 10;
+
   async createBackup() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups');
@@ -186,36 +189,25 @@ export class AdminSystemService {
 
     const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
 
+    const [users, masters, statistics] = await Promise.all([
+      this.fetchUsersPaginated(),
+      this.fetchMastersPaginated(),
+      this.getSystemStats(),
+    ]);
+
     const backupData = {
       timestamp: new Date().toISOString(),
-      users: await this.prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          role: true,
-          isVerified: true,
-          isBanned: true,
-          createdAt: true,
-        },
-      }),
-      masters: await this.prisma.master.findMany({
-        select: {
-          id: true,
-          user: { select: { firstName: true, lastName: true } },
-          rating: true,
-          tariffType: true,
-          isFeatured: true,
-          createdAt: true,
-        },
-      }),
-      statistics: await this.getSystemStats(),
+      users,
+      masters,
+      statistics,
     };
 
     await fs.promises.writeFile(
       backupFile,
       JSON.stringify(backupData, null, 2),
     );
+
+    await this.rotateBackups(backupDir);
 
     this.logger.log(`Backup created: ${backupFile}`);
 
@@ -225,6 +217,107 @@ export class AdminSystemService {
       path: backupFile,
       timestamp: backupData.timestamp,
     };
+  }
+
+  private async fetchUsersPaginated() {
+    const users: Array<{
+      id: string;
+      email: string;
+      phone: string | null;
+      role: string;
+      isVerified: boolean;
+      isBanned: boolean;
+      createdAt: Date;
+    }> = [];
+    let cursor: string | undefined;
+    const take = AdminSystemService.BACKUP_PAGE_SIZE;
+
+    do {
+      const batch = await this.prisma.user.findMany({
+        take,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          role: true,
+          isVerified: true,
+          isBanned: true,
+          createdAt: true,
+        },
+      });
+      users.push(...batch);
+      cursor = batch.length === take ? batch[batch.length - 1]?.id : undefined;
+    } while (cursor);
+
+    return users;
+  }
+
+  private async fetchMastersPaginated() {
+    const masters: Array<{
+      id: string;
+      user: { firstName: string | null; lastName: string | null };
+      rating: number;
+      tariffType: string;
+      isFeatured: boolean;
+      createdAt: Date;
+    }> = [];
+    let cursor: string | undefined;
+    const take = AdminSystemService.BACKUP_PAGE_SIZE;
+
+    do {
+      const batch = await this.prisma.master.findMany({
+        take,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          user: { select: { firstName: true, lastName: true } },
+          rating: true,
+          tariffType: true,
+          isFeatured: true,
+          createdAt: true,
+        },
+      });
+      masters.push(...batch);
+      cursor = batch.length === take ? batch[batch.length - 1]?.id : undefined;
+    } while (cursor);
+
+    return masters;
+  }
+
+  private async rotateBackups(backupDir: string): Promise<void> {
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(backupDir);
+    } catch {
+      return;
+    }
+    const jsonFiles = entries.filter((file) => file.endsWith('.json'));
+    if (jsonFiles.length <= AdminSystemService.MAX_BACKUPS) return;
+
+    const filesWithStats = await Promise.all(
+      jsonFiles.map(async (file) => {
+        const stats = await fs.promises.stat(path.join(backupDir, file));
+        return { file, mtime: stats.mtime };
+      }),
+    );
+    const sorted = filesWithStats.sort(
+      (a, b) => a.mtime.getTime() - b.mtime.getTime(),
+    );
+    const toDelete = sorted.slice(
+      0,
+      sorted.length - AdminSystemService.MAX_BACKUPS,
+    );
+    for (const { file } of toDelete) {
+      try {
+        await fs.promises.unlink(path.join(backupDir, file));
+        this.logger.log(`Rotated old backup: ${file}`);
+      } catch (err) {
+        this.logger.warn(`Failed to delete old backup ${file}:`, err);
+      }
+    }
   }
 
   async listBackups(): Promise<

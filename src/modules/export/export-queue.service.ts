@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ExportService } from './export.service';
 
@@ -14,8 +15,10 @@ export interface ExportJob {
   locale?: string;
   status: 'queued' | 'processing' | 'done' | 'error';
   error?: string;
-  /** Serialized file content as a Buffer, available when status = 'done' */
+  /** Serialized file content as a Buffer, available when status = 'done' (CSV/Excel) */
   result?: Buffer;
+  /** Temp file path for PDF — streamed to avoid holding in memory */
+  resultPath?: string;
   contentType?: string;
   filename?: string;
   queuedAt: Date;
@@ -44,26 +47,50 @@ export interface ExportJob {
  * - Retry logic
  * - Job history & monitoring (Bull Board UI)
  */
+const SHUTDOWN_WAIT_MS = 30_000;
+
 @Injectable()
 export class ExportQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(ExportQueueService.name);
   private readonly jobs = new Map<string, ExportJob>();
   private readonly cleanupTimeouts = new Map<string, NodeJS.Timeout>();
+  private readonly runningJobPromises = new Set<Promise<void>>();
   private readonly MAX_CONCURRENT = 3;
   private running = 0;
   private pending: Array<() => void> = [];
 
   constructor(private readonly exportService: ExportService) {}
 
-  onModuleDestroy() {
+  async onModuleDestroy() {
     for (const id of this.cleanupTimeouts.keys()) {
       const t = this.cleanupTimeouts.get(id);
       if (t) clearTimeout(t);
     }
     this.cleanupTimeouts.clear();
-    this.jobs.clear();
-    for (const resolve of this.pending) resolve();
+    // Do NOT resolve pending — that would start new jobs during shutdown
     this.pending = [];
+
+    if (this.runningJobPromises.size > 0) {
+      this.logger.log(
+        `Waiting up to ${SHUTDOWN_WAIT_MS / 1000}s for ${this.runningJobPromises.size} export job(s) to complete`,
+      );
+      await Promise.race([
+        Promise.all([...this.runningJobPromises]),
+        new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_WAIT_MS)),
+      ]);
+    }
+    for (const job of this.jobs.values()) {
+      this.cleanupJob(job);
+    }
+    this.jobs.clear();
+  }
+
+  private cleanupJob(job: ExportJob): void {
+    if (job.resultPath) {
+      fs.unlink(job.resultPath, () => {
+        // ignore errors (file may already be deleted)
+      });
+    }
   }
 
   /**
@@ -94,12 +121,18 @@ export class ExportQueueService implements OnModuleDestroy {
 
     this.jobs.set(job.id, job);
 
-    // Kick off asynchronously — do NOT await
-    void this.runJob(job, user);
+    const promise = this.runJob(job, user);
+    this.runningJobPromises.add(promise);
+    promise
+      .catch((err) =>
+        this.logger.error(`Export job ${job.id} unhandled error`, err),
+      )
+      .finally(() => this.runningJobPromises.delete(promise));
 
     // Auto-clean after 10 minutes to prevent memory leak
     const timeoutId = setTimeout(
       () => {
+        this.cleanupJob(job);
         this.jobs.delete(job.id);
         this.cleanupTimeouts.delete(job.id);
       },
@@ -128,10 +161,11 @@ export class ExportQueueService implements OnModuleDestroy {
     job.startedAt = new Date();
 
     try {
-      const buffer = await this.generate(job, user);
-      job.result = buffer.data;
-      job.contentType = buffer.contentType;
-      job.filename = buffer.filename;
+      const output = await this.generate(job, user);
+      job.result = output.data;
+      job.resultPath = output.filePath;
+      job.contentType = output.contentType;
+      job.filename = output.filename;
       job.status = 'done';
       job.completedAt = new Date();
       const ms = job.completedAt.getTime() - (job.startedAt?.getTime() ?? 0);
@@ -152,7 +186,12 @@ export class ExportQueueService implements OnModuleDestroy {
   private async generate(
     job: ExportJob,
     user: JwtUser,
-  ): Promise<{ data: Buffer; contentType: string; filename: string }> {
+  ): Promise<{
+    data?: Buffer;
+    filePath?: string;
+    contentType: string;
+    filename: string;
+  }> {
     const date = new Date().toISOString().split('T')[0];
 
     if (job.type === 'csv') {
@@ -183,13 +222,13 @@ export class ExportQueueService implements OnModuleDestroy {
     }
 
     if (job.type === 'pdf') {
-      const data = await this.exportService.exportAnalyticsToBuffer(
+      const filePath = await this.exportService.exportAnalyticsToFile(
         job.masterId,
         user,
         job.locale ?? 'en',
       );
       return {
-        data,
+        filePath,
         contentType: 'application/pdf',
         filename: `analytics_${date}.pdf`,
       };

@@ -10,20 +10,29 @@ interface PoolConnectClient {
       setKeepAlive?: (enable: boolean, initialDelayMs: number) => void;
     };
   };
+  query?: (sql: string) => Promise<unknown>;
 }
 
 interface PgPool {
   on(event: 'connect', listener: (client: PoolConnectClient) => void): void;
+  removeAllListeners?: (event?: string) => void;
   end(): Promise<void>;
 }
 
+const STATEMENT_TIMEOUT_MS = 60_000; // 60s max per query to prevent pool exhaustion
+
 function attachKeepAliveToPool(pool: PgPool): void {
-  // TCP keepAlive so idle connections aren't dropped by network/load balancers
   pool.on('connect', (client) => {
     try {
       client.connection?.stream?.setKeepAlive?.(true, 60_000);
     } catch {
       // ignore keepalive setup errors
+    }
+    // Limit query duration to prevent long-running queries from exhausting the pool
+    if (typeof client.query === 'function') {
+      void client
+        .query(`SET statement_timeout = '${STATEMENT_TIMEOUT_MS}'`)
+        .catch(() => {});
     }
   });
 }
@@ -51,6 +60,7 @@ async function closePgPool(pool: PgPool | undefined): Promise<void> {
   }
 
   try {
+    pool.removeAllListeners?.();
     await pool.end();
   } catch {
     // ignore pool end errors

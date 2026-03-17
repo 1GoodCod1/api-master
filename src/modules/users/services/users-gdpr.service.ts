@@ -17,6 +17,8 @@ import type {
   PersonalDataPdfNotification,
 } from './personal-data-pdf.builder';
 
+const GDPR_PAGE_SIZE = 500;
+
 @Injectable()
 export class UsersGdprService {
   private readonly logger = new Logger(UsersGdprService.name);
@@ -101,42 +103,15 @@ export class UsersGdprService {
     const masterId = masterProfile?.id;
     const isMaster = user.role === 'MASTER' && masterId;
 
+    const leadWhere = isMaster ? { masterId } : { clientId: userId };
+    const reviewWhere = isMaster ? { masterId } : { clientId: userId };
+    const bookingWhere = isMaster ? { masterId } : { clientId: userId };
+
     const [leads, reviews, bookings, loginHistory, notifications] =
       await Promise.all([
-        this.prisma.lead.findMany({
-          where: isMaster ? { masterId } : { clientId: userId },
-          select: {
-            message: true,
-            clientPhone: true,
-            clientName: true,
-            status: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.review.findMany({
-          where: isMaster ? { masterId } : { clientId: userId },
-          select: {
-            rating: true,
-            comment: true,
-            clientPhone: true,
-            clientName: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.booking.findMany({
-          where: isMaster ? { masterId } : { clientId: userId },
-          select: {
-            clientPhone: true,
-            clientName: true,
-            startTime: true,
-            endTime: true,
-            status: true,
-            createdAt: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
+        this.fetchLeadsPaginated(leadWhere),
+        this.fetchReviewsPaginated(reviewWhere),
+        this.fetchBookingsPaginated(bookingWhere),
         this.prisma.loginHistory.findMany({
           where: { userId },
           select: {
@@ -240,6 +215,116 @@ export class UsersGdprService {
       loginHistory: pdfLoginHistory,
       notifications: pdfNotifications,
     };
+  }
+
+  private async fetchLeadsPaginated(
+    where: { masterId: string } | { clientId: string },
+  ) {
+    const results: Array<{
+      message: string;
+      clientPhone: string;
+      clientName: string | null;
+      status: string;
+      createdAt: Date;
+    }> = [];
+    let cursor: { id: string } | undefined;
+
+    do {
+      const batch = await this.prisma.lead.findMany({
+        take: GDPR_PAGE_SIZE,
+        ...(cursor ? { cursor, skip: 1 } : {}),
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        select: {
+          message: true,
+          clientPhone: true,
+          clientName: true,
+          status: true,
+          createdAt: true,
+          id: true,
+        },
+      });
+      results.push(...batch.map(({ id: _id, ...r }) => r));
+      const last = batch[batch.length - 1];
+      cursor =
+        batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
+    } while (cursor);
+
+    return results;
+  }
+
+  private async fetchReviewsPaginated(
+    where: { masterId: string } | { clientId: string },
+  ) {
+    const results: Array<{
+      rating: number;
+      comment: string | null;
+      clientPhone: string;
+      clientName: string | null;
+      createdAt: Date;
+    }> = [];
+    let cursor: { id: string } | undefined;
+
+    do {
+      const batch = await this.prisma.review.findMany({
+        take: GDPR_PAGE_SIZE,
+        ...(cursor ? { cursor, skip: 1 } : {}),
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        select: {
+          rating: true,
+          comment: true,
+          clientPhone: true,
+          clientName: true,
+          createdAt: true,
+          id: true,
+        },
+      });
+      results.push(...batch.map(({ id: _id, ...r }) => r));
+      const last = batch[batch.length - 1];
+      cursor =
+        batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
+    } while (cursor);
+
+    return results;
+  }
+
+  private async fetchBookingsPaginated(
+    where: { masterId: string } | { clientId: string },
+  ) {
+    const results: Array<{
+      clientPhone: string;
+      clientName: string | null;
+      startTime: Date;
+      endTime: Date;
+      status: string;
+      createdAt: Date;
+    }> = [];
+    let cursor: { id: string } | undefined;
+
+    do {
+      const batch = await this.prisma.booking.findMany({
+        take: GDPR_PAGE_SIZE,
+        ...(cursor ? { cursor, skip: 1 } : {}),
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        select: {
+          clientPhone: true,
+          clientName: true,
+          startTime: true,
+          endTime: true,
+          status: true,
+          createdAt: true,
+          id: true,
+        },
+      });
+      results.push(...batch.map(({ id: _id, ...r }) => r));
+      const last = batch[batch.length - 1];
+      cursor =
+        batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
+    } while (cursor);
+
+    return results;
   }
 
   private async invalidateCache(userId: string) {

@@ -86,7 +86,7 @@ export class TelegramConnectService {
       void this.sendTelegramReply(
         chatId,
         'Привет! Нажмите «Подключить Telegram» в настройках уведомлений на сайте, затем перейдите по полученной ссылке.',
-      );
+      ).catch((e) => this.logger.warn('sendTelegramReply failed', e));
       return;
     }
 
@@ -102,7 +102,7 @@ export class TelegramConnectService {
       void this.sendTelegramReply(
         chatId,
         'Ссылка недействительна или уже использована. Получите новую ссылку в настройках уведомлений.',
-      );
+      ).catch((e) => this.logger.warn('sendTelegramReply failed', e));
       return;
     }
 
@@ -113,7 +113,7 @@ export class TelegramConnectService {
       void this.sendTelegramReply(
         chatId,
         'Ссылка истекла. Получите новую ссылку в настройках уведомлений.',
-      );
+      ).catch((e) => this.logger.warn('sendTelegramReply failed', e));
       return;
     }
 
@@ -131,7 +131,7 @@ export class TelegramConnectService {
     void this.sendTelegramReply(
       chatId,
       '✅ Telegram подключен! Теперь вы будете получать уведомления о новых заявках здесь.',
-    );
+    ).catch((e) => this.logger.warn('sendTelegramReply failed', e));
   }
 
   private async sendTelegramReply(chatId: string, text: string): Promise<void> {

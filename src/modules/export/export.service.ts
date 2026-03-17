@@ -9,6 +9,10 @@ import { getEffectiveTariff } from '../../common/helpers/plans';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { randomUUID } from 'crypto';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { buildAnalyticsPdf } from './analytics-pdf-builder';
 
@@ -651,6 +655,100 @@ export class ExportService {
         throw err;
       }
       this.logger.error('exportAnalyticsToBuffer failed', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Generate analytics PDF by streaming to a temp file.
+   * Avoids holding the full PDF in memory — use for large reports.
+   * Caller must delete the file after use.
+   */
+  async exportAnalyticsToFile(
+    masterId: string,
+    user: JwtUser,
+    locale: string = 'en',
+  ): Promise<string> {
+    const filePath = path.join(
+      os.tmpdir(),
+      `export-analytics-${randomUUID()}.pdf`,
+    );
+    const writeStream = fs.createWriteStream(filePath);
+
+    try {
+      await this.validateExportAccess(masterId, user);
+
+      const master = await this.prisma.master.findUnique({
+        where: { id: masterId },
+        include: { user: true, category: true, city: true },
+      });
+      if (!master) throw new BadRequestException('Master not found');
+
+      const [leadsStats, reviewsStats, bookingsStats, analytics] =
+        await Promise.all([
+          this.prisma.lead.groupBy({
+            by: ['status'],
+            where: { masterId },
+            _count: true,
+          }),
+          this.prisma.review.groupBy({
+            by: ['status'],
+            where: { masterId },
+            _count: true,
+          }),
+          this.prisma.booking.groupBy({
+            by: ['status'],
+            where: { masterId },
+            _count: true,
+          }),
+          this.prisma.masterAnalytics.findMany({
+            where: { masterId },
+            orderBy: { date: 'desc' },
+            take: 30,
+          }),
+        ]);
+
+      const pdfData = {
+        masterName:
+          `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() ||
+          'Master',
+        categoryName: master.category?.name ?? '',
+        cityName: master.city?.name ?? '',
+        rating: master.rating,
+        totalReviews: master.totalReviews ?? 0,
+        totalLeads: master.leadsCount ?? 0,
+        leadsStats,
+        reviewsStats,
+        bookingsStats,
+        analytics: analytics.map((a) => ({
+          date: a.date,
+          leadsCount: a.leadsCount ?? 0,
+          viewsCount: a.viewsCount ?? 0,
+        })),
+      };
+
+      await new Promise<void>((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 });
+        doc.pipe(writeStream);
+        doc.on('error', reject);
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+        buildAnalyticsPdf(doc, pdfData, locale);
+        doc.end();
+      });
+
+      return filePath;
+    } catch (err) {
+      writeStream.destroy();
+      try {
+        await fs.promises.unlink(filePath);
+      } catch {
+        // ignore cleanup errors
+      }
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      this.logger.error('exportAnalyticsToFile failed', err);
       throw err;
     }
   }

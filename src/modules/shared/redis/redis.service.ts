@@ -214,6 +214,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     this.isDestroyed = true;
     try {
+      this.client.removeAllListeners();
       await this.client.quit().catch(() => {});
     } catch {
       this.logger.debug('Redis connection closed');

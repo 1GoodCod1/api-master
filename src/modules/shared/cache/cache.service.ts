@@ -35,7 +35,7 @@ export class CacheService {
     try {
       await this.redis.set(key, value, ttl || this.defaultTTL);
       // Register key in pattern set for O(members) invalidation (no SCAN needed)
-      void this.registerKeyInSet(key);
+      void this.registerKeyInSet(key).catch(() => {});
     } catch (error) {
       this.logger.error(`Cache set error for key ${key}:`, error);
       // Fail silently, don't break the application
@@ -178,7 +178,7 @@ export class CacheService {
         try {
           const value = await fetchFn();
           await this.redis.set(key, value, ttl || this.defaultTTL);
-          void this.registerKeyInSet(key); // track for set-based invalidation
+          void this.registerKeyInSet(key).catch(() => {}); // track for set-based invalidation
           return value;
         } catch (error) {
           lastError = error;

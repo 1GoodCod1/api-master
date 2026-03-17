@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsService } from './notifications.service';
@@ -60,7 +60,7 @@ import { WebPushModule } from '../web-push/web-push.module';
     ConfigModule,
     PrismaModule,
     RedisModule,
-    forwardRef(() => WebSocketModule),
+    WebSocketModule,
     WebPushModule,
   ],
   controllers: [NotificationsController, TelegramWebhookController],

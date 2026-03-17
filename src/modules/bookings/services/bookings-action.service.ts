@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -21,6 +22,8 @@ const VALID_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
 
 @Injectable()
 export class BookingsActionService {
+  private readonly logger = new Logger(BookingsActionService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly validation: BookingsValidationService,
@@ -95,15 +98,19 @@ export class BookingsActionService {
       },
     });
 
-    void this.leadSync.updateLeadStatusOnCreate(resolved.resolvedLeadId);
-    void this.notifications.notifyBookingConfirmed(
-      masterId,
-      master,
-      resolved.resolvedClientId,
-      resolved.resolvedName,
-      start,
-      booking.id,
-    );
+    void this.leadSync
+      .updateLeadStatusOnCreate(resolved.resolvedLeadId)
+      .catch((e) => this.logger.error('updateLeadStatusOnCreate failed', e));
+    void this.notifications
+      .notifyBookingConfirmed(
+        masterId,
+        master,
+        resolved.resolvedClientId,
+        resolved.resolvedName,
+        start,
+        booking.id,
+      )
+      .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
 
     return booking;
   }
@@ -165,9 +172,13 @@ export class BookingsActionService {
       },
     });
 
-    void this.leadSync.updateLeadOnStatusChange(booking, newStatus);
+    void this.leadSync
+      .updateLeadOnStatusChange(booking, newStatus)
+      .catch((e) => this.logger.error('updateLeadOnStatusChange failed', e));
     if (newStatus === 'CANCELLED') {
-      void this.notifications.notifyBookingCancelled(booking);
+      void this.notifications
+        .notifyBookingCancelled(booking)
+        .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
     }
 
     return updated;

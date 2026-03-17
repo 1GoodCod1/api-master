@@ -9,6 +9,7 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -20,6 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import * as fs from 'fs';
+import { stat } from 'fs/promises';
 import { ExportService } from './export.service';
 import { ExportQueueService } from './export-queue.service';
 import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
@@ -33,6 +36,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Roles('MASTER', 'ADMIN')
 @ApiBearerAuth()
 export class ExportController {
+  private readonly logger = new Logger(ExportController.name);
+
   constructor(
     private readonly exportService: ExportService,
     private readonly exportQueue: ExportQueueService,
@@ -132,7 +137,7 @@ export class ExportController {
   @ApiOperation({ summary: 'Download completed export file' })
   @ApiResponse({ status: 200, description: 'File download' })
   @ApiResponse({ status: 404, description: 'Job not found or not ready' })
-  downloadExport(
+  async downloadExport(
     @Param('jobId') jobId: string,
     @Res() res: Response,
     @Req() req: RequestWithUser,
@@ -142,7 +147,7 @@ export class ExportController {
     if (job.userId !== req.user.id && req.user.role !== 'ADMIN') {
       throw new NotFoundException('Job not found'); // Don't leak job existence to other users
     }
-    if (job.status !== 'done' || !job.result) {
+    if (job.status !== 'done' || (!job.result && !job.resultPath)) {
       throw new BadRequestException(
         `Export not ready yet. Status: ${job.status}`,
       );
@@ -152,8 +157,22 @@ export class ExportController {
       'Content-Disposition',
       `attachment; filename="${job.filename}"`,
     );
-    res.setHeader('Content-Length', job.result.length);
-    res.end(job.result);
+    if (job.resultPath) {
+      const stats = await stat(job.resultPath);
+      res.setHeader('Content-Length', stats.size);
+      const stream = fs.createReadStream(job.resultPath);
+      stream.on('error', (err) => {
+        this.logger.error('Export file stream error', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to read export file' });
+        }
+        stream.destroy();
+      });
+      stream.pipe(res);
+    } else {
+      res.setHeader('Content-Length', job.result!.length);
+      res.end(job.result);
+    }
   }
 
   // ============================================================================
