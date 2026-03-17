@@ -8,6 +8,15 @@
 #
 # Dokploy: добавьте переменные из .env.production.example в Environment tab.
 # Dokploy сохраняет их в .env, compose подхватывает через env_file: .env
+#
+# Порты Postgres (5433), PgBouncer (6432), Prometheus (9091), Grafana (3002)
+# по умолчанию привязаны к 127.0.0.1 — доступ только с самого сервера (localhost).
+# API и контейнеры общаются внутри Docker-сети: postgres:5432, redis:6379 и т.д.
+# Для доступа снаружи (отладка, Grafana в браузере): в .env добавьте:
+#   PORT_POSTGRES=5433:5432
+#   PORT_PGBOUNCER=6432:6432
+#   PORT_PROMETHEUS=9091:9090
+#   PORT_GRAFANA=3002:3000
 # =============================================================================
 
 services:
@@ -20,7 +29,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}
       TZ: Europe/Chisinau
     ports:
-      - "5433:5432"
+      - "${PORT_POSTGRES:-127.0.0.1:5433:5432}"
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
       - ./docker/backups:/backups
@@ -42,7 +51,7 @@ services:
       - DEFAULT_POOL_SIZE=100
       - IGNORE_STARTUP_PARAMETERS=extra_float_digits
     ports:
-      - "6432:6432"
+      - "${PORT_PGBOUNCER:-127.0.0.1:6432:6432}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -279,7 +288,7 @@ services:
     image: prom/prometheus:latest
     container_name: masterhub-prometheus-prod
     ports:
-      - "9091:9090"
+      - "${PORT_PROMETHEUS:-127.0.0.1:9091:9090}"
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_prod_data:/prometheus
@@ -291,7 +300,7 @@ services:
     image: grafana/grafana:latest
     container_name: masterhub-grafana-prod
     ports:
-      - "3002:3000"
+      - "${PORT_GRAFANA:-127.0.0.1:3002:3000}"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-CHANGE_THIS_PASSWORD}
       GF_SERVER_ROOT_URL: https://monitoring.your-domain.com

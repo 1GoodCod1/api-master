@@ -341,6 +341,8 @@ npm run docker:prod:logs     # Логи
 | `npm run generate:secrets` | Генерация JWT-секретов |
 | `npm run backup` | Бэкап БД |
 | `npm run restore` | Восстановление БД |
+| `npm run update:deps` | Обновить зависимости (npm-check-updates) |
+| `npm run update:deps:check` | Показать доступные обновления без изменений |
 
 </details>
 

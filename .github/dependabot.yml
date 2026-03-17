@@ -7,8 +7,6 @@ updates:
       day: "monday"
       time: "03:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "your-team"
     labels:
       - "dependencies"
       - "backend"
@@ -33,8 +31,6 @@ updates:
       day: "monday"
       time: "03:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "your-team"
     labels:
       - "dependencies"
       - "ci/cd"
@@ -48,8 +44,6 @@ updates:
       day: "monday"
       time: "03:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "your-team"
     labels:
       - "dependencies"
       - "docker"

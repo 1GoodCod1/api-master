@@ -7,6 +7,7 @@ package-lock.json
 !.env.example
 !.env.docker.example
 !.env.production.example
+.env.dockploy.example
 *.log
 
 # --- IDE & Editors ---
