@@ -9,6 +9,7 @@ import { TokenService } from './services/token.service';
 import { RegistrationService } from './services/registration.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { LoginService } from './services/login.service';
+import { USER_PROFILE_SELECT } from './constants/profile-select.constant';
 
 @Injectable()
 export class AuthService {
@@ -70,67 +71,29 @@ export class AuthService {
 
   async getProfile(userId: string) {
     try {
-      const cacheKey = this.cache.keys.userProfile(userId);
-
       return this.cache.getOrSet(
-        cacheKey,
-        async () => {
-          const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-              id: true,
-              email: true,
-              phone: true,
-              firstName: true,
-              lastName: true,
-              role: true,
-              isVerified: true,
-              phoneVerified: true,
-              isBanned: true,
-              lastLoginAt: true,
-              createdAt: true,
-              updatedAt: true,
-              avatarFile: {
-                select: {
-                  id: true,
-                  path: true,
-                  filename: true,
-                },
-              },
-              masterProfile: {
-                select: {
-                  id: true,
-                  tariffType: true,
-                  tariffExpiresAt: true,
-                  avatarFile: {
-                    select: {
-                      id: true,
-                      path: true,
-                      filename: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          if (!user) {
-            throw new NotFoundException('User not found');
-          }
-
-          return {
-            user,
-          };
-        },
+        this.cache.keys.userProfile(userId),
+        () => this.fetchUserProfile(userId),
         this.cache.ttl.userProfile,
       );
     } catch (err) {
-      if (err instanceof NotFoundException) {
-        throw err;
-      }
+      if (err instanceof NotFoundException) throw err;
       this.logger.error('getProfile failed', err);
       throw err;
     }
+  }
+
+  private async fetchUserProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: USER_PROFILE_SELECT,
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return { user };
   }
 
   async invalidateUserCache(userId: string) {

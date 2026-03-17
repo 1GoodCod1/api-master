@@ -9,8 +9,6 @@ import {
   Query,
   UseGuards,
   Req,
-  BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -76,9 +74,9 @@ export class ReviewsController {
   ) {
     return this.reviewsService.findAllForMaster(masterId, {
       status,
-      limit: limit ? Math.min(100, Math.max(1, Number(limit) || 20)) : 20,
+      limit,
       cursor,
-      page: page ? Number(page) : undefined,
+      page,
       sortOrder,
     });
   }
@@ -92,11 +90,7 @@ export class ReviewsController {
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
   ) {
-    const resolvedMasterId =
-      req.user.role === 'ADMIN' ? masterId : req.user.masterProfile?.id;
-    if (!resolvedMasterId)
-      throw new ForbiddenException('Master profile not found');
-    return this.reviewsService.getStats(resolvedMasterId);
+    return this.reviewsService.getStatsForUser(masterId, req.user);
   }
 
   @Put(':id/status')
@@ -109,12 +103,11 @@ export class ReviewsController {
     @Body() updateDto: UpdateReviewStatusDto,
     @Req() req: RequestWithUser,
   ) {
-    const statusEnum = updateDto.status.toUpperCase() as ReviewStatus;
-    if (!Object.values(ReviewStatus).includes(statusEnum)) {
-      throw new BadRequestException(`Invalid status: ${updateDto.status}`);
-    }
-
-    return this.reviewsService.updateReviewStatus(id, statusEnum, req.user.id);
+    return this.reviewsService.updateReviewStatus(
+      id,
+      updateDto.status,
+      req.user.id,
+    );
   }
 
   @Get('my-reviews')
@@ -133,14 +126,7 @@ export class ReviewsController {
     @Query('cursor') cursor?: string,
     @Query('page') page?: string,
   ) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.reviewsService.findAllForMaster(masterId, {
-      statusIn: [ReviewStatus.PENDING, ReviewStatus.VISIBLE],
-      limit: limit ? Math.min(100, Math.max(1, Number(limit) || 20)) : 20,
-      cursor,
-      page: page ? Number(page) : undefined,
-    });
+    return this.reviewsService.getMyReviews(req.user, { limit, cursor, page });
   }
 
   // ============================================
@@ -158,9 +144,7 @@ export class ReviewsController {
     @Body() dto: CreateReviewReplyDto,
     @Req() req: RequestWithUser,
   ) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.reviewsService.replyToReview(id, masterId, dto.content);
+    return this.reviewsService.replyToReview(id, req.user, dto.content);
   }
 
   @Delete(':id/reply')
@@ -169,9 +153,7 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete reply to a review' })
   async deleteReply(@Param('id') id: string, @Req() req: RequestWithUser) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.reviewsService.deleteReply(id, masterId);
+    return this.reviewsService.deleteReply(id, req.user);
   }
 
   // ============================================

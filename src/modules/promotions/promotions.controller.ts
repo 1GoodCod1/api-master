@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
   Req,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,9 +38,7 @@ export class PromotionsController {
   @ApiOperation({ summary: 'Get all active promotions (public)' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getActivePromotions(@Query('limit') limit?: string) {
-    return this.promotionsService.findActivePromotions(
-      limit ? parseInt(limit, 10) : 10,
-    );
+    return this.promotionsService.findActivePromotions(limit);
   }
 
   @Get('master/:masterId')
@@ -57,9 +54,7 @@ export class PromotionsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my promotions' })
   async getMyPromotions(@Req() req: RequestWithUser) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.promotionsService.findMyPromotions(masterId);
+    return this.promotionsService.findMyPromotionsForUser(req.user);
   }
 
   @Post()
@@ -70,9 +65,7 @@ export class PromotionsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a promotion (PREMIUM only)' })
   async create(@Body() dto: CreatePromotionDto, @Req() req: RequestWithUser) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.promotionsService.create(masterId, dto);
+    return this.promotionsService.createForUser(req.user, dto);
   }
 
   @Put(':id')
@@ -87,9 +80,7 @@ export class PromotionsController {
     @Body() dto: UpdatePromotionDto,
     @Req() req: RequestWithUser,
   ) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.promotionsService.update(id, masterId, dto);
+    return this.promotionsService.updateForUser(id, req.user, dto);
   }
 
   @Delete(':id')
@@ -100,8 +91,6 @@ export class PromotionsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a promotion (PREMIUM only)' })
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
-    const masterId = req.user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
-    return this.promotionsService.remove(id, masterId);
+    return this.promotionsService.removeForUser(id, req.user);
   }
 }

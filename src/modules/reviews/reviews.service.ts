@@ -1,9 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ReviewsActionService } from './services/reviews-action.service';
 import { ReviewsQueryService } from './services/reviews-query.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewStatus } from '@prisma/client';
+
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+export interface FindReviewsOptions {
+  status?: string;
+  statusIn?: ReviewStatus[];
+  limit?: string;
+  cursor?: string;
+  page?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 /**
  * ReviewsService — координатор модуля отзывов.
@@ -28,30 +44,24 @@ export class ReviewsService {
   }
 
   /**
-   * Получить список всех отзывов мастера с cursor-based пагинацией
+   * Получить список всех отзывов мастера с cursor-based пагинацией.
+   * Парсит limit/page из query-параметров.
    */
-  async findAllForMaster(
-    masterId: string,
-    options: {
-      status?: string;
-      statusIn?: ReviewStatus[];
-      limit?: number;
-      cursor?: string;
-      page?: number;
-      sortOrder?: 'asc' | 'desc';
-    } = {},
-  ) {
-    return this.queryService.findAllForMaster(masterId, options);
+  async findAllForMaster(masterId: string, options: FindReviewsOptions = {}) {
+    const { limit, page, ...rest } = options;
+    return this.queryService.findAllForMaster(masterId, {
+      ...rest,
+      limit: this.parseLimit(limit),
+      page: this.parsePage(page),
+    });
   }
 
   /**
-   * Обновить статус отзыва (подтвердить, скрыть и т.д.)
+   * Обновить статус отзыва (подтвердить, скрыть и т.д.).
+   * Валидирует и нормализует статус.
    */
-  async updateReviewStatus(
-    id: string,
-    status: ReviewStatus,
-    moderatedBy?: string,
-  ) {
+  async updateReviewStatus(id: string, statusRaw: string, moderatedBy: string) {
+    const status = this.parseAndValidateStatus(statusRaw);
     return this.actionService.updateStatus(id, status, moderatedBy);
   }
 
@@ -63,10 +73,33 @@ export class ReviewsService {
   }
 
   /**
-   * Получить общую статистику отзывов
+   * Получить статистику отзывов.
+   * ADMIN может запросить любого мастера, MASTER — только своего.
    */
-  async getStats(masterId: string) {
-    return this.queryService.getStats(masterId);
+  async getStatsForUser(masterId: string, user: JwtUser) {
+    const resolvedMasterId =
+      user.role === 'ADMIN' ? masterId : user.masterProfile?.id;
+    if (!resolvedMasterId) {
+      throw new ForbiddenException('Master profile not found');
+    }
+    return this.queryService.getStats(resolvedMasterId);
+  }
+
+  /**
+   * Получить отзывы для авторизованного мастера (его собственные).
+   */
+  async getMyReviews(user: JwtUser, options: FindReviewsOptions = {}) {
+    const masterId = user.masterProfile?.id;
+    if (!masterId) {
+      throw new BadRequestException('Master profile not found');
+    }
+    const { limit, page, ...rest } = options;
+    return this.queryService.findAllForMaster(masterId, {
+      ...rest,
+      statusIn: [ReviewStatus.PENDING, ReviewStatus.VISIBLE],
+      limit: this.parseLimit(limit),
+      page: this.parsePage(page),
+    });
   }
 
   /**
@@ -81,16 +114,24 @@ export class ReviewsService {
   // ============================================
 
   /**
-   * Ответить на отзыв (мастер)
+   * Ответить на отзыв (мастер). Извлекает masterId из контекста пользователя.
    */
-  async replyToReview(reviewId: string, masterId: string, content: string) {
+  async replyToReview(reviewId: string, user: JwtUser, content: string) {
+    const masterId = user.masterProfile?.id;
+    if (!masterId) {
+      throw new BadRequestException('Master profile not found');
+    }
     return this.actionService.replyToReview(reviewId, masterId, content);
   }
 
   /**
-   * Удалить ответ на отзыв
+   * Удалить ответ на отзыв. Извлекает masterId из контекста пользователя.
    */
-  async deleteReply(reviewId: string, masterId: string) {
+  async deleteReply(reviewId: string, user: JwtUser) {
+    const masterId = user.masterProfile?.id;
+    if (!masterId) {
+      throw new BadRequestException('Master profile not found');
+    }
     return this.actionService.deleteReply(reviewId, masterId);
   }
 
@@ -110,5 +151,29 @@ export class ReviewsService {
    */
   async removeVote(reviewId: string, userId: string) {
     return this.actionService.removeVote(reviewId, userId);
+  }
+
+  // ============================================
+  // PRIVATE HELPERS
+  // ============================================
+
+  private parseLimit(limit?: string): number {
+    if (!limit) return DEFAULT_LIMIT;
+    const num = Number(limit) || DEFAULT_LIMIT;
+    return Math.min(MAX_LIMIT, Math.max(1, num));
+  }
+
+  private parsePage(page?: string): number | undefined {
+    if (!page) return undefined;
+    const num = Number(page);
+    return Number.isNaN(num) ? undefined : num;
+  }
+
+  private parseAndValidateStatus(statusRaw: string): ReviewStatus {
+    const status = statusRaw.toUpperCase() as ReviewStatus;
+    if (!Object.values(ReviewStatus).includes(status)) {
+      throw new BadRequestException(`Invalid status: ${statusRaw}`);
+    }
+    return status;
   }
 }

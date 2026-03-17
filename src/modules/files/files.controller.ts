@@ -42,7 +42,7 @@ export class FilesController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUser,
   ) {
-    return this.filesService.uploadFile(file, req.user.id);
+    return this.filesService.uploadFileForUser(file, req.user);
   }
 
   @Post('upload-many')
@@ -56,10 +56,10 @@ export class FilesController {
     @Req() req: RequestWithOptionalUser,
     @Query('forLead') forLead?: string,
   ) {
-    const userId = req.user?.id ?? null;
-    const skipClientGallery = forLead === 'true' || forLead === '1';
-    return this.filesService.uploadMany(files, userId, {
-      skipClientGallery,
-    });
+    return this.filesService.uploadManyForUser(
+      files,
+      req.user ?? null,
+      forLead,
+    );
   }
 }

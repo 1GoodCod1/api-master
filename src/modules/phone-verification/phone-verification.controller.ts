@@ -28,7 +28,7 @@ export class PhoneVerificationController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async sendCode(@GetUser() user: JwtUser) {
-    return this.phoneVerificationService.sendVerificationCode(user.id);
+    return this.phoneVerificationService.sendVerificationCodeForUser(user);
   }
 
   @Post('verify')
@@ -38,7 +38,7 @@ export class PhoneVerificationController {
   @ApiResponse({ status: 200, description: 'Phone verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid code' })
   async verify(@GetUser() user: JwtUser, @Body() dto: VerifyCodeDto) {
-    return this.phoneVerificationService.verifyCode(user.id, dto.code);
+    return this.phoneVerificationService.verifyCodeForUser(user, dto.code);
   }
 
   @Get('status')
@@ -47,6 +47,6 @@ export class PhoneVerificationController {
   @ApiOperation({ summary: 'Get phone verification status' })
   @ApiResponse({ status: 200, description: 'Verification status retrieved' })
   async getStatus(@GetUser() user: JwtUser) {
-    return this.phoneVerificationService.getVerificationStatus(user.id);
+    return this.phoneVerificationService.getVerificationStatusForUser(user);
   }
 }

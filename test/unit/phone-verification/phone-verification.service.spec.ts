@@ -1,9 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PhoneVerificationService } from '../../../src/modules/phone-verification/phone-verification.service';
+import { PhoneVerificationActionService } from '../../../src/modules/phone-verification/services/phone-verification-action.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { EncryptionService } from '../../../src/modules/shared/utils/encryption.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 import type { ConfigService } from '@nestjs/config';
+import type { PhoneVerificationValidationService } from '../../../src/modules/phone-verification/services/phone-verification-validation.service';
 
 type PrismaPhoneVerificationMock = {
   user: { findUnique: jest.Mock; update: jest.Mock };
@@ -15,7 +16,7 @@ type PrismaPhoneVerificationMock = {
   $transaction: jest.Mock;
 };
 
-describe('PhoneVerificationService', () => {
+describe('PhoneVerificationActionService', () => {
   const prisma: PrismaPhoneVerificationMock = {
     user: {
       findUnique: jest.fn(),
@@ -48,7 +49,12 @@ describe('PhoneVerificationService', () => {
     },
   } as unknown as jest.Mocked<CacheService>;
 
-  let service: PhoneVerificationService;
+  const validationService = {
+    assertCanSendCode: jest.fn(),
+    assertCanVerifyCode: jest.fn(),
+  } as unknown as jest.Mocked<PhoneVerificationValidationService>;
+
+  let service: PhoneVerificationActionService;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -56,16 +62,19 @@ describe('PhoneVerificationService', () => {
       if (key === 'NODE_ENV') return 'development';
       return undefined as never;
     });
-    service = new PhoneVerificationService(
+    service = new PhoneVerificationActionService(
       prisma as unknown as PrismaService,
       encryption,
-      configService,
       cache,
+      configService,
+      validationService,
     );
   });
 
   it('throws NotFoundException when sending code for missing user', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
+    validationService.assertCanSendCode.mockRejectedValue(
+      new NotFoundException('User not found'),
+    );
 
     await expect(service.sendVerificationCode('u1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -73,16 +82,10 @@ describe('PhoneVerificationService', () => {
   });
 
   it('throws BadRequestException on wrong verification code and increments attempts', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'u1',
-      phoneVerified: false,
-      role: 'CLIENT',
-    } as never);
-    prisma.phoneVerification.findFirst.mockResolvedValue({
-      id: 'pv1',
-      code: 'hashed-correct',
-      attempts: 0,
-    } as never);
+    validationService.assertCanVerifyCode.mockResolvedValue({
+      user: { id: 'u1', phoneVerified: false, role: 'CLIENT' } as never,
+      verification: { id: 'pv1', code: 'hashed-correct', attempts: 0 } as never,
+    });
     encryption.hash.mockReturnValue('hashed-wrong');
     prisma.phoneVerification.update.mockResolvedValue({} as never);
 
@@ -98,16 +101,10 @@ describe('PhoneVerificationService', () => {
   });
 
   it('verifies code, updates user and invalidates cache', async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: 'u1',
-      phoneVerified: false,
-      role: 'CLIENT',
-    } as never);
-    prisma.phoneVerification.findFirst.mockResolvedValue({
-      id: 'pv1',
-      code: 'hashed-123456',
-      attempts: 0,
-    } as never);
+    validationService.assertCanVerifyCode.mockResolvedValue({
+      user: { id: 'u1', phoneVerified: false, role: 'CLIENT' } as never,
+      verification: { id: 'pv1', code: 'hashed-123456', attempts: 0 } as never,
+    });
     encryption.hash.mockReturnValue('hashed-123456');
     prisma.phoneVerification.update.mockResolvedValue({} as never);
     prisma.user.update.mockResolvedValue({} as never);
