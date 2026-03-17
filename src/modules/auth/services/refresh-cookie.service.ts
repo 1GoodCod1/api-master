@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 
@@ -18,6 +18,19 @@ export class RefreshCookieService {
     const days =
       this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
     return Math.max(86400, days * 24 * 60 * 60);
+  }
+
+  /**
+   * Возвращает refresh-токен или выбрасывает, если токена нет.
+   */
+  getTokenOrThrow(req: Request, bodyToken?: string): string {
+    const token = this.getToken(req, bodyToken);
+    if (!token) {
+      throw new UnauthorizedException(
+        'Refresh token required (cookie or body)',
+      );
+    }
+    return token;
   }
 
   /**
@@ -80,5 +93,31 @@ export class RefreshCookieService {
     const { refreshToken: _rt, ...rest } = payload;
     void _rt;
     return rest;
+  }
+
+  /**
+   * Устанавливает refresh-куку (если включено) и возвращает payload без refreshToken.
+   */
+  handleAuthSuccess<T extends { refreshToken?: string }>(
+    result: T,
+    res: Response,
+  ): Omit<T, 'refreshToken'> {
+    this.attachIfEnabled(res, result.refreshToken ?? '');
+    return this.stripRefreshFromPayload(result);
+  }
+
+  /**
+   * Логаут: получает токен, вызывает logoutFn при наличии, очищает куку.
+   */
+  async handleLogout(
+    req: Request,
+    res: Response,
+    bodyToken: string | undefined,
+    logoutFn: (token: string) => Promise<unknown>,
+  ): Promise<{ message: string }> {
+    const token = this.getToken(req, bodyToken);
+    if (token) await logoutFn(token);
+    this.clearIfEnabled(res);
+    return { message: 'Logged out successfully' };
   }
 }

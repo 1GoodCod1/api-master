@@ -63,7 +63,9 @@ export class VerificationActionService {
         );
       }
 
-      const encryptedDocNumber = this.encryption.encrypt(dto.documentNumber);
+      const encryptedDocNumber = await this.encryption.encrypt(
+        dto.documentNumber,
+      );
 
       const verification = await this.prisma.masterVerification.upsert({
         where: { masterId: user.masterProfile.id },

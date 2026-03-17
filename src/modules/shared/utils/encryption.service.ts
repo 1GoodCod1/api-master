@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { promisify } from 'util';
+
+const scryptAsync = promisify(crypto.scrypt);
 
 @Injectable()
 export class EncryptionService {
@@ -8,43 +11,39 @@ export class EncryptionService {
   private readonly keyLength = 32; // 256 bits
   private readonly ivLength = 16; // 128 bits
   private readonly tagLength = 16; // 128 bits
-  private encryptionKey: Buffer;
+  private readonly encryptionKeyPromise: Promise<Buffer>;
 
   constructor(private readonly configService: ConfigService) {
     let key = this.configService.get<string>('ENCRYPTION_KEY');
 
-    // В development режиме используем дефолтный ключ с предупреждением
     if (!key) {
       const nodeEnv = this.configService.get<string>('NODE_ENV');
-
       if (nodeEnv === 'production') {
         throw new Error('ENCRYPTION_KEY is not set in environment variables');
       }
-
-      // Дефолтный ключ для development (НЕ ИСПОЛЬЗОВАТЬ В ПРОДАКШН!)
       console.warn(
         '⚠️ WARNING: Using default ENCRYPTION_KEY for development. DO NOT USE IN PRODUCTION!',
       );
       key = 'development-key-change-this-in-production-32chars-minimum';
     }
 
-    // Создаем ключ из переменной окружения
-    this.encryptionKey = crypto.scryptSync(key, 'salt', this.keyLength);
+    this.encryptionKeyPromise = scryptAsync(
+      key,
+      'salt',
+      this.keyLength,
+    ) as Promise<Buffer>;
   }
 
   /**
    * Зашифровать текст
    */
-  encrypt(text: string): string {
+  async encrypt(text: string): Promise<string> {
     if (!text) return text;
 
     try {
+      const encryptionKey = await this.encryptionKeyPromise;
       const iv = crypto.randomBytes(this.ivLength);
-      const cipher = crypto.createCipheriv(
-        this.algorithm,
-        this.encryptionKey,
-        iv,
-      );
+      const cipher = crypto.createCipheriv(this.algorithm, encryptionKey, iv);
 
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
@@ -62,10 +61,11 @@ export class EncryptionService {
   /**
    * Расшифровать текст
    */
-  decrypt(encryptedText: string): string {
+  async decrypt(encryptedText: string): Promise<string> {
     if (!encryptedText) return encryptedText;
 
     try {
+      const encryptionKey = await this.encryptionKeyPromise;
       const parts = encryptedText.split(':');
       if (parts.length !== 3) {
         throw new Error('Invalid encrypted data format');
@@ -77,7 +77,7 @@ export class EncryptionService {
 
       const decipher = crypto.createDecipheriv(
         this.algorithm,
-        this.encryptionKey,
+        encryptionKey,
         iv,
       );
       decipher.setAuthTag(authTag);

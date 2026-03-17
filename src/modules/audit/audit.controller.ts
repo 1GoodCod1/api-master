@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,16 +9,17 @@ import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { UseGuards } from '@nestjs/common';
 
 @ApiTags('Audit')
 @Controller('audit')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
+@ApiBearerAuth()
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get('logs')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get audit logs (admin only)' })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'action', required: false })
@@ -33,57 +34,35 @@ export class AuditController {
     @Query('entityType') entityType?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @Query('page') page: string | number = 1,
-    @Query('limit') limit: string | number = 50,
+    @Query('page') page?: string | number,
+    @Query('limit') limit?: string | number,
   ) {
-    const filters: {
-      userId?: string;
-      action?: string;
-      entityType?: string;
-      startDate?: Date;
-      endDate?: Date;
-    } = {};
-    if (userId) filters.userId = userId;
-    if (action) filters.action = action;
-    if (entityType) filters.entityType = entityType;
-    if (startDate || endDate) {
-      filters.startDate = startDate ? new Date(startDate) : undefined;
-      filters.endDate = endDate ? new Date(endDate) : undefined;
-    }
-    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
-    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
-
-    return this.auditService.getLogs({
-      ...filters,
-      page: pageNum || 1,
-      limit: limitNum || 50,
+    return this.auditService.getLogsFromQuery({
+      userId,
+      action,
+      entityType,
+      startDate,
+      endDate,
+      page,
+      limit,
     });
   }
 
   @Get('stream')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent audit stream (admin only)' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getRecentStream(@Query('limit') limit: string | number = 100) {
-    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
-    return this.auditService.getRecentStream(limitNum || 100);
+  async getRecentStream(@Query('limit') limit?: string | number) {
+    return this.auditService.getRecentStreamFromQuery(limit);
   }
 
   @Get('stats')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get audit statistics (admin only)' })
   @ApiQuery({
     name: 'timeframe',
     required: false,
     enum: ['day', 'week', 'month'],
   })
-  async getStats(
-    @Query('timeframe') timeframe: 'day' | 'week' | 'month' = 'day',
-  ) {
-    return this.auditService.getStats(timeframe);
+  async getStats(@Query('timeframe') timeframe?: string) {
+    return this.auditService.getStatsFromQuery(timeframe);
   }
 }

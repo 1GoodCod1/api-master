@@ -72,16 +72,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
+    let timeoutId: NodeJS.Timeout | undefined;
     try {
-      await Promise.race([
-        this.client.ping(),
-        new Promise((_, reject) => {
-          setTimeout(
-            () => reject(new Error('Redis connection timeout')),
-            10000,
-          );
-        }),
-      ]);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Redis connection timeout')),
+          10000,
+        );
+      });
+      await Promise.race([this.client.ping(), timeoutPromise]);
       this.logger.log('Redis connection initiated and verified');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -89,6 +88,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         'Application will continue without Redis. Some features may be unavailable.',
       );
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 

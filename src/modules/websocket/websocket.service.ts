@@ -250,83 +250,84 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(
           `Redis not ready (status: ${redisClient.status}), waiting for connection...`,
         );
+        let timeoutId: NodeJS.Timeout | undefined;
         try {
-          await Promise.race([
-            new Promise<void>((resolve, reject) => {
-              let resolved = false;
+          const connectPromise = new Promise<void>((resolve, reject) => {
+            let resolved = false;
 
-              const readyHandler = () => {
+            const readyHandler = () => {
+              if (!resolved) {
+                resolved = true;
+                cleanup();
+                resolve();
+              }
+            };
+
+            const errorHandler = (err?: Error | string) => {
+              if (!resolved) {
+                resolved = true;
+                cleanup();
+                if (err instanceof Error) {
+                  reject(err);
+                } else if (typeof err === 'string') {
+                  reject(new Error(err));
+                } else {
+                  reject(new Error('Redis connection error'));
+                }
+              }
+            };
+
+            const cleanup = () => {
+              redisClient.removeListener('ready', readyHandler);
+              redisClient.removeListener('error', errorHandler);
+            };
+
+            if (
+              redisClient.status === 'connect' ||
+              redisClient.status === 'ready'
+            ) {
+              if (redisClient.status === 'ready') {
                 if (!resolved) {
                   resolved = true;
                   cleanup();
                   resolve();
                 }
-              };
-
-              const errorHandler = (err?: Error | string) => {
-                if (!resolved) {
-                  resolved = true;
-                  cleanup();
-                  if (err instanceof Error) {
-                    reject(err);
-                  } else if (typeof err === 'string') {
-                    reject(new Error(err));
-                  } else {
-                    reject(new Error('Redis connection error'));
-                  }
-                }
-              };
-
-              const cleanup = () => {
-                redisClient.removeListener('ready', readyHandler);
-                redisClient.removeListener('error', errorHandler);
-              };
-
-              // Проверяем статус сразу (может измениться между проверками)
-              if (
-                redisClient.status === 'connect' ||
-                redisClient.status === 'ready'
-              ) {
-                // Если уже подключен, ждем события 'ready' для полной готовности (если еще не ready)
-                if (redisClient.status === 'ready') {
-                  if (!resolved) {
-                    resolved = true;
-                    cleanup();
-                    resolve();
-                  }
-                  return;
-                }
-                // Если connect, ждем ready
-                redisClient.once('ready', readyHandler);
-                redisClient.once('error', errorHandler);
                 return;
               }
-
-              // Подписываемся на события для подключения
               redisClient.once('ready', readyHandler);
               redisClient.once('error', errorHandler);
-            }),
-            new Promise<void>((_, reject) => {
-              setTimeout(() => {
-                reject(new Error('Redis connection timeout'));
-              }, 10000);
-            }),
-          ]).catch((error: unknown) => {
-            if (error instanceof Error) {
-              throw error;
+              return;
             }
-            const msg =
-              typeof error === 'string'
-                ? error
-                : 'Unknown Redis connection error';
-            throw new Error(msg);
+
+            redisClient.once('ready', readyHandler);
+            redisClient.once('error', errorHandler);
           });
+
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(
+              () => reject(new Error('Redis connection timeout')),
+              10000,
+            );
+          });
+
+          await Promise.race([connectPromise, timeoutPromise]).catch(
+            (error: unknown) => {
+              if (error instanceof Error) throw error;
+              const msg =
+                typeof error === 'string'
+                  ? error
+                  : 'Unknown Redis connection error';
+              throw new Error(msg);
+            },
+          );
         } catch (error: unknown) {
           const msg = error instanceof Error ? error.message : 'Unknown error';
           this.logger.warn(
             `Redis connection timeout, skipping subscriptions setup: ${msg}`,
           );
           return;
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
         }
       }
 

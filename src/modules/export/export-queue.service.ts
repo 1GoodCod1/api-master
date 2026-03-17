@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ExportService } from './export.service';
@@ -45,16 +45,26 @@ export interface ExportJob {
  * - Job history & monitoring (Bull Board UI)
  */
 @Injectable()
-export class ExportQueueService {
+export class ExportQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(ExportQueueService.name);
   private readonly jobs = new Map<string, ExportJob>();
-  /** Max concurrent export jobs (prevents memory spikes) */
+  private readonly cleanupTimeouts = new Map<string, NodeJS.Timeout>();
   private readonly MAX_CONCURRENT = 3;
   private running = 0;
-  /** Queue of pending jobs waiting for a slot */
   private pending: Array<() => void> = [];
 
   constructor(private readonly exportService: ExportService) {}
+
+  onModuleDestroy() {
+    for (const id of this.cleanupTimeouts.keys()) {
+      const t = this.cleanupTimeouts.get(id);
+      if (t) clearTimeout(t);
+    }
+    this.cleanupTimeouts.clear();
+    this.jobs.clear();
+    for (const resolve of this.pending) resolve();
+    this.pending = [];
+  }
 
   /**
    * Enqueue an export job and return its ID immediately.
@@ -88,7 +98,14 @@ export class ExportQueueService {
     void this.runJob(job, user);
 
     // Auto-clean after 10 minutes to prevent memory leak
-    setTimeout(() => this.jobs.delete(job.id), 10 * 60 * 1000);
+    const timeoutId = setTimeout(
+      () => {
+        this.jobs.delete(job.id);
+        this.cleanupTimeouts.delete(job.id);
+      },
+      10 * 60 * 1000,
+    );
+    this.cleanupTimeouts.set(job.id, timeoutId);
 
     this.logger.log(
       `Export job enqueued: ${job.id} (${type}, master=${masterId})`,

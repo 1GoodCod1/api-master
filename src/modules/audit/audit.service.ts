@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../shared/database/prisma.service';
-import { RedisService } from '../shared/redis/redis.service';
+import { AuditLogWriterService } from './services/audit-log-writer.service';
+import { AuditLogQueryService } from './services/audit-log-query.service';
 
-interface AuditLogData {
+export interface AuditLogData {
   userId?: string | null;
   action: string;
   entityType?: string;
@@ -16,85 +16,13 @@ interface AuditLogData {
 
 @Injectable()
 export class AuditService {
-  private readonly logger = new Logger(AuditService.name);
-
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
+    private readonly writer: AuditLogWriterService,
+    private readonly query: AuditLogQueryService,
   ) {}
 
   async log(data: AuditLogData) {
-    try {
-      // Проверяем существует ли пользователь если указан userId
-      if (data.userId) {
-        const userExists = await this.prisma.user.findUnique({
-          where: { id: data.userId },
-          select: { id: true },
-        });
-
-        // Если пользователь не найден, не создаем запись или используем null
-        if (!userExists) {
-          data.userId = null;
-        }
-      }
-
-      const log = await this.prisma.auditLog.create({
-        data: {
-          userId: data.userId || null,
-          action: data.action,
-          entityType: data.entityType,
-          entityId: data.entityId,
-          oldData: data.oldData,
-          newData: data.newData,
-          ipAddress: data.ipAddress,
-          userAgent: data.userAgent,
-        },
-      });
-
-      try {
-        await this.redis
-          .getClient()
-          .xadd(
-            'audit:stream',
-            '*',
-            'action',
-            data.action,
-            'userId',
-            data.userId || 'system',
-            'entityType',
-            data.entityType || '',
-            'entityId',
-            data.entityId || '',
-            'timestamp',
-            new Date().toISOString(),
-          );
-      } catch {
-        this.logger.debug('Redis Streams not available for audit logging');
-      }
-
-      const securityEvents = [
-        'USER_BANNED',
-        'USER_UNBANNED',
-        'IP_BLACKLISTED',
-        'SUSPICIOUS_SCORE_INCREASED',
-        'LOGIN_FAILED',
-        'PHONE_VERIFIED',
-      ];
-
-      if (securityEvents.includes(data.action)) {
-        this.logger.warn(`[SECURITY] ${data.action}`, {
-          userId: data.userId,
-          entityType: data.entityType,
-          entityId: data.entityId,
-          ipAddress: data.ipAddress,
-          details: data.newData,
-        });
-      }
-
-      return log;
-    } catch (error) {
-      this.logger.error('Failed to save audit log:', error);
-    }
+    return this.writer.log(data);
   }
 
   async getLogs(filters?: {
@@ -106,155 +34,81 @@ export class AuditService {
     page?: number;
     limit?: number;
   }) {
-    const {
-      userId,
-      action,
-      entityType,
-      startDate,
-      endDate,
-      page = 1,
-      limit = 50,
-    } = filters || {};
-
-    const skip = (page - 1) * limit;
-
-    const where: Prisma.AuditLogWhereInput = {};
-
-    if (userId) where.userId = userId;
-    if (action) where.action = action;
-    if (entityType) where.entityType = entityType;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
-    }
-
-    const [logs, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              email: true,
-              phone: true,
-              role: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.auditLog.count({ where }),
-    ]);
-
-    return {
-      logs,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return this.query.getLogs(filters);
   }
 
   async getRecentStream(limit: number = 100) {
-    try {
-      const redis = this.redis.getClient();
-      const stream = await redis.xrevrange(
-        'audit:stream',
-        '+',
-        '-',
-        'COUNT',
-        limit,
-      );
-
-      return {
-        items: stream.map(([id, fields]: [string, string[]]) => {
-          const entry: Record<string, string> = { id };
-          for (let i = 0; i < fields.length; i += 2) {
-            entry[fields[i]] = fields[i + 1];
-          }
-          return entry;
-        }),
-      };
-    } catch {
-      this.logger.warn('Redis Streams not available, falling back to database');
-
-      const logs = await this.prisma.auditLog.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        include: {
-          user: {
-            select: {
-              email: true,
-              role: true,
-            },
-          },
-        },
-      });
-
-      return {
-        items: logs.map((log) => ({
-          id: log.id,
-          action: log.action,
-          entity: log.entityType,
-          entityId: log.entityId,
-          actorId: log.userId,
-          ip: log.ipAddress,
-          ua: log.userAgent,
-          createdAt: log.createdAt.toISOString(),
-          user: log.user,
-        })),
-      };
-    }
+    return this.query.getRecentStream(limit);
   }
 
   async getStats(timeframe: 'day' | 'week' | 'month' = 'day') {
-    const now = new Date();
-    let startDate: Date;
+    return this.query.getStats(timeframe);
+  }
 
-    switch (timeframe) {
-      case 'day':
-        startDate = new Date(now.setDate(now.getDate() - 1));
-        break;
-      case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7));
-        break;
-      case 'month':
-        startDate = new Date(now.setMonth(now.getMonth() - 1));
-        break;
+  /**
+   * Парсит query-параметры и возвращает логи (для контроллера).
+   */
+  getLogsFromQuery(params: {
+    userId?: string;
+    action?: string;
+    entityType?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: string | number;
+    limit?: string | number;
+  }) {
+    const filters: {
+      userId?: string;
+      action?: string;
+      entityType?: string;
+      startDate?: Date;
+      endDate?: Date;
+      page?: number;
+      limit?: number;
+    } = {};
+
+    if (params.userId) filters.userId = params.userId;
+    if (params.action) filters.action = params.action;
+    if (params.entityType) filters.entityType = params.entityType;
+    if (params.startDate || params.endDate) {
+      filters.startDate = params.startDate
+        ? new Date(params.startDate)
+        : undefined;
+      filters.endDate = params.endDate ? new Date(params.endDate) : undefined;
     }
 
-    const [totalLogs, byAction, byUser] = await Promise.all([
-      this.prisma.auditLog.count({
-        where: { createdAt: { gte: startDate } },
-      }),
-      this.prisma.auditLog.groupBy({
-        by: ['action'],
-        _count: true,
-        where: { createdAt: { gte: startDate } },
-        orderBy: { _count: { action: 'desc' } },
-        take: 10,
-      }),
-      this.prisma.auditLog.groupBy({
-        by: ['userId'],
-        _count: true,
-        where: { createdAt: { gte: startDate }, userId: { not: null } },
-        orderBy: { _count: { userId: 'desc' } },
-        take: 10,
-      }),
-    ]);
+    const page =
+      typeof params.page === 'string'
+        ? parseInt(params.page, 10)
+        : (params.page ?? 1);
+    const limit =
+      typeof params.limit === 'string'
+        ? parseInt(params.limit, 10)
+        : (params.limit ?? 50);
 
-    return {
-      timeframe,
-      totalLogs,
-      byAction: byAction.map((item) => ({
-        action: item.action,
-        count: item._count,
-      })),
-      byUser,
-    };
+    filters.page = page || 1;
+    filters.limit = limit || 50;
+
+    return this.query.getLogs(filters);
+  }
+
+  /**
+   * Парсит limit из query и возвращает stream (для контроллера).
+   */
+  getRecentStreamFromQuery(limit?: string | number) {
+    const limitNum =
+      typeof limit === 'string' ? parseInt(limit, 10) : (limit ?? 100);
+    return this.query.getRecentStream(limitNum || 100);
+  }
+
+  /**
+   * Валидирует timeframe и возвращает статистику (для контроллера).
+   */
+  getStatsFromQuery(timeframe?: string) {
+    const valid = ['day', 'week', 'month'] as const;
+    const tf = valid.includes(timeframe as (typeof valid)[number])
+      ? (timeframe as (typeof valid)[number])
+      : 'day';
+    return this.query.getStats(tf);
   }
 }

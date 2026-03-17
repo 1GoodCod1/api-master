@@ -12,10 +12,12 @@ export class VerificationQueryService {
     private readonly encryption: EncryptionService,
   ) {}
 
-  private decryptDocumentNumber(docNumber: string | null): string | null {
+  private async decryptDocumentNumber(
+    docNumber: string | null,
+  ): Promise<string | null> {
     if (!docNumber) return null;
     try {
-      return this.encryption.decrypt(docNumber);
+      return await this.encryption.decrypt(docNumber);
     } catch {
       return docNumber;
     }
@@ -92,10 +94,12 @@ export class VerificationQueryService {
     ]);
 
     return {
-      verifications: verifications.map((v) => ({
-        ...v,
-        documentNumber: this.decryptDocumentNumber(v.documentNumber),
-      })),
+      verifications: await Promise.all(
+        verifications.map(async (v) => ({
+          ...v,
+          documentNumber: await this.decryptDocumentNumber(v.documentNumber),
+        })),
+      ),
       meta: {
         total,
         page,
@@ -140,7 +144,9 @@ export class VerificationQueryService {
 
     return {
       ...verification,
-      documentNumber: this.decryptDocumentNumber(verification.documentNumber),
+      documentNumber: await this.decryptDocumentNumber(
+        verification.documentNumber,
+      ),
     };
   }
 

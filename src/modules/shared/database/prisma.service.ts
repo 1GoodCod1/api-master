@@ -112,15 +112,15 @@ export class PrismaService
   }
 
   async onModuleInit() {
+    let timeoutId: NodeJS.Timeout | undefined;
     try {
       const connectPromise = this.$connect();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
           () => reject(new Error('Database connection timeout')),
           5000,
-        ),
-      );
-
+        );
+      });
       await Promise.race([connectPromise, timeoutPromise]);
     } catch (error) {
       if (process.env.NODE_ENV === 'production') {
@@ -129,6 +129,8 @@ export class PrismaService
       console.warn(
         '⚠️ Continuing without database connection (development mode)',
       );
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 

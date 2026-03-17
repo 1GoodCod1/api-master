@@ -8,7 +8,6 @@ import {
   Res,
   HttpCode,
   HttpStatus,
-  UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -30,6 +29,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { Throttle } from '@nestjs/throttler';
+import { extractRequestContext } from '../shared/utils/request-context.util';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -50,8 +50,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.register(registerDto);
-    this.refreshCookie.attachIfEnabled(res, result.refreshToken ?? '');
-    return this.refreshCookie.stripRefreshFromPayload(result);
+    return this.refreshCookie.handleAuthSuccess(result, res);
   }
 
   @Get('registration-options')
@@ -79,19 +78,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const ipAddress =
-      req.ip ||
-      (typeof req.headers['x-forwarded-for'] === 'string'
-        ? req.headers['x-forwarded-for']
-        : undefined) ||
-      req.socket?.remoteAddress;
-    const userAgent =
-      typeof req.headers['user-agent'] === 'string'
-        ? req.headers['user-agent']
-        : undefined;
+    const { ipAddress, userAgent } = extractRequestContext(req);
     const result = await this.authService.login(loginDto, ipAddress, userAgent);
-    this.refreshCookie.attachIfEnabled(res, result.refreshToken ?? '');
-    return this.refreshCookie.stripRefreshFromPayload(result);
+    return this.refreshCookie.handleAuthSuccess(result, res);
   }
 
   @Post('logout')
@@ -103,13 +92,12 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token = this.refreshCookie.getToken(
+    return this.refreshCookie.handleLogout(
       req,
+      res,
       refreshTokenDto.refreshToken,
+      (token) => this.authService.logout(token),
     );
-    if (token) await this.authService.logout(token);
-    this.refreshCookie.clearIfEnabled(res);
-    return { message: 'Logged out successfully' };
   }
 
   @Post('refresh')
@@ -122,18 +110,12 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token = this.refreshCookie.getToken(
+    const token = this.refreshCookie.getTokenOrThrow(
       req,
       refreshTokenDto.refreshToken,
     );
-    if (!token) {
-      throw new UnauthorizedException(
-        'Refresh token required (cookie or body)',
-      );
-    }
     const result = await this.authService.refreshTokens(token);
-    this.refreshCookie.attachIfEnabled(res, result.refreshToken ?? '');
-    return this.refreshCookie.stripRefreshFromPayload(result);
+    return this.refreshCookie.handleAuthSuccess(result, res);
   }
 
   @Get('me')

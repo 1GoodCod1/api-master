@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { getStartOfTodayInMoldova } from '../../shared/utils/timezone.util';
 import { RedisService } from '../../shared/redis/redis.service';
@@ -177,9 +182,7 @@ export class AdminSystemService {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups');
 
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
+    await fs.promises.mkdir(backupDir, { recursive: true });
 
     const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
 
@@ -209,7 +212,10 @@ export class AdminSystemService {
       statistics: await this.getSystemStats(),
     };
 
-    fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+    await fs.promises.writeFile(
+      backupFile,
+      JSON.stringify(backupData, null, 2),
+    );
 
     this.logger.log(`Backup created: ${backupFile}`);
 
@@ -221,61 +227,63 @@ export class AdminSystemService {
     };
   }
 
-  listBackups(): Promise<
+  async listBackups(): Promise<
     { filename: string; size: string; modified: Date; created: Date }[]
   > {
     const backupDir = path.join(process.cwd(), 'backups');
 
-    if (!fs.existsSync(backupDir)) {
-      return Promise.resolve([]);
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(backupDir);
+    } catch {
+      return [];
     }
 
-    const files = fs
-      .readdirSync(backupDir)
-      .filter((file) => file.endsWith('.json'))
-      .map((file) => {
-        const stats = fs.statSync(path.join(backupDir, file));
+    const jsonFiles = entries.filter((file) => file.endsWith('.json'));
+    const filesWithStats = await Promise.all(
+      jsonFiles.map(async (file) => {
+        const stats = await fs.promises.stat(path.join(backupDir, file));
         return {
           filename: file,
           size: this.formatBytes(stats.size),
           modified: stats.mtime,
           created: stats.birthtime,
         };
-      })
-      .sort((a, b) => b.modified.getTime() - a.modified.getTime());
+      }),
+    );
 
-    return Promise.resolve(files);
+    return filesWithStats.sort(
+      (a, b) => b.modified.getTime() - a.modified.getTime(),
+    );
   }
 
-  getBackupPath(
+  async getBackupPath(
     filename: string,
   ): Promise<{ backupPath: string; backupDir: string }> {
-    // Валидация имени файла
     if (!/^backup-[\d\-TZ]+\.json$/.test(filename)) {
-      return Promise.reject(new Error('Invalid backup filename'));
+      throw new BadRequestException('Invalid backup filename');
     }
 
     const backupDir = path.join(process.cwd(), 'backups');
     const backupPath = path.join(backupDir, filename);
 
-    // Нормализация путей для защиты от path traversal
     const normalizedBackupPath = path.normalize(backupPath);
     const normalizedBackupDir = path.normalize(backupDir);
 
-    // Проверка что файл находится в директории backups
     if (!normalizedBackupPath.startsWith(normalizedBackupDir)) {
-      return Promise.reject(new Error('Invalid backup path'));
+      throw new BadRequestException('Invalid backup path');
     }
 
-    // Проверка существования файла
-    if (!fs.existsSync(normalizedBackupPath)) {
-      return Promise.reject(new Error('Backup file not found'));
+    try {
+      await fs.promises.access(normalizedBackupPath, fs.constants.F_OK);
+    } catch {
+      throw new NotFoundException('Backup file not found');
     }
 
-    return Promise.resolve({
+    return {
       backupPath: normalizedBackupPath,
       backupDir: normalizedBackupDir,
-    });
+    };
   }
 
   // ==================== УТИЛИТЫ ====================

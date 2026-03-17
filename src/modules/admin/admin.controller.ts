@@ -8,8 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  BadRequestException,
-  NotFoundException,
   Header,
   Res,
 } from '@nestjs/common';
@@ -224,25 +222,8 @@ export class AdminController {
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {
-    try {
-      const { backupDir } = await this.adminService.getBackupPath(filename);
-
-      return res.sendFile(filename, {
-        root: backupDir,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (
-        message === 'Invalid backup filename' ||
-        message === 'Invalid backup path'
-      ) {
-        throw new BadRequestException(message);
-      }
-      if (message === 'Backup file not found') {
-        throw new NotFoundException(message);
-      }
-      throw error;
-    }
+    const { backupDir } = await this.adminService.getBackupPath(filename);
+    return res.sendFile(filename, { root: backupDir });
   }
 
   @Get('settings/referrals')
