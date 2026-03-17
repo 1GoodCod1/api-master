@@ -1,8 +1,8 @@
 import { PaymentStatus } from '@prisma/client';
 import { PaymentsWebhookService } from '../../../src/modules/payments/services/payments-webhook.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
-import type { NotificationsService } from '../../../src/modules/notifications/notifications.service';
+import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
+import type { NotificationsService } from '../../../src/modules/notifications/notifications/notifications.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
 type PrismaPaymentsWebhookMock = {

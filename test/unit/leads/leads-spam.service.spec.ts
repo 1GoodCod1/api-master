@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { LeadsSpamService } from '../../../src/modules/leads/services/leads-spam.service';
+import { LeadsSpamService } from '../../../src/modules/marketplace/leads/services/leads-spam.service';
 import type { RedisService } from '../../../src/modules/shared/redis/redis.service';
 import type { RecaptchaService } from '../../../src/modules/shared/utils/recaptcha.service';
 

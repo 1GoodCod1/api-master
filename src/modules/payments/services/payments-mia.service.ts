@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { TariffsService } from '../../tariffs/tariffs.service';
+import { TariffsService } from '../../marketplace/tariffs/tariffs.service';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';

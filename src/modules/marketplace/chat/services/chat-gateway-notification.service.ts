@@ -1,0 +1,69 @@
+import { Injectable, Logger } from '@nestjs/common';
+import type { OutgoingChatMessage } from '../chat.types';
+import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+
+@Injectable()
+export class ChatGatewayNotificationService {
+  private readonly logger = new Logger(ChatGatewayNotificationService.name);
+
+  constructor(
+    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notifications: NotificationsService,
+  ) {}
+
+  /**
+   * Send notification to offline user via in-app + optional SMS when master responds.
+   */
+  async notifyOfflineUser(
+    message: OutgoingChatMessage,
+    conversationId: string,
+  ): Promise<void> {
+    try {
+      const conversation = message.conversation;
+      if (!conversation) return;
+
+      const recipientUserId =
+        message.senderType === 'MASTER'
+          ? conversation.clientId
+          : (conversation.masterUserId ?? null);
+
+      if (!recipientUserId) return;
+
+      const senderName =
+        message.senderType === 'MASTER'
+          ? (conversation.masterName ?? undefined)
+          : (conversation.clientName ?? undefined);
+
+      await this.inAppNotifications
+        .notifyNewChatMessage(recipientUserId, {
+          conversationId,
+          messageId: message.id,
+          senderType: message.senderType,
+          senderName: senderName || undefined,
+        })
+        .catch((e: unknown) => {
+          const msg = e instanceof Error ? e.message : String(e);
+          this.logger.warn(`Failed to save in-app chat notification: ${msg}`);
+        });
+
+      if (
+        message.senderType === 'MASTER' &&
+        conversation.clientId === recipientUserId &&
+        conversation.clientPhone
+      ) {
+        const masterName = conversation.masterName || 'Мастер';
+        const smsText = `${masterName} ответил вам в чате. Откройте приложение для просмотра.`;
+        await this.notifications
+          .sendSMS(conversation.clientPhone, smsText)
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(`Failed to send MASTER_RESPONDED SMS: ${msg}`);
+          });
+      }
+    } catch (error) {
+      const errMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error notifying offline user: ${errMessage}`);
+    }
+  }
+}

@@ -1,0 +1,250 @@
+import type { Server, Socket } from 'socket.io';
+import {
+  WebSocketGateway as NestWebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  ConnectedSocket,
+  MessageBody,
+} from '@nestjs/websockets';
+import { Logger, UseGuards } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { WsException } from '@nestjs/websockets';
+import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
+import { WebsocketService } from './websocket.service';
+import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
+import type { SocketData } from './services/websocket-connection.service';
+
+/**
+ * Парсит FRONTEND_URL так же как getCorsOrigins() в main.ts.
+ * Поддерживает несколько origins через запятую:
+ *   FRONTEND_URL=https://master-hub.md,https://www.master-hub.md
+ * Вызывается один раз при загрузке модуля (декораторы вычисляются при старте).
+ */
+function resolveWsCorsOrigins(): string | string[] {
+  const isProd = process.env.NODE_ENV === 'production';
+  const fallback = isProd ? '' : 'http://localhost:3000';
+  const raw = process.env.FRONTEND_URL || fallback;
+  const origins = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (origins.length === 0) return fallback || '*';
+  return origins.length === 1 ? origins[0] : origins;
+}
+
+@NestWebSocketGateway({
+  cors: {
+    origin: resolveWsCorsOrigins(),
+    credentials: true,
+  },
+  namespace: 'notifications',
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+})
+export class WebsocketGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
+  @WebSocketServer()
+  server: Server;
+
+  private readonly logger = new Logger(WebsocketGateway.name);
+  private prisma: PrismaService | null = null;
+
+  constructor(
+    private readonly websocketService: WebsocketService,
+    private readonly moduleRef: ModuleRef,
+    private readonly errorHandler: WebsocketErrorHandlerService,
+  ) {
+    this.logger.log('Websocket Gateway constructor вызван');
+  }
+
+  // Получаем PrismaService лениво, когда он понадобится
+  private getPrismaService(): PrismaService | null {
+    if (!this.prisma) {
+      try {
+        this.prisma = this.moduleRef.get(PrismaService, { strict: false });
+        if (!this.prisma) {
+          this.logger.warn('PrismaService не найден в модуле');
+          return null;
+        }
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.warn(`Failed to get PrismaService: ${msg}`);
+        return null;
+      }
+    }
+    return this.prisma;
+  }
+
+  afterInit(server: Server) {
+    this.logger.log('Websocket Gateway afterInit вызван');
+    try {
+      this.websocketService.initServer(server);
+      this.logger.log('Websocket Gateway инициализирован успешно');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Ошибка при инициализации Gateway: ${msg}`);
+    }
+  }
+
+  async handleConnection(client: Socket) {
+    try {
+      const userId = await this.websocketService.handleConnection(client);
+      if (userId) {
+        // Отправляем приветственное сообщение и проверяем оффлайн уведомления
+        try {
+          const offlineNotifications =
+            await this.websocketService.getOfflineNotifications(userId);
+
+          client.emit('connected', {
+            message: 'Успешное подключение к уведомлениям',
+            userId,
+            timestamp: new Date().toISOString(),
+            offlineCount: offlineNotifications.length,
+          });
+
+          for (const notification of offlineNotifications) {
+            if (typeof notification.event === 'string') {
+              client.emit(notification.event, notification.data);
+            }
+          }
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(`Error getting offline notifications: ${msg}`);
+          client.emit('connected', {
+            message: 'Успешное подключение к уведомлениям',
+            userId,
+            timestamp: new Date().toISOString(),
+            offlineCount: 0,
+          });
+        }
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error in handleConnection: ${msg}`);
+      client.disconnect();
+    }
+  }
+
+  async handleDisconnect(client: Socket) {
+    try {
+      await this.websocketService.handleDisconnect(client);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Error in handleDisconnect: ${msg}`);
+    }
+  }
+
+  @SubscribeMessage('subscribe:master')
+  @UseGuards(WsJwtGuard)
+  async handleSubscribeToMaster(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { masterId: string },
+  ) {
+    try {
+      const userId = (client.data as SocketData).userId;
+
+      // Валидация и санитизация входных данных
+      this.errorHandler.validateInput(
+        data,
+        {
+          masterId: (value) =>
+            typeof value === 'string' && value.trim().length > 0,
+        },
+        'handleSubscribeToMaster',
+      );
+
+      const sanitizedMasterId = sanitizeMasterId(data.masterId);
+      if (!sanitizedMasterId) {
+        throw this.errorHandler.handleError(
+          new Error('Invalid masterId format'),
+          'handleSubscribeToMaster',
+          userId,
+        );
+      }
+
+      // ЗАЩИТА: Проверяем, что пользователь может подписаться на этого мастера
+      const prisma = this.getPrismaService();
+      if (!prisma) {
+        this.logger.warn('PrismaService недоступен, пропускаем валидацию');
+        await client.join(`master:${sanitizedMasterId}`);
+        return { success: true, masterId: sanitizedMasterId };
+      }
+
+      const user = await this.errorHandler.handleAsyncError(
+        () =>
+          prisma.user.findUnique({
+            where: { id: userId },
+            include: { masterProfile: true },
+          }),
+        'handleSubscribeToMaster - findUser',
+        userId,
+      );
+
+      if (!user) {
+        throw this.errorHandler.handleError(
+          new Error('User not found'),
+          'handleSubscribeToMaster',
+          userId,
+        );
+      }
+
+      const isMasterOwner =
+        user.role === 'MASTER' && user.masterProfile?.id === sanitizedMasterId;
+      const isAdmin = user.role === 'ADMIN';
+
+      if (!isMasterOwner && !isAdmin) {
+        this.logger.warn(
+          `Unauthorized subscribe attempt: userId=${userId}, masterId=${sanitizedMasterId}`,
+        );
+        throw this.errorHandler.handleError(
+          new Error('Unauthorized to subscribe to this master'),
+          'handleSubscribeToMaster',
+          userId,
+        );
+      }
+
+      await client.join(`master:${sanitizedMasterId}`);
+      this.logger.log(
+        `User ${userId} subscribed to master:${sanitizedMasterId}`,
+      );
+      return { success: true, masterId: sanitizedMasterId };
+    } catch (error: unknown) {
+      if (error instanceof WsException) {
+        throw error;
+      }
+      throw this.errorHandler.handleError(
+        error,
+        'handleSubscribeToMaster',
+        (client.data as SocketData).userId,
+      );
+    }
+  }
+
+  @SubscribeMessage('unsubscribe:master')
+  async handleUnsubscribeFromMaster(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { masterId: string },
+  ) {
+    await client.leave(`master:${data.masterId}`);
+    return { success: true, masterId: data.masterId };
+  }
+
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { masterId: string; isTyping: boolean },
+  ) {
+    const userId = (client.data as SocketData).userId;
+    this.server.to(`master:${data.masterId}`).emit('user:typing', {
+      userId,
+      isTyping: data.isTyping,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}

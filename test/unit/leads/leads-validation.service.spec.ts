@@ -3,7 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { LeadsValidationService } from '../../../src/modules/leads/services/leads-validation.service';
+import { LeadsValidationService } from '../../../src/modules/marketplace/leads/services/leads-validation.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 
 type PrismaLeadsValidationMock = {

@@ -61,7 +61,7 @@ export class AuditLogWriterService {
 
       return log;
     } catch (error) {
-      this.logger.error('Failed to save audit log:', error);
+      this.logger.error('Ошибка сохранения audit log:', error);
     }
   }
 
@@ -87,7 +87,7 @@ export class AuditLogWriterService {
           new Date().toISOString(),
         );
     } catch {
-      this.logger.debug('Redis Streams not available for audit logging');
+      this.logger.debug('Redis Streams недоступны для audit logging');
     }
   }
 

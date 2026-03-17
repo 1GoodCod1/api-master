@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BookingsService } from '../../../src/modules/bookings/bookings.service';
-import type { BookingsQueryService } from '../../../src/modules/bookings/services/bookings-query.service';
-import type { BookingsActionService } from '../../../src/modules/bookings/services/bookings-action.service';
+import { BookingsService } from '../../../src/modules/marketplace/bookings/bookings.service';
+import type { BookingsQueryService } from '../../../src/modules/marketplace/bookings/services/bookings-query.service';
+import type { BookingsActionService } from '../../../src/modules/marketplace/bookings/services/bookings-action.service';
 
 describe('BookingsService', () => {
   const queryService = {} as unknown as jest.Mocked<BookingsQueryService>;

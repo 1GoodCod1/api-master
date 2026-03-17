@@ -1,4 +1,4 @@
-import { ReviewsQueryService } from '../../../src/modules/reviews/services/reviews-query.service';
+import { ReviewsQueryService } from '../../../src/modules/marketplace/reviews/services/reviews-query.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 

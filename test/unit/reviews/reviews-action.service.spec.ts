@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ReviewStatus } from '@prisma/client';
-import { ReviewsActionService } from '../../../src/modules/reviews/services/reviews-action.service';
+import { ReviewsActionService } from '../../../src/modules/marketplace/reviews/services/reviews-action.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
-import type { NotificationsService } from '../../../src/modules/notifications/notifications.service';
+import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
+import type { NotificationsService } from '../../../src/modules/notifications/notifications/notifications.service';
 
 type PrismaReviewsActionMock = {
   user: { findUnique: jest.Mock };

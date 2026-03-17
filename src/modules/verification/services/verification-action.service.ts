@@ -7,7 +7,7 @@ import {
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
-import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
+import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { EncryptionService } from '../../shared/utils/encryption.service';
 import { SubmitVerificationDto } from '../dto/submit-verification.dto';
 import {

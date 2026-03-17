@@ -96,7 +96,7 @@ export class AuditLogQueryService {
         }),
       };
     } catch {
-      this.logger.warn('Redis Streams not available, falling back to database');
+      this.logger.warn('Redis Streams недоступны, используем базу данных');
       return this.getRecentStreamFromDb(limit);
     }
   }

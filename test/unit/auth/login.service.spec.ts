@@ -1,8 +1,8 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { LoginService } from '../../../src/modules/auth/services/login.service';
+import { LoginService } from '../../../src/modules/auth/auth/services/login.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
-import type { TokenService } from '../../../src/modules/auth/services/token.service';
+import type { TokenService } from '../../../src/modules/auth/auth/services/token.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
 jest.mock('bcrypt', () => ({

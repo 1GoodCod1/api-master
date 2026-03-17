@@ -1,7 +1,7 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { CategoriesService } from '../../../src/modules/categories/categories.service';
-import type { CategoriesQueryService } from '../../../src/modules/categories/services/categories-query.service';
-import type { CategoriesActionService } from '../../../src/modules/categories/services/categories-action.service';
+import { CategoriesService } from '../../../src/modules/marketplace/categories/categories.service';
+import type { CategoriesQueryService } from '../../../src/modules/marketplace/categories/services/categories-query.service';
+import type { CategoriesActionService } from '../../../src/modules/marketplace/categories/services/categories-action.service';
 
 describe('CategoriesService', () => {
   const queryService = {

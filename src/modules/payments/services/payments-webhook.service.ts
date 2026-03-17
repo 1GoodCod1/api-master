@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { InAppNotificationService } from '../../notifications/services/in-app-notification.service';
-import { NotificationsService } from '../../notifications/notifications.service';
+import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsService } from '../../notifications/notifications/notifications.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
@@ -46,7 +46,7 @@ export class PaymentsWebhookService {
 
     const days = meta.days ?? 30;
 
-    // Handle tariff payments
+    // Обработка платежей за тариф
     if (payment.tariffType) {
       await this.updateMasterTariff(
         payment.masterId,
@@ -54,7 +54,7 @@ export class PaymentsWebhookService {
         days,
       );
 
-      // Notify master about successful tariff payment (in-app + SMS/Telegram)
+      // Уведомление мастера об успешной оплате тарифа (in-app + SMS/Telegram)
       try {
         const master = await this.prisma.master.findUnique({
           where: { id: payment.masterId },
@@ -87,7 +87,7 @@ export class PaymentsWebhookService {
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(`Failed to send payment notification: ${msg}`);
+        this.logger.warn(`Не удалось отправить уведомление о платеже: ${msg}`);
       }
     }
   }

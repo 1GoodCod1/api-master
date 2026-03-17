@@ -50,7 +50,7 @@ export class PaymentsUpgradeService {
         );
       }
 
-      // Создаем сессию оплаты через MIA для PREMIUM
+      // Создаём сессию оплаты через MIA для PREMIUM
       const result = await this.miaService.createTariffQrPayment(
         { masterId: master.id, tariffType: master.pendingUpgradeTo },
         userId,
@@ -67,7 +67,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('confirmPendingUpgrade failed', err);
+      this.logger.error('Ошибка confirmPendingUpgrade', err);
       throw err;
     }
   }
@@ -92,7 +92,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('cancelPendingUpgrade failed', err);
+      this.logger.error('Ошибка cancelPendingUpgrade', err);
       throw err;
     }
   }
@@ -133,7 +133,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('cancelTariffAtPeriodEnd failed', err);
+      this.logger.error('Ошибка cancelTariffAtPeriodEnd', err);
       throw err;
     }
   }

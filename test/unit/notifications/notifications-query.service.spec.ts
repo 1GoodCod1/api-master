@@ -1,4 +1,4 @@
-import { NotificationsQueryService } from '../../../src/modules/notifications/services/notifications-query.service';
+import { NotificationsQueryService } from '../../../src/modules/notifications/notifications/services/notifications-query.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 
 type PrismaNotificationsQueryMock = {

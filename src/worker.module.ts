@@ -13,17 +13,17 @@ import { CacheModule } from './modules/shared/cache/cache.module';
 import { EmailModule } from './modules/email/email.module';
 
 // Worker modules (cron, Bull processors, cache warming)
-import { TasksModule } from './modules/tasks/tasks.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
-import { CacheWarmingModule } from './modules/cache-warming/cache-warming.module';
+import { TasksModule } from './modules/infrastructure/tasks/tasks.module';
+import { NotificationsModule } from './modules/notifications/notifications/notifications.module';
+import { CacheWarmingModule } from './modules/infrastructure/cache-warming/cache-warming.module';
 
 // Modules required by the above as dependencies
-import { MastersModule } from './modules/masters/masters.module';
-import { CategoriesModule } from './modules/categories/categories.module';
-import { CitiesModule } from './modules/cities/cities.module';
-import { TariffsModule } from './modules/tariffs/tariffs.module';
-import { WebSocketModule } from './modules/websocket/websocket.module';
-import { AuthModule } from './modules/auth/auth.module';
+import { MastersModule } from './modules/marketplace/masters/masters.module';
+import { CategoriesModule } from './modules/marketplace/categories/categories.module';
+import { CitiesModule } from './modules/marketplace/cities/cities.module';
+import { TariffsModule } from './modules/marketplace/tariffs/tariffs.module';
+import { WebSocketModule } from './modules/infrastructure/websocket/websocket.module';
+import { AuthModule } from './modules/auth/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 
 /**

@@ -1,0 +1,119 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../../shared/database/prisma.service';
+import { CacheService } from '../../../shared/cache/cache.service';
+import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { SenderType } from '@prisma/client';
+
+@Injectable()
+export class ChatLeadTransitionService {
+  private readonly logger = new Logger(ChatLeadTransitionService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+    private readonly inAppNotifications: InAppNotificationService,
+  ) {}
+
+  /**
+   * Проверка возможности перевода лида NEW -> IN_PROGRESS при обмене сообщениями.
+   */
+  async checkAndTransition(conversationId: string): Promise<void> {
+    try {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: {
+          id: true,
+          leadId: true,
+          masterId: true,
+          lead: {
+            select: {
+              status: true,
+              clientName: true,
+              clientId: true,
+            },
+          },
+        },
+      });
+
+      if (!conversation?.leadId || conversation.lead?.status !== 'NEW') {
+        return;
+      }
+
+      const [msgMaster, msgClient] = await Promise.all([
+        this.prisma.message.findFirst({
+          where: {
+            conversationId,
+            senderType: SenderType.MASTER,
+            isAutoresponder: false,
+          },
+          select: { id: true },
+        }),
+        this.prisma.message.findFirst({
+          where: { conversationId, senderType: SenderType.CLIENT },
+          select: { id: true },
+        }),
+      ]);
+
+      if (!msgMaster || !msgClient) {
+        return;
+      }
+
+      await this.prisma.lead.update({
+        where: { id: conversation.leadId },
+        data: {
+          status: 'IN_PROGRESS',
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.log(
+        `Lead ${conversation.leadId} auto-transitioned to IN_PROGRESS due to chat message exchange`,
+      );
+
+      await this.cache.invalidateMasterData(conversation.masterId);
+
+      const master = await this.prisma.master.findUnique({
+        where: { id: conversation.masterId },
+        select: { userId: true },
+      });
+      const clientName = conversation.lead?.clientName ?? undefined;
+      const clientId = conversation.lead?.clientId ?? null;
+
+      if (master) {
+        this.inAppNotifications
+          .notifyLeadStatusUpdated(master.userId, {
+            leadId: conversation.leadId,
+            status: 'IN_PROGRESS',
+            clientName,
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to notify master of lead status: ${String(err)}`,
+            ),
+          );
+      }
+      if (clientId) {
+        this.inAppNotifications
+          .notify({
+            userId: clientId,
+            category: 'LEAD_STATUS_UPDATED',
+            title: 'Статус заявки обновлён',
+            message: 'Ваша заявка — IN_PROGRESS',
+            messageKey: 'notifications.messages.leadStatusUpdated',
+            messageParams: { status: 'IN_PROGRESS' },
+            metadata: { leadId: conversation.leadId, status: 'IN_PROGRESS' },
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to notify client of lead status: ${String(err)}`,
+            ),
+          );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to check lead transition for conversation ${conversationId}:`,
+        error,
+      );
+    }
+  }
+}

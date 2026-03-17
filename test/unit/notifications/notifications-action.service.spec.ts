@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { NotificationStatus, NotificationType } from '@prisma/client';
-import { NotificationsActionService } from '../../../src/modules/notifications/services/notifications-action.service';
+import { NotificationsActionService } from '../../../src/modules/notifications/notifications/services/notifications-action.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 
 type PrismaNotificationsActionMock = {

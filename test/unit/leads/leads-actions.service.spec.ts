@@ -10,13 +10,13 @@ jest.mock('../../../src/modules/referrals/referrals.service', () => ({
   })),
 }));
 
-import { LeadsActionsService } from '../../../src/modules/leads/services/leads-actions.service';
+import { LeadsActionsService } from '../../../src/modules/marketplace/leads/services/leads-actions.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/services/in-app-notification.service';
-import type { MastersAvailabilityService } from '../../../src/modules/masters/services/masters-availability.service';
+import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
+import type { MastersAvailabilityService } from '../../../src/modules/marketplace/masters/services/masters-availability.service';
 import type { EmailDripService } from '../../../src/modules/email/email-drip.service';
-import type { ReferralsService } from '../../../src/modules/referrals/referrals.service';
+import type { ReferralsService } from '../../../src/modules/engagement/referrals/referrals.service';
 import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';
 
 type PrismaLeadsActionsMock = {

@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { PhoneVerificationActionService } from '../../../src/modules/phone-verification/services/phone-verification-action.service';
+import { PhoneVerificationActionService } from '../../../src/modules/auth/services/phone-verification-action.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { EncryptionService } from '../../../src/modules/shared/utils/encryption.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
