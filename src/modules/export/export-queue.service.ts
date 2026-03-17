@@ -1,6 +1,14 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
+import { stat } from 'fs/promises';
+import type { Response } from 'express';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { ExportService } from './export.service';
 
@@ -11,13 +19,13 @@ export interface ExportJob {
   type: ExportJobType;
   masterId: string;
   userId: string;
-  /** PDF report locale (en|ru), used when type = 'pdf' */
+  /** Локаль PDF-отчёта (en|ru), используется при type = 'pdf' */
   locale?: string;
   status: 'queued' | 'processing' | 'done' | 'error';
   error?: string;
-  /** Serialized file content as a Buffer, available when status = 'done' (CSV/Excel) */
+  /** Сериализованное содержимое файла в Buffer, доступно при status = 'done' (CSV/Excel) */
   result?: Buffer;
-  /** Temp file path for PDF — streamed to avoid holding in memory */
+  /** Путь к временному файлу PDF — стриминг для экономии памяти */
   resultPath?: string;
   contentType?: string;
   filename?: string;
@@ -27,27 +35,42 @@ export interface ExportJob {
 }
 
 /**
- * Lightweight in-process export queue.
+ * Лёгкая in-process очередь экспорта.
  *
- * WHY: Excel/PDF generation is CPU-bound (can take 500ms–5s and use 200–400MB peak).
- * Doing this synchronously in a request handler blocks the Node.js event loop for
- * all other requests during that time.
+ * ЗАЧЕМ: Генерация Excel/PDF — CPU-bound (500ms–5s, пик 200–400MB).
+ * Синхронное выполнение в обработчике блокирует event loop Node.js для всех запросов.
  *
- * HOW THIS WORKS:
- * 1. Client POSTs /export/queue → receives a jobId immediately (HTTP 202)
- * 2. Export runs off the request path (microtask queue, still same process)
- * 3. Client polls GET /export/status/:jobId until status = 'done'
- * 4. Client fetches GET /export/download/:jobId to receive the file
- * 5. Job is cleaned up from memory 10 minutes after completion
+ * КАК РАБОТАЕТ:
+ * 1. Клиент POST /export/queue → сразу получает jobId (HTTP 202)
+ * 2. Экспорт выполняется вне запроса (microtask queue, тот же процесс)
+ * 3. Клиент опрашивает GET /export/status/:jobId до status = 'done'
+ * 4. Клиент загружает GET /export/download/:jobId для получения файла
+ * 5. Задача удаляется из памяти через 10 минут после завершения
  *
- * PRODUCTION UPGRADE PATH:
- * Replace this with @nestjs/bull + Bull queue backed by Redis for:
- * - Cross-process job distribution (multiple API pods)
- * - Persistence across restarts
- * - Retry logic
- * - Job history & monitoring (Bull Board UI)
+ * ПРОДАКШН: заменить на @nestjs/bull + Bull с Redis для:
+ * - Распределения задач между процессами (несколько API pods)
+ * - Сохранения при перезапуске
+ * - Повторов при ошибках
+ * - Истории и мониторинга (Bull Board UI)
  */
 const SHUTDOWN_WAIT_MS = 30_000;
+const VALID_EXPORT_TYPES: ExportJobType[] = ['csv', 'excel', 'pdf'];
+
+export interface ExportJobStatusDto {
+  jobId: string;
+  status: ExportJob['status'];
+  error: string | null;
+  queuedAt: Date;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  filename: string | null;
+}
+
+export interface EnqueueResultDto {
+  jobId: string;
+  status: ExportJob['status'];
+  message: string;
+}
 
 @Injectable()
 export class ExportQueueService implements OnModuleDestroy {
@@ -67,7 +90,7 @@ export class ExportQueueService implements OnModuleDestroy {
       if (t) clearTimeout(t);
     }
     this.cleanupTimeouts.clear();
-    // Do NOT resolve pending — that would start new jobs during shutdown
+    // Не резолвить pending — иначе запустятся новые задачи при завершении
     this.pending = [];
 
     if (this.runningJobPromises.size > 0) {
@@ -88,15 +111,33 @@ export class ExportQueueService implements OnModuleDestroy {
   private cleanupJob(job: ExportJob): void {
     if (job.resultPath) {
       fs.unlink(job.resultPath, () => {
-        // ignore errors (file may already be deleted)
+        // игнорировать ошибки (файл может быть уже удалён)
       });
     }
   }
 
   /**
-   * Enqueue an export job and return its ID immediately.
-   * The actual work runs off the request path.
-   * @param locale — PDF report language (en|ru), used when type = 'pdf'
+   * Валидация типа, постановка в очередь, возврат DTO для HTTP-ответа.
+   */
+  enqueueExport(
+    type: string,
+    masterId: string,
+    user: JwtUser,
+    locale?: string,
+  ): EnqueueResultDto {
+    const validatedType = this.validateExportType(type);
+    const job = this.enqueue(validatedType, masterId, user, locale);
+    return {
+      jobId: job.id,
+      status: job.status,
+      message: 'Export started. Poll /export/status/:jobId for progress.',
+    };
+  }
+
+  /**
+   * Поставить задачу экспорта в очередь и вернуть её ID.
+   * Фактическая работа выполняется вне запроса.
+   * @param locale — язык PDF-отчёта (en|ru), используется при type = 'pdf'
    */
   enqueue(
     type: ExportJobType,
@@ -129,7 +170,7 @@ export class ExportQueueService implements OnModuleDestroy {
       )
       .finally(() => this.runningJobPromises.delete(promise));
 
-    // Auto-clean after 10 minutes to prevent memory leak
+    // Автоочистка через 10 минут для предотвращения утечки памяти
     const timeoutId = setTimeout(
       () => {
         this.cleanupJob(job);
@@ -150,8 +191,77 @@ export class ExportQueueService implements OnModuleDestroy {
     return this.jobs.get(id) ?? null;
   }
 
+  validateExportType(type: string): ExportJobType {
+    if (!VALID_EXPORT_TYPES.includes(type as ExportJobType)) {
+      throw new BadRequestException(
+        `Invalid export type. Use: ${VALID_EXPORT_TYPES.join(', ')}`,
+      );
+    }
+    return type as ExportJobType;
+  }
+
+  getJobStatus(jobId: string): ExportJobStatusDto {
+    const job = this.getJob(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found or expired');
+    }
+    return {
+      jobId: job.id,
+      status: job.status,
+      error: job.error ?? null,
+      queuedAt: job.queuedAt,
+      startedAt: job.startedAt ?? null,
+      completedAt: job.completedAt ?? null,
+      filename: job.filename ?? null,
+    };
+  }
+
+  getJobForDownload(
+    jobId: string,
+    userId: string,
+    userRole: string,
+  ): ExportJob {
+    const job = this.getJob(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found or expired');
+    }
+    if (job.userId !== userId && userRole !== 'ADMIN') {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.status !== 'done' || (!job.result && !job.resultPath)) {
+      throw new BadRequestException(
+        `Export not ready yet. Status: ${job.status}`,
+      );
+    }
+    return job;
+  }
+
+  async streamJobToResponse(job: ExportJob, res: Response): Promise<void> {
+    res.setHeader('Content-Type', job.contentType!);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${job.filename}"`,
+    );
+    if (job.resultPath) {
+      const stats = await stat(job.resultPath);
+      res.setHeader('Content-Length', stats.size);
+      const stream = fs.createReadStream(job.resultPath);
+      stream.on('error', (err) => {
+        this.logger.error('Export file stream error', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to read export file' });
+        }
+        stream.destroy();
+      });
+      stream.pipe(res);
+    } else {
+      res.setHeader('Content-Length', job.result!.length);
+      res.end(job.result);
+    }
+  }
+
   private async runJob(job: ExportJob, user: JwtUser): Promise<void> {
-    // Throttle: wait if MAX_CONCURRENT is reached
+    // Ограничение: ждать, если достигнут MAX_CONCURRENT
     if (this.running >= this.MAX_CONCURRENT) {
       await new Promise<void>((resolve) => this.pending.push(resolve));
     }
@@ -177,7 +287,7 @@ export class ExportQueueService implements OnModuleDestroy {
       this.logger.error(`Export job failed: ${job.id}`, err);
     } finally {
       this.running--;
-      // Unblock next pending job
+      // Разблокировать следующую ожидающую задачу
       const next = this.pending.shift();
       if (next) next();
     }

@@ -1,7 +1,7 @@
 import path from 'path';
 import { getAnalyticsPdfTranslations } from './analytics-pdf-translations';
 
-/** PDF color palette */
+/** Цветовая палитра PDF */
 const COLORS = {
   primary: '#0f766e',
   primaryLight: '#e6f7f6',
@@ -97,7 +97,7 @@ function drawStatBox(
 }
 
 /**
- * Build analytics PDF content with improved design and translations.
+ * Построение содержимого PDF-отчёта аналитики с улучшенным дизайном и переводами.
  */
 export function buildAnalyticsPdf(
   doc: Doc,
@@ -114,7 +114,7 @@ export function buildAnalyticsPdf(
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
 
-  // Header with accent bar
+  // Заголовок с акцентной полосой
   doc.rect(0, 0, pageWidth, 80).fill(COLORS.primary);
   doc.fontSize(24).fillColor(COLORS.white).text(t.title, margin, 28, {
     align: 'center',
@@ -136,7 +136,7 @@ export function buildAnalyticsPdf(
 
   y = 100;
 
-  // Profile Information section
+  // Секция информации о профиле
   y = drawSectionHeader(doc, t.profileInfo, y);
   doc.fontSize(10);
 
@@ -159,7 +159,7 @@ export function buildAnalyticsPdf(
   const boxWidth = (contentWidth - 40) / 3;
   const boxHeight = 52;
 
-  // Leads stats
+  // Статистика лидов
   y = drawSectionHeader(doc, t.leadsStats, y);
   if (data.leadsStats.length > 0) {
     let col = 0;
@@ -182,7 +182,7 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Reviews stats
+  // Статистика отзывов
   y = drawSectionHeader(doc, t.reviewsStats, y);
   if (data.reviewsStats.length > 0) {
     let col = 0;
@@ -228,7 +228,7 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Recent Analytics table
+  // Таблица последней аналитики
   if (data.analytics.length > 0) {
     y = drawSectionHeader(doc, t.recentAnalytics, y);
 

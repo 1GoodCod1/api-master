@@ -1,6 +1,6 @@
 /**
- * Translations for Analytics PDF report.
- * Supports EN (English) and RU (Russian).
+ * Переводы для PDF-отчёта аналитики.
+ * Поддерживаются EN (английский) и RU (русский).
  */
 export type AnalyticsPdfLocale = 'en' | 'ru';
 
