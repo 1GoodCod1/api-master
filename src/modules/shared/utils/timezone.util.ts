@@ -64,3 +64,12 @@ export function getStartOfDateInMoldova(date: Date): Date {
 export function getStartOfTodayInMoldova(): Date {
   return getStartOfDateInMoldova(new Date());
 }
+
+/** Start of the day N days ago in Moldova. For statistics (e.g. "last 7 days"). */
+export function getStartOfDaysAgoInMoldova(days: number): Date {
+  const todayStart = getStartOfTodayInMoldova();
+  const targetDate = new Date(
+    todayStart.getTime() - days * 24 * 60 * 60 * 1000,
+  );
+  return getStartOfDateInMoldova(targetDate);
+}

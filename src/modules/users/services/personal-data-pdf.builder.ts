@@ -1,4 +1,5 @@
 import path from 'path';
+import { formatUserName } from '../../shared/utils/format-name.util';
 
 /** PDF color palette — professional, GDPR-friendly */
 const COLORS = {
@@ -348,8 +349,7 @@ export function buildPersonalDataPdf(
 
   // Profile section
   y = drawSectionHeader(doc, t.profile, y);
-  const fullName =
-    [data.user.firstName, data.user.lastName].filter(Boolean).join(' ') || '—';
+  const fullName = formatUserName(data.user.firstName, data.user.lastName, '—');
   const profileItems: [string, string | number | null | undefined][] = [
     [t.name, fullName],
     [t.email, data.user.email],

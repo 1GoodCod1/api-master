@@ -4,6 +4,8 @@ import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
 import { UsersQueryService } from './services/users-query.service';
 import { UsersManageService } from './services/users-manage.service';
+import { UsersAvatarService } from './services/users-avatar.service';
+import { UsersGdprService } from './services/users-gdpr.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   buildPersonalDataPdf,
@@ -19,6 +21,8 @@ export class UsersService {
   constructor(
     private readonly queryService: UsersQueryService,
     private readonly manageService: UsersManageService,
+    private readonly avatarService: UsersAvatarService,
+    private readonly gdprService: UsersGdprService,
   ) {}
 
   /**
@@ -67,7 +71,7 @@ export class UsersService {
    * Установить аватар
    */
   async setAvatar(userId: string, fileId?: string) {
-    return this.manageService.setAvatar(userId, fileId);
+    return this.avatarService.setAvatar(userId, fileId);
   }
 
   /**
@@ -99,14 +103,14 @@ export class UsersService {
    * Удалить фотографию клиента
    */
   async removeMyPhoto(userId: string, fileId: string) {
-    return this.manageService.removeMyPhoto(userId, fileId);
+    return this.avatarService.removeMyPhoto(userId, fileId);
   }
 
   /**
    * GDPR: Самостоятельное удаление аккаунта
    */
   async removeSelf(userId: string) {
-    return this.manageService.removeSelf(userId);
+    return this.gdprService.removeSelf(userId);
   }
 
   /**
@@ -118,7 +122,7 @@ export class UsersService {
     locale: string = 'en',
   ): Promise<void> {
     const data: PersonalDataPdfData =
-      await this.manageService.getPersonalDataForPdf(userId);
+      await this.gdprService.getPersonalDataForPdf(userId);
     const filename = `my-data-${new Date().toISOString().split('T')[0]}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
