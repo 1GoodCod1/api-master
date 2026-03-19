@@ -101,7 +101,7 @@
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
     "nest-winston": "^1.10.2",
-    "nodemailer": "^8.0.0",
+    "nodemailer": "^8.0.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
