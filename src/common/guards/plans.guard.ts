@@ -34,7 +34,7 @@ function getEffectivePlan(
 
 @Injectable()
 export class PlansGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
     const required = this.reflector.getAllAndOverride<TariffType[]>(PLANS_KEY, [

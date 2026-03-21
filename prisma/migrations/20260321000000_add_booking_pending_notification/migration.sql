@@ -1,0 +1,2 @@
+-- Add BOOKING_PENDING to NotificationCategory enum
+ALTER TYPE "NotificationCategory" ADD VALUE IF NOT EXISTS 'BOOKING_PENDING' BEFORE 'BOOKING_CONFIRMED';

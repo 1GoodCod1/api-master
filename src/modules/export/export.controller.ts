@@ -60,7 +60,7 @@ export class ExportController {
     description: 'Job queued. Poll /export/status/:jobId',
   })
   @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
-  enqueueExport(
+  async enqueueExport(
     @Param('type') type: string,
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
@@ -73,7 +73,7 @@ export class ExportController {
   @ApiOperation({ summary: 'Get export job status' })
   @ApiResponse({ status: 200, description: 'Job status' })
   @ApiResponse({ status: 404, description: 'Job not found' })
-  getExportStatus(@Param('jobId') jobId: string) {
+  async getExportStatus(@Param('jobId') jobId: string) {
     return this.exportQueue.getJobStatus(jobId);
   }
 
@@ -86,12 +86,12 @@ export class ExportController {
     @Res() res: Response,
     @Req() req: RequestWithUser,
   ) {
-    const job = this.exportQueue.getJobForDownload(
+    const result = await this.exportQueue.getJobForDownload(
       jobId,
       req.user.id,
       req.user.role ?? '',
     );
-    await this.exportQueue.streamJobToResponse(job, res);
+    await this.exportQueue.streamJobToResponse(result, res);
   }
 
   @Get('analytics/pdf/:masterId')

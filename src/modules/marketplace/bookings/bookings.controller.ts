@@ -117,6 +117,30 @@ export class BookingsController {
     return this.bookingsService.updateStatusWithAuth(id, dto, req.user);
   }
 
+  @Patch(':id/confirm')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CLIENT')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Client confirms a PENDING booking proposed by master',
+  })
+  @ApiResponse({ status: 200, description: 'Booking confirmed' })
+  async clientConfirm(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.bookingsService.clientConfirm(id, req.user.id);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CLIENT')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Client rejects a PENDING booking proposed by master',
+  })
+  @ApiResponse({ status: 200, description: 'Booking rejected' })
+  async clientReject(@Param('id') id: string, @Req() req: RequestWithUser) {
+    return this.bookingsService.clientReject(id, req.user.id);
+  }
+
   @Get(':id/rebook-info')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

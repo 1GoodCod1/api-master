@@ -10,7 +10,7 @@ import { VERIFIED_KEY } from '../decorators/verified.decorator';
 
 @Injectable()
 export class VerifiedGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
     const required = this.reflector.getAllAndOverride<boolean>(VERIFIED_KEY, [

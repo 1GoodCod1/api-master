@@ -37,6 +37,7 @@ import { WebSocketModule } from './modules/infrastructure/websocket/websocket.mo
 import { RecommendationsModule } from './modules/engagement/recommendations/recommendations.module';
 import { VerificationModule } from './modules/verification/verification.module';
 import { CacheWarmingModule } from './modules/infrastructure/cache-warming/cache-warming.module';
+import { WebVitalsModule } from './modules/infrastructure/web-vitals/web-vitals.module';
 import { EmailModule } from './modules/email/email.module';
 import { ReferralsModule } from './modules/engagement/referrals/referrals.module';
 
@@ -126,6 +127,7 @@ import { ReferralsModule } from './modules/engagement/referrals/referrals.module
     RecommendationsModule,
     VerificationModule,
     CacheWarmingModule,
+    WebVitalsModule,
     ReferralsModule,
   ],
 })

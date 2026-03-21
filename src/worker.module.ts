@@ -16,6 +16,7 @@ import { EmailModule } from './modules/email/email.module';
 import { TasksModule } from './modules/infrastructure/tasks/tasks.module';
 import { NotificationsModule } from './modules/notifications/notifications/notifications.module';
 import { CacheWarmingModule } from './modules/infrastructure/cache-warming/cache-warming.module';
+import { ExportModule } from './modules/export/export.module';
 
 // Modules required by the above as dependencies
 import { MastersModule } from './modules/marketplace/masters/masters.module';
@@ -76,6 +77,7 @@ import { UsersModule } from './modules/users/users.module';
     NotificationsModule, // Bull processors: sms, telegram
     TasksModule, // Cron: ежедневные, ежечасные задачи
     CacheWarmingModule, // Прогрев кеша при старте и по расписанию
+    ExportModule, // Bull processor: export (csv, excel, pdf)
   ],
 })
 export class WorkerModule {}

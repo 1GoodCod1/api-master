@@ -80,6 +80,16 @@ export class BookingsService {
     return this.actionService.updateStatus(bookingId, masterId, dto);
   }
 
+  /** Client confirms a PENDING booking. */
+  clientConfirm(bookingId: string, clientUserId: string) {
+    return this.actionService.clientConfirm(bookingId, clientUserId);
+  }
+
+  /** Client rejects a PENDING booking. */
+  clientReject(bookingId: string, clientUserId: string) {
+    return this.actionService.clientReject(bookingId, clientUserId);
+  }
+
   getRebookInfo(bookingId: string, userId: string) {
     return this.queryService.getRebookInfo(bookingId, userId);
   }

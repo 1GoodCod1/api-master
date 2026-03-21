@@ -53,6 +53,10 @@ export class AuthService {
     return this.loginService.logout(refreshToken);
   }
 
+  async logoutAll(userId: string) {
+    return this.loginService.logoutAll(userId);
+  }
+
   async validateUser(email: string, password: string) {
     return this.loginService.validateUser(email, password);
   }

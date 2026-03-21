@@ -95,8 +95,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       isBanned: user.isBanned,
     };
 
-    // Сохраняем в кэш на 15 минут
-    await this.cache.set(cacheKey, result, this.cache.ttl.userProfile);
+    // Сохраняем в кэш на 2 минуты — короткий TTL для быстрой propagation бана
+    await this.cache.set(cacheKey, result, 120);
 
     return {
       id: result.id,

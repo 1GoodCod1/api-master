@@ -163,95 +163,290 @@ export class ExportLeadsService {
 
     const masterName =
       `${master.user.firstName ?? ''} ${master.user.lastName ?? ''}`.trim() ||
-      'Master';
-    const categoryName = master.category?.name ?? '';
-    const cityName = master.city?.name ?? '';
+      'Мастер';
+    const categoryName = master.category?.name ?? '—';
+    const cityName = master.city?.name ?? '—';
 
-    const infoSheet = workbook.addWorksheet('Report Info', {
-      properties: { tabColor: { argb: 'FFB45309' } },
+    // ── Helpers ──────────────────────────────────
+    const statusLabel: Record<string, string> = {
+      NEW: 'Новый',
+      IN_PROGRESS: 'В работе',
+      CLOSED: 'Закрыт',
+      SPAM: 'Спам',
+    };
+    const statusBg: Record<string, string> = {
+      NEW: 'FFDBEAFE',
+      IN_PROGRESS: 'FFFEF3C7',
+      CLOSED: 'FFDCFCE7',
+      SPAM: 'FFFEE2E2',
+    };
+    const statusFontClr: Record<string, string> = {
+      NEW: 'FF7C3AED',
+      IN_PROGRESS: 'FFD97706',
+      CLOSED: 'FF16A34A',
+      SPAM: 'FFDC2626',
+    };
+
+    const HEADER_BG = 'FF1F2937';
+    const HEADER_FONT = 'FFFFFFFF';
+    const ALT_ROW = 'FFF9FAFB';
+    const BORDER_CLR = 'FFE5E7EB';
+    const ACCENT = 'FFB45309';
+    const LABEL_BG = 'FFF3F4F6';
+    const DARK = 'FF1F2937';
+    const MUTED = 'FF374151';
+
+    const bdr = { style: 'thin' as const, color: { argb: BORDER_CLR } };
+    const thinBorder = { top: bdr, bottom: bdr, left: bdr, right: bdr };
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const fmtDate = (d: Date) =>
+      `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+    const fmtDateTime = (d: Date) =>
+      `${fmtDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    // ═══════════════════════════════════════════
+    //  ЛИСТ «ОТЧЁТ»
+    // ═══════════════════════════════════════════
+    const info = workbook.addWorksheet('Отчёт', {
+      properties: { tabColor: { argb: ACCENT } },
     });
-    infoSheet.columns = [
-      { key: 'label', width: 22 },
-      { key: 'value', width: 50 },
+    info.columns = [
+      { key: 'label', width: 28 },
+      { key: 'value', width: 44 },
     ];
-    infoSheet.addRow({ label: 'Report Type', value: 'Leads Export' });
-    infoSheet.addRow({ label: 'Master', value: masterName });
-    infoSheet.addRow({
-      label: 'Category',
-      value: master.category?.name ?? '-',
-    });
-    infoSheet.addRow({ label: 'City', value: master.city?.name ?? '-' });
-    infoSheet.addRow({ label: 'Export Date', value: new Date().toISOString() });
-    infoSheet.addRow({ label: 'Total Leads', value: leads.length });
-    infoSheet.addRow({ label: '', value: '' });
-    infoSheet.addRow({ label: 'Column Legend', value: '' });
-    LEADS_EXPORT_COLUMNS.forEach((col, i) => {
-      infoSheet.addRow({ label: `  ${i + 1}. ${col}`, value: '' });
-    });
-    infoSheet.getRow(1).font = { bold: true, size: 12 };
-    infoSheet.getColumn(1).eachCell({ includeEmpty: true }, (cell, row) => {
-      if (row <= 6) cell.font = { bold: true };
+
+    // Title
+    info.mergeCells('A1:B1');
+    const titleCell = info.getCell('A1');
+    titleCell.value = 'Отчёт по заявкам';
+    titleCell.font = { bold: true, size: 16, color: { argb: DARK } };
+    titleCell.alignment = { vertical: 'middle' };
+    info.getRow(1).height = 32;
+
+    info.mergeCells('A2:B2');
+    info.getCell('A2').value = 'Master-Hub';
+    info.getCell('A2').font = { size: 11, color: { argb: 'FF9CA3AF' } };
+
+    info.addRow({});
+
+    const addInfoRow = (label: string, value: string | number) => {
+      const row = info.addRow({ label, value });
+      row.getCell(1).font = { bold: true, size: 11, color: { argb: MUTED } };
+      row.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: LABEL_BG },
+      };
+      row.getCell(1).border = thinBorder;
+      row.getCell(2).border = thinBorder;
+      row.getCell(2).font = { size: 11 };
+      return row;
+    };
+
+    addInfoRow('Мастер', masterName);
+    addInfoRow('Категория', categoryName);
+    addInfoRow('Город', cityName);
+    addInfoRow('Дата выгрузки', fmtDateTime(new Date()));
+    addInfoRow('Всего заявок', leads.length);
+
+    const premiumCount = leads.filter((l) => l.isPremium).length;
+    if (premiumCount > 0) {
+      addInfoRow('Премиум заявок', `${premiumCount} из ${leads.length}`);
+    }
+
+    if (leads.length > 0) {
+      const times = leads.map((l) => l.createdAt.getTime());
+      addInfoRow(
+        'Период',
+        `${fmtDate(new Date(Math.min(...times)))} — ${fmtDate(new Date(Math.max(...times)))}`,
+      );
+    }
+
+    // Status breakdown
+    info.addRow({});
+    const statsRow = info.addRow({ label: 'Статистика по статусам' });
+    info.mergeCells(`A${statsRow.number}:B${statsRow.number}`);
+    statsRow.getCell(1).font = {
+      bold: true,
+      size: 13,
+      color: { argb: DARK },
+    };
+
+    const statusCounts: Record<string, number> = {};
+    leads.forEach((l) => {
+      statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
     });
 
-    const leadsSheet = workbook.addWorksheet('Leads', {
+    for (const [status, count] of Object.entries(statusCounts)) {
+      const row = info.addRow({
+        label: statusLabel[status] ?? status,
+        value: count,
+      });
+      row.getCell(1).font = {
+        bold: true,
+        color: { argb: statusFontClr[status] ?? MUTED },
+      };
+      row.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: statusBg[status] ?? LABEL_BG },
+      };
+      row.getCell(1).border = thinBorder;
+      row.getCell(2).border = thinBorder;
+      row.getCell(2).font = { bold: true, size: 12 };
+      row.getCell(2).alignment = { horizontal: 'center' };
+    }
+
+    // ═══════════════════════════════════════════
+    //  ЛИСТ «ЗАЯВКИ»
+    // ═══════════════════════════════════════════
+    const sheet = workbook.addWorksheet('Заявки', {
       properties: { tabColor: { argb: 'FF217346' } },
       views: [{ state: 'frozen', ySplit: 1 }],
     });
 
     const colDefs: { header: string; key: string; width: number }[] = [
       { header: '№', key: 'rowNum', width: 6 },
-      { header: 'Lead ID', key: 'id', width: 38 },
-      { header: 'Created At', key: 'createdAt', width: 22 },
-      { header: 'Updated At', key: 'updatedAt', width: 22 },
-      { header: 'Status', key: 'status', width: 14 },
-      { header: 'Client Name', key: 'clientName', width: 20 },
-      { header: 'Client Phone', key: 'clientPhone', width: 16 },
-      { header: 'Client Email', key: 'clientEmail', width: 26 },
-      { header: 'Message', key: 'message', width: 45 },
-      { header: 'Is Premium', key: 'isPremium', width: 12 },
-      { header: 'Spam Score', key: 'spamScore', width: 12 },
-      { header: 'Attachments Count', key: 'filesCount', width: 18 },
-      { header: 'Master Category', key: 'categoryName', width: 20 },
-      { header: 'Master City', key: 'cityName', width: 18 },
+      { header: 'Дата создания', key: 'createdAt', width: 20 },
+      { header: 'Обновлено', key: 'updatedAt', width: 20 },
+      { header: 'Статус', key: 'status', width: 16 },
+      { header: 'Имя клиента', key: 'clientName', width: 22 },
+      { header: 'Телефон', key: 'clientPhone', width: 18 },
+      { header: 'Email', key: 'clientEmail', width: 28 },
+      { header: 'Сообщение', key: 'message', width: 50 },
+      { header: 'Премиум', key: 'isPremium', width: 12 },
+      { header: 'Оценка спама', key: 'spamScore', width: 14 },
+      { header: 'Файлов', key: 'filesCount', width: 10 },
     ];
-    leadsSheet.columns = colDefs;
+    sheet.columns = colDefs;
 
-    leadsSheet.getRow(1).font = { bold: true };
-    leadsSheet.getRow(1).fill = {
+    // Header row
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 26;
+    headerRow.font = { bold: true, size: 11, color: { argb: HEADER_FONT } };
+    headerRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE8E8E8' },
+      fgColor: { argb: HEADER_BG },
     };
-    leadsSheet.getRow(1).alignment = {
-      wrapText: true,
+    headerRow.alignment = {
       vertical: 'middle',
+      horizontal: 'center',
+      wrapText: true,
     };
-    leadsSheet.autoFilter = {
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: HEADER_BG } },
+        bottom: { style: 'medium', color: { argb: ACCENT } },
+        left: { style: 'thin', color: { argb: 'FF374151' } },
+        right: { style: 'thin', color: { argb: 'FF374151' } },
+      };
+    });
+
+    sheet.autoFilter = {
       from: { row: 1, column: 1 },
       to: { row: 1, column: colDefs.length },
     };
 
+    // Data rows
     leads.forEach((lead, idx) => {
-      leadsSheet.addRow({
+      const row = sheet.addRow({
         rowNum: idx + 1,
-        id: lead.id,
         createdAt: lead.createdAt,
         updatedAt: lead.updatedAt,
-        status: lead.status,
+        status: statusLabel[lead.status] ?? lead.status,
         clientName: lead.clientName ?? '',
         clientPhone: lead.clientPhone,
         clientEmail: this.getClientEmail(lead),
         message: lead.message,
-        isPremium: lead.isPremium ? 'Yes' : 'No',
+        isPremium: lead.isPremium ? 'Да' : 'Нет',
         spamScore: lead.spamScore,
         filesCount: lead.files.length,
-        categoryName,
-        cityName,
       });
+
+      // Alternating row background
+      if (idx % 2 === 1) {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: ALT_ROW },
+          };
+        });
+      }
+
+      // Borders & base alignment
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = thinBorder;
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+
+      // Status cell colour
+      const sBg = statusBg[lead.status];
+      const sFc = statusFontClr[lead.status];
+      if (sBg && sFc) {
+        const sc = row.getCell('status');
+        sc.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: sBg },
+        };
+        sc.font = { bold: true, color: { argb: sFc } };
+        sc.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+
+      row.getCell('rowNum').alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+      };
+
+      // Premium highlight
+      if (lead.isPremium) {
+        const pc = row.getCell('isPremium');
+        pc.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFEF3C7' },
+        };
+        pc.font = { bold: true, color: { argb: 'FFD97706' } };
+        pc.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+
+      // Spam score highlight
+      if (lead.spamScore > 0) {
+        row.getCell('spamScore').font = {
+          bold: true,
+          color: { argb: 'FFDC2626' },
+        };
+      }
     });
 
-    leadsSheet.getColumn(3).numFmt = 'yyyy-mm-dd hh:mm:ss';
-    leadsSheet.getColumn(4).numFmt = 'yyyy-mm-dd hh:mm:ss';
+    // Date format
+    sheet.getColumn('createdAt').numFmt = 'dd.mm.yyyy hh:mm';
+    sheet.getColumn('updatedAt').numFmt = 'dd.mm.yyyy hh:mm';
+
+    // Summary row
+    if (leads.length > 0) {
+      const sumRow = sheet.addRow({});
+      sheet.mergeCells(`A${sumRow.number}:C${sumRow.number}`);
+      const sumCell = sumRow.getCell(1);
+      sumCell.value = `Итого: ${leads.length} заявок`;
+      sumCell.font = { bold: true, size: 11, color: { argb: DARK } };
+      sumCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE5E7EB' },
+      };
+      sumRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'medium', color: { argb: ACCENT } },
+          bottom: { style: 'thin', color: { argb: BORDER_CLR } },
+          left: { style: 'thin', color: { argb: BORDER_CLR } },
+          right: { style: 'thin', color: { argb: BORDER_CLR } },
+        };
+      });
+    }
 
     return workbook;
   }

@@ -652,6 +652,7 @@ export class InAppNotificationService {
       ADMIN_NEW_PAYMENT: 'admin_new_payment',
       MASTER_RESPONDED: 'master_responded',
       MASTER_AVAILABLE: 'master_available',
+      BOOKING_PENDING: 'booking_pending',
       BOOKING_CONFIRMED: 'booking_confirmed',
       BOOKING_CANCELLED: 'booking_cancelled',
       BOOKING_REMINDER: 'booking_reminder',

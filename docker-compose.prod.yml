@@ -265,6 +265,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

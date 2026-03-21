@@ -220,12 +220,17 @@ export class WebsocketGateway
   }
 
   @SubscribeMessage('typing')
+  @UseGuards(WsJwtGuard)
   handleTyping(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: WsTypingDto,
   ) {
     const userId = (client.data as SocketData).userId;
-    this.server.to(`master:${data.masterId}`).emit('user:typing', {
+    const sanitizedMasterId = sanitizeMasterId(data.masterId);
+    if (!sanitizedMasterId) {
+      throw new WsException('Invalid masterId');
+    }
+    this.server.to(`master:${sanitizedMasterId}`).emit('user:typing', {
       userId,
       isTyping: data.isTyping,
       timestamp: new Date().toISOString(),

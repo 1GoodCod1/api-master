@@ -10,10 +10,10 @@ import Redis, { RedisOptions } from 'ioredis';
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private client: Redis;
+  private readonly client: Redis;
   private isDestroyed = false;
 
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     const sentinels =
       this.configService.get<{ host: string; port: number }[]>(
         'redis.sentinels',

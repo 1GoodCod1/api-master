@@ -10,6 +10,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -69,18 +70,28 @@ export class PaymentsController {
       'mia.webhookSecret',
       '',
     );
-    if (expectedSecret) {
-      if (token !== expectedSecret) {
+    const nodeEnv = this.configService.get<string>('nodeEnv', 'development');
+    if (!expectedSecret) {
+      if (nodeEnv === 'production') {
+        // В production без секрета вебхук закрыт полностью
+        throw new ForbiddenException('Webhook endpoint is not configured');
+      }
+      this.logger.warn(
+        'MIA_WEBHOOK_SECRET is not set — mia-callback endpoint is UNPROTECTED! Set it in .env',
+      );
+    } else {
+      // Constant-time comparison — защита от timing attacks
+      const tokenBuf = Buffer.from(token ?? '');
+      const secretBuf = Buffer.from(expectedSecret);
+      const valid =
+        tokenBuf.length === secretBuf.length &&
+        timingSafeEqual(tokenBuf, secretBuf);
+      if (!valid) {
         this.logger.warn(
           `Rejected MIA webhook call — invalid token. orderId: ${body?.orderId ?? 'none'}`,
         );
         throw new ForbiddenException('Invalid webhook token');
       }
-    } else {
-      // Секрет не задан — вебхук незащищён! Опасно в продакшне, допустимо в dev.
-      this.logger.warn(
-        'MIA_WEBHOOK_SECRET is not set — mia-callback endpoint is UNPROTECTED! Set it in .env',
-      );
     }
     // --- End webhook protection ---
 
@@ -119,6 +130,10 @@ export class PaymentsController {
     @Param('masterId') masterId: string,
     @GetUser() user: JwtUser,
   ) {
+    // Defense-in-depth: IDOR check at controller level (also enforced in service)
+    if (user.role !== 'ADMIN' && user.masterProfile?.id !== masterId) {
+      throw new ForbiddenException('Access to payment data denied');
+    }
     return this.paymentsService.getPaymentsForMaster(masterId, user);
   }
 
@@ -131,6 +146,10 @@ export class PaymentsController {
     @Param('masterId') masterId: string,
     @GetUser() user: JwtUser,
   ) {
+    // Defense-in-depth: IDOR check at controller level (also enforced in service)
+    if (user.role !== 'ADMIN' && user.masterProfile?.id !== masterId) {
+      throw new ForbiddenException('Access to payment data denied');
+    }
     return this.paymentsService.getPaymentStats(masterId, user);
   }
 

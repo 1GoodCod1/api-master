@@ -5,9 +5,15 @@
  */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { randomInt } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+
+/** +373 + exactly 8 digits (RegisterDto); unique per call to avoid DB collisions in e2e */
+function uniqueMoldovanPhone(): string {
+  return `+373${String(randomInt(10_000_000, 99_999_999))}`;
+}
 
 describe('Auth API (e2e)', () => {
   let app: INestApplication<App>;
@@ -15,7 +21,8 @@ describe('Auth API (e2e)', () => {
   const unique = `${timestamp}-${Math.random().toString(36).slice(2, 10)}`;
   const testEmail = `api-auth-${unique}@test.local`;
   const testPassword = 'TestPass1!@#';
-  const testPhone = `+37360${String(timestamp).slice(-7)}`;
+  const testPhone = uniqueMoldovanPhone();
+  const testPhoneOther = uniqueMoldovanPhone();
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -65,7 +72,7 @@ describe('Auth API (e2e)', () => {
         .post('/auth/register')
         .send({
           email: testEmail,
-          phone: `+37360${String(timestamp + 1).slice(-7)}`,
+          phone: testPhoneOther,
           password: testPassword,
           firstName: 'API2',
           lastName: 'Test2',

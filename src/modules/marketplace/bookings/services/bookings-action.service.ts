@@ -67,6 +67,13 @@ export class BookingsActionService {
     this.validation.validateTimeSlot(start, end);
     await this.validation.ensureNoConflict(masterId, start, end);
 
+    // Master proposes time → PENDING (client must confirm).
+    // Client books directly → CONFIRMED.
+    const isMasterCreating = authUser.role === 'MASTER';
+    const initialStatus: BookingStatus = isMasterCreating
+      ? 'PENDING'
+      : 'CONFIRMED';
+
     const booking = await this.prisma.booking.create({
       data: {
         masterId,
@@ -77,7 +84,7 @@ export class BookingsActionService {
         startTime: start,
         endTime: end,
         notes,
-        status: 'CONFIRMED',
+        status: initialStatus,
       },
       include: {
         master: {
@@ -98,21 +105,157 @@ export class BookingsActionService {
       },
     });
 
+    if (initialStatus === 'PENDING') {
+      // Notify client that master proposed a time
+      void this.notifications
+        .notifyBookingPending(
+          masterId,
+          master,
+          resolved.resolvedClientId,
+          resolved.resolvedName,
+          start,
+          booking.id,
+        )
+        .catch((e) => this.logger.error('notifyBookingPending failed', e));
+    } else {
+      // Client booked directly — move lead to IN_PROGRESS and notify
+      void this.leadSync
+        .updateLeadStatusOnCreate(resolved.resolvedLeadId)
+        .catch((e) => this.logger.error('updateLeadStatusOnCreate failed', e));
+      void this.notifications
+        .notifyBookingConfirmed(
+          masterId,
+          master,
+          resolved.resolvedClientId,
+          resolved.resolvedName,
+          start,
+          booking.id,
+        )
+        .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
+    }
+
+    return booking;
+  }
+
+  /**
+   * Client confirms a PENDING booking proposed by master.
+   */
+  async clientConfirm(bookingId: string, clientUserId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        master: {
+          include: {
+            user: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientId !== clientUserId) {
+      throw new BadRequestException('You can only confirm your own bookings');
+    }
+    if (booking.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Cannot confirm booking with status ${booking.status}. Only PENDING bookings can be confirmed.`,
+      );
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CONFIRMED' },
+      include: {
+        master: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                isVerified: true,
+              },
+            },
+            city: true,
+            category: true,
+          },
+        },
+        lead: true,
+      },
+    });
+
+    // Now that client confirmed, move lead to IN_PROGRESS
     void this.leadSync
-      .updateLeadStatusOnCreate(resolved.resolvedLeadId)
-      .catch((e) => this.logger.error('updateLeadStatusOnCreate failed', e));
+      .updateLeadStatusOnCreate(booking.leadId)
+      .catch((e) =>
+        this.logger.error('updateLeadStatusOnCreate (confirm) failed', e),
+      );
     void this.notifications
       .notifyBookingConfirmed(
-        masterId,
-        master,
-        resolved.resolvedClientId,
-        resolved.resolvedName,
-        start,
+        booking.masterId,
+        booking.master,
+        booking.clientId,
+        booking.clientName ?? undefined,
+        booking.startTime,
         booking.id,
       )
       .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
 
-    return booking;
+    return updated;
+  }
+
+  /**
+   * Client rejects a PENDING booking proposed by master.
+   */
+  async clientReject(bookingId: string, clientUserId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        master: {
+          include: {
+            user: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.clientId !== clientUserId) {
+      throw new BadRequestException('You can only reject your own bookings');
+    }
+    if (booking.status !== 'PENDING') {
+      throw new BadRequestException(
+        `Cannot reject booking with status ${booking.status}. Only PENDING bookings can be rejected.`,
+      );
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'CANCELLED' },
+      include: {
+        master: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                isVerified: true,
+              },
+            },
+            city: true,
+            category: true,
+          },
+        },
+        lead: true,
+      },
+    });
+
+    void this.notifications
+      .notifyBookingCancelled(updated)
+      .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
+
+    return updated;
   }
 
   async updateStatus(

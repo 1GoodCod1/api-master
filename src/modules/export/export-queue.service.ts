@@ -1,64 +1,29 @@
 import {
   Injectable,
   Logger,
-  OnModuleDestroy,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import * as fs from 'fs';
 import { stat } from 'fs/promises';
 import type { Response } from 'express';
+import { randomUUID } from 'crypto';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
-import { ExportService } from './export.service';
+import type {
+  ExportJobType,
+  ExportJobData,
+  ExportJobResult,
+} from '../shared/types/export.types';
 
-export type ExportJobType = 'csv' | 'excel' | 'pdf';
+export type { ExportJobType };
 
-export interface ExportJob {
-  id: string;
-  type: ExportJobType;
-  masterId: string;
-  userId: string;
-  /** Локаль PDF-отчёта (en|ru), используется при type = 'pdf' */
-  locale?: string;
-  status: 'queued' | 'processing' | 'done' | 'error';
-  error?: string;
-  /** Сериализованное содержимое файла в Buffer, доступно при status = 'done' (CSV/Excel) */
-  result?: Buffer;
-  /** Путь к временному файлу PDF — стриминг для экономии памяти */
-  resultPath?: string;
-  contentType?: string;
-  filename?: string;
-  queuedAt: Date;
-  startedAt?: Date;
-  completedAt?: Date;
-}
-
-/**
- * Лёгкая in-process очередь экспорта.
- *
- * ЗАЧЕМ: Генерация Excel/PDF — CPU-bound (500ms–5s, пик 200–400MB).
- * Синхронное выполнение в обработчике блокирует event loop Node.js для всех запросов.
- *
- * КАК РАБОТАЕТ:
- * 1. Клиент POST /export/queue → сразу получает jobId (HTTP 202)
- * 2. Экспорт выполняется вне запроса (microtask queue, тот же процесс)
- * 3. Клиент опрашивает GET /export/status/:jobId до status = 'done'
- * 4. Клиент загружает GET /export/download/:jobId для получения файла
- * 5. Задача удаляется из памяти через 10 минут после завершения
- *
- * ПРОДАКШН: заменить на @nestjs/bull + Bull с Redis для:
- * - Распределения задач между процессами (несколько API pods)
- * - Сохранения при перезапуске
- * - Повторов при ошибках
- * - Истории и мониторинга (Bull Board UI)
- */
-const SHUTDOWN_WAIT_MS = 30_000;
-const VALID_EXPORT_TYPES: ExportJobType[] = ['csv', 'excel', 'pdf'];
+export type ExportJobStatus = 'queued' | 'processing' | 'done' | 'error';
 
 export interface ExportJobStatusDto {
   jobId: string;
-  status: ExportJob['status'];
+  status: ExportJobStatus;
   error: string | null;
   queuedAt: Date;
   startedAt: Date | null;
@@ -68,127 +33,68 @@ export interface ExportJobStatusDto {
 
 export interface EnqueueResultDto {
   jobId: string;
-  status: ExportJob['status'];
+  status: ExportJobStatus;
   message: string;
 }
 
+const VALID_EXPORT_TYPES: ExportJobType[] = ['csv', 'excel', 'pdf'];
+
+/**
+ * Очередь экспорта на Bull + Redis.
+ *
+ * КАК РАБОТАЕТ:
+ * 1. Клиент POST /export/queue → сразу получает jobId (HTTP 202)
+ * 2. Задача ставится в Bull-очередь «export» → worker подхватывает
+ * 3. Worker генерирует файл → сохраняет на диск (uploads/exports/)
+ * 4. Клиент опрашивает GET /export/status/:jobId до status = 'done'
+ * 5. Клиент загружает GET /export/download/:jobId — стриминг с диска
+ * 6. Завершённые задачи удаляются из Redis через 10 минут
+ * 7. Файлы на диске чистятся ExportProcessor каждые 10 минут
+ */
 @Injectable()
-export class ExportQueueService implements OnModuleDestroy {
+export class ExportQueueService {
   private readonly logger = new Logger(ExportQueueService.name);
-  private readonly jobs = new Map<string, ExportJob>();
-  private readonly cleanupTimeouts = new Map<string, NodeJS.Timeout>();
-  private readonly runningJobPromises = new Set<Promise<void>>();
-  private readonly MAX_CONCURRENT = 3;
-  private running = 0;
-  private pending: Array<() => void> = [];
 
-  constructor(private readonly exportService: ExportService) {}
-
-  async onModuleDestroy() {
-    for (const id of this.cleanupTimeouts.keys()) {
-      const t = this.cleanupTimeouts.get(id);
-      if (t) clearTimeout(t);
-    }
-    this.cleanupTimeouts.clear();
-    // Не резолвить pending — иначе запустятся новые задачи при завершении
-    this.pending = [];
-
-    if (this.runningJobPromises.size > 0) {
-      this.logger.log(
-        `Waiting up to ${SHUTDOWN_WAIT_MS / 1000}s for ${this.runningJobPromises.size} export job(s) to complete`,
-      );
-      await Promise.race([
-        Promise.all([...this.runningJobPromises]),
-        new Promise<void>((resolve) => setTimeout(resolve, SHUTDOWN_WAIT_MS)),
-      ]);
-    }
-    for (const job of this.jobs.values()) {
-      this.cleanupJob(job);
-    }
-    this.jobs.clear();
-  }
-
-  private cleanupJob(job: ExportJob): void {
-    if (job.resultPath) {
-      fs.unlink(job.resultPath, () => {
-        // игнорировать ошибки (файл может быть уже удалён)
-      });
-    }
-  }
+  constructor(
+    @InjectQueue('export') private readonly exportQueue: Queue<ExportJobData>,
+  ) {}
 
   /**
    * Валидация типа, постановка в очередь, возврат DTO для HTTP-ответа.
    */
-  enqueueExport(
+  async enqueueExport(
     type: string,
     masterId: string,
     user: JwtUser,
     locale?: string,
-  ): EnqueueResultDto {
+  ): Promise<EnqueueResultDto> {
     const validatedType = this.validateExportType(type);
-    const job = this.enqueue(validatedType, masterId, user, locale);
-    return {
-      jobId: job.id,
-      status: job.status,
-      message: 'Export started. Poll /export/status/:jobId for progress.',
-    };
-  }
+    const jobId = randomUUID();
 
-  /**
-   * Поставить задачу экспорта в очередь и вернуть её ID.
-   * Фактическая работа выполняется вне запроса.
-   * @param locale — язык PDF-отчёта (en|ru), используется при type = 'pdf'
-   */
-  enqueue(
-    type: ExportJobType,
-    masterId: string,
-    user: JwtUser,
-    locale?: string,
-  ): ExportJob {
-    const job: ExportJob = {
-      id: randomUUID(),
-      type,
+    const data: ExportJobData = {
+      type: validatedType,
       masterId,
       userId: user.id,
+      userRole: user.role,
       locale:
-        type === 'pdf'
+        validatedType === 'pdf'
           ? locale?.toLowerCase().startsWith('ru')
             ? 'ru'
             : 'en'
           : undefined,
-      status: 'queued',
-      queuedAt: new Date(),
     };
 
-    this.jobs.set(job.id, job);
-
-    const promise = this.runJob(job, user);
-    this.runningJobPromises.add(promise);
-    promise
-      .catch((err) =>
-        this.logger.error(`Export job ${job.id} unhandled error`, err),
-      )
-      .finally(() => this.runningJobPromises.delete(promise));
-
-    // Автоочистка через 10 минут для предотвращения утечки памяти
-    const timeoutId = setTimeout(
-      () => {
-        this.cleanupJob(job);
-        this.jobs.delete(job.id);
-        this.cleanupTimeouts.delete(job.id);
-      },
-      10 * 60 * 1000,
-    );
-    this.cleanupTimeouts.set(job.id, timeoutId);
+    await this.exportQueue.add('generate', data, { jobId });
 
     this.logger.log(
-      `Export job enqueued: ${job.id} (${type}, master=${masterId})`,
+      `Export job enqueued: ${jobId} (${validatedType}, master=${masterId})`,
     );
-    return job;
-  }
 
-  getJob(id: string): ExportJob | null {
-    return this.jobs.get(id) ?? null;
+    return {
+      jobId,
+      status: 'queued',
+      message: 'Export started. Poll /export/status/:jobId for progress.',
+    };
   }
 
   validateExportType(type: string): ExportJobType {
@@ -200,150 +106,87 @@ export class ExportQueueService implements OnModuleDestroy {
     return type as ExportJobType;
   }
 
-  getJobStatus(jobId: string): ExportJobStatusDto {
-    const job = this.getJob(jobId);
+  async getJobStatus(jobId: string): Promise<ExportJobStatusDto> {
+    const job = await this.exportQueue.getJob(jobId);
     if (!job) {
       throw new NotFoundException('Job not found or expired');
     }
+
+    const state = await job.getState();
+
     return {
-      jobId: job.id,
-      status: job.status,
-      error: job.error ?? null,
-      queuedAt: job.queuedAt,
-      startedAt: job.startedAt ?? null,
-      completedAt: job.completedAt ?? null,
-      filename: job.filename ?? null,
+      jobId: job.id.toString(),
+      status: this.mapBullState(state),
+      error: job.failedReason ?? null,
+      queuedAt: new Date(job.timestamp),
+      startedAt: job.processedOn ? new Date(job.processedOn) : null,
+      completedAt: job.finishedOn ? new Date(job.finishedOn) : null,
+      filename:
+        (job.returnvalue as ExportJobResult | undefined)?.filename ?? null,
     };
   }
 
-  getJobForDownload(
+  async getJobForDownload(
     jobId: string,
     userId: string,
     userRole: string,
-  ): ExportJob {
-    const job = this.getJob(jobId);
+  ): Promise<ExportJobResult> {
+    const job = await this.exportQueue.getJob(jobId);
     if (!job) {
       throw new NotFoundException('Job not found or expired');
     }
-    if (job.userId !== userId && userRole !== 'ADMIN') {
+
+    if (job.data.userId !== userId && userRole !== 'ADMIN') {
       throw new NotFoundException('Job not found');
     }
-    if (job.status !== 'done' || (!job.result && !job.resultPath)) {
+
+    const state = await job.getState();
+    if (state !== 'completed' || !job.returnvalue) {
       throw new BadRequestException(
-        `Export not ready yet. Status: ${job.status}`,
+        `Export not ready yet. Status: ${this.mapBullState(state)}`,
       );
     }
-    return job;
+
+    return job.returnvalue as ExportJobResult;
   }
 
-  async streamJobToResponse(job: ExportJob, res: Response): Promise<void> {
-    res.setHeader('Content-Type', job.contentType!);
+  async streamJobToResponse(
+    result: ExportJobResult,
+    res: Response,
+  ): Promise<void> {
+    const stats = await stat(result.filePath);
+
+    res.setHeader('Content-Type', result.contentType);
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${job.filename}"`,
+      `attachment; filename="${result.filename}"`,
     );
-    if (job.resultPath) {
-      const stats = await stat(job.resultPath);
-      res.setHeader('Content-Length', stats.size);
-      const stream = fs.createReadStream(job.resultPath);
-      stream.on('error', (err) => {
-        this.logger.error('Export file stream error', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Failed to read export file' });
-        }
-        stream.destroy();
-      });
-      stream.pipe(res);
-    } else {
-      res.setHeader('Content-Length', job.result!.length);
-      res.end(job.result);
-    }
+    res.setHeader('Content-Length', stats.size);
+
+    const stream = fs.createReadStream(result.filePath);
+    stream.on('error', (err) => {
+      this.logger.error('Export file stream error', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to read export file' });
+      }
+      stream.destroy();
+    });
+    stream.pipe(res);
   }
 
-  private async runJob(job: ExportJob, user: JwtUser): Promise<void> {
-    // Ограничение: ждать, если достигнут MAX_CONCURRENT
-    if (this.running >= this.MAX_CONCURRENT) {
-      await new Promise<void>((resolve) => this.pending.push(resolve));
+  private mapBullState(state: string): ExportJobStatus {
+    switch (state) {
+      case 'waiting':
+      case 'delayed':
+        return 'queued';
+      case 'active':
+        return 'processing';
+      case 'completed':
+        return 'done';
+      case 'failed':
+        return 'error';
+      default:
+        return 'queued';
     }
-
-    this.running++;
-    job.status = 'processing';
-    job.startedAt = new Date();
-
-    try {
-      const output = await this.generate(job, user);
-      job.result = output.data;
-      job.resultPath = output.filePath;
-      job.contentType = output.contentType;
-      job.filename = output.filename;
-      job.status = 'done';
-      job.completedAt = new Date();
-      const ms = job.completedAt.getTime() - (job.startedAt?.getTime() ?? 0);
-      this.logger.log(`Export job done: ${job.id} in ${ms}ms`);
-    } catch (err) {
-      job.status = 'error';
-      job.error = err instanceof Error ? err.message : String(err);
-      job.completedAt = new Date();
-      this.logger.error(`Export job failed: ${job.id}`, err);
-    } finally {
-      this.running--;
-      // Разблокировать следующую ожидающую задачу
-      const next = this.pending.shift();
-      if (next) next();
-    }
-  }
-
-  private async generate(
-    job: ExportJob,
-    user: JwtUser,
-  ): Promise<{
-    data?: Buffer;
-    filePath?: string;
-    contentType: string;
-    filename: string;
-  }> {
-    const date = new Date().toISOString().split('T')[0];
-
-    if (job.type === 'csv') {
-      const data = await this.exportService.exportLeadsToBuffer(
-        job.masterId,
-        user,
-        'csv',
-      );
-      return {
-        data,
-        contentType: 'text/csv; charset=utf-8',
-        filename: `leads_${date}.csv`,
-      };
-    }
-
-    if (job.type === 'excel') {
-      const data = await this.exportService.exportLeadsToBuffer(
-        job.masterId,
-        user,
-        'excel',
-      );
-      return {
-        data,
-        contentType:
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        filename: `leads_${date}.xlsx`,
-      };
-    }
-
-    if (job.type === 'pdf') {
-      const filePath = await this.exportService.exportAnalyticsToFile(
-        job.masterId,
-        user,
-        job.locale ?? 'en',
-      );
-      return {
-        filePath,
-        contentType: 'application/pdf',
-        filename: `analytics_${date}.pdf`,
-      };
-    }
-
-    throw new Error(`Unknown export type: ${job.type as string}`);
   }
 }

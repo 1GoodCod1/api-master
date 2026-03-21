@@ -131,6 +131,20 @@ export class LoginService {
   }
 
   /**
+   * Выход из всех сессий пользователя (удаление всех refresh токенов)
+   */
+  async logoutAll(userId: string) {
+    try {
+      await this.prisma.refreshToken.deleteMany({ where: { userId } });
+      await this.invalidateUserCache(userId);
+      return { message: 'All sessions logged out successfully' };
+    } catch (err) {
+      this.logger.error('logoutAll failed', err);
+      throw err;
+    }
+  }
+
+  /**
    * Валидация пользователя для Passport Local Strategy
    */
   async validateUser(email: string, password: string) {

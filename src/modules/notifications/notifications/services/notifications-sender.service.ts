@@ -37,7 +37,7 @@ export interface PaymentConfirmationData {
 @Injectable()
 export class NotificationsSenderService {
   private readonly logger = new Logger(NotificationsSenderService.name);
-  private twilioClient: Twilio.Twilio;
+  private readonly twilioClient: Twilio.Twilio;
 
   constructor(
     private readonly configService: ConfigService,

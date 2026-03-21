@@ -7,7 +7,7 @@ import { EmailTemplateService } from './email-template.service';
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter | null = null;
+  private readonly transporter: Transporter | null = null;
 
   constructor(
     private readonly configService: ConfigService,

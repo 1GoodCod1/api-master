@@ -9,6 +9,47 @@ export class BookingsNotificationService {
 
   constructor(private readonly inAppNotifications: InAppNotificationService) {}
 
+  /** Master proposed a time — notify client to confirm or reject */
+  async notifyBookingPending(
+    masterId: string,
+    master: {
+      user: { id: string; firstName: string | null; lastName: string | null };
+    },
+    clientId: string | null,
+    clientName: string | undefined,
+    start: Date,
+    bookingId: string,
+  ): Promise<void> {
+    try {
+      const masterName = formatUserName(
+        master.user.firstName,
+        master.user.lastName,
+      );
+
+      // Notify client to confirm
+      if (clientId) {
+        await this.inAppNotifications.notify({
+          userId: clientId,
+          category: 'BOOKING_PENDING',
+          title: 'Мастер предложил время',
+          message: `${masterName || 'Мастер'} предложил встречу на ${formatDateTime(start)}. Подтвердите или отклоните.`,
+          metadata: {
+            bookingId,
+            masterId,
+            masterName: masterName || undefined,
+            clientName: clientName || undefined,
+            startTime: formatDateTime(start),
+          },
+          priority: 'high',
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send booking pending notification: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   async notifyBookingConfirmed(
     masterId: string,
     master: {

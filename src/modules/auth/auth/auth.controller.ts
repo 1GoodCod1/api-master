@@ -100,6 +100,22 @@ export class AuthController {
     );
   }
 
+  @Post('logout-all')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Logout from all sessions (revokes all refresh tokens)',
+  })
+  @ApiResponse({ status: 200, description: 'All sessions logged out' })
+  async logoutAll(
+    @GetUser() user: JwtUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.refreshCookie.clearIfEnabled(res);
+    return this.authService.logoutAll(user.id);
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })

@@ -76,9 +76,9 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private pool: PgPool;
-  private replicaPools: PgPool[] = [];
-  private replicaClients: PrismaClient[] = [];
+  private readonly pool: PgPool;
+  private readonly replicaPools: PgPool[] = [];
+  private readonly replicaClients: PrismaClient[] = [];
   private readonly extendedClient: PrismaClient;
   private readonly nodeEnv: string;
 

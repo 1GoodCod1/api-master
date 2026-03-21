@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PhoneVerificationService } from './phone-verification.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { GetUser } from '../../../common/decorators/get-user.decorator';
@@ -20,6 +21,7 @@ export class PhoneVerificationController {
 
   @Post('send-code')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Send verification code to user phone' })
   @ApiResponse({
@@ -33,6 +35,7 @@ export class PhoneVerificationController {
 
   @Post('verify')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Verify phone with code' })
   @ApiResponse({ status: 200, description: 'Phone verified successfully' })

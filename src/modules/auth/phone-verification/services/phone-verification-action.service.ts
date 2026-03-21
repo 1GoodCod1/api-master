@@ -16,7 +16,7 @@ const CODE_TTL_MS = 10 * 60_000; // 10 minutes
  */
 @Injectable()
 export class PhoneVerificationActionService {
-  private twilioClient: Twilio | null = null;
+  private readonly twilioClient: Twilio | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
