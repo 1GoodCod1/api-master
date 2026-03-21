@@ -66,7 +66,12 @@ export class ExportController {
     @Req() req: RequestWithUser,
     @Query('locale') locale?: string,
   ) {
-    return this.exportQueue.enqueueExport(type, masterId, req.user, locale);
+    return await this.exportQueue.enqueueExport(
+      type,
+      masterId,
+      req.user,
+      locale,
+    );
   }
 
   @Get('status/:jobId')
@@ -74,7 +79,7 @@ export class ExportController {
   @ApiResponse({ status: 200, description: 'Job status' })
   @ApiResponse({ status: 404, description: 'Job not found' })
   async getExportStatus(@Param('jobId') jobId: string) {
-    return this.exportQueue.getJobStatus(jobId);
+    return await this.exportQueue.getJobStatus(jobId);
   }
 
   @Get('download/:jobId')

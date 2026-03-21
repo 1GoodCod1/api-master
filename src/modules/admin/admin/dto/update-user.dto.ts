@@ -13,7 +13,11 @@ export class AdminUpdateUserDto {
   @IsBoolean()
   isBanned?: boolean;
 
-  @ApiProperty({ required: false, enum: UserRole, description: 'Override user role' })
+  @ApiProperty({
+    required: false,
+    enum: UserRole,
+    description: 'Override user role',
+  })
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
