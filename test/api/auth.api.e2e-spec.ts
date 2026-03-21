@@ -9,6 +9,8 @@ import { randomInt } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 /** +373 + exactly 8 digits (RegisterDto); unique per call to avoid DB collisions in e2e */
 function uniqueMoldovanPhone(): string {
@@ -30,13 +32,14 @@ describe('Auth API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
   });
 
   describe('GET /auth/registration-options', () => {
     it('returns cities and categories', () =>
       request(app.getHttpServer())
-        .get('/auth/registration-options')
+        .get(api('/auth/registration-options'))
         .expect(200)
         .expect((res) => {
           const body = res.body as Record<string, unknown>;
@@ -50,7 +53,7 @@ describe('Auth API (e2e)', () => {
   describe('POST /auth/register', () => {
     it('registers new client', () =>
       request(app.getHttpServer())
-        .post('/auth/register')
+        .post(api('/auth/register'))
         .send({
           email: testEmail,
           phone: testPhone,
@@ -69,7 +72,7 @@ describe('Auth API (e2e)', () => {
 
     it('rejects duplicate email', () =>
       request(app.getHttpServer())
-        .post('/auth/register')
+        .post(api('/auth/register'))
         .send({
           email: testEmail,
           phone: testPhoneOther,
@@ -86,7 +89,7 @@ describe('Auth API (e2e)', () => {
   describe('POST /auth/login', () => {
     it('logs in with valid credentials', () =>
       request(app.getHttpServer())
-        .post('/auth/login')
+        .post(api('/auth/login'))
         .send({ email: testEmail, password: testPassword })
         .expect(200)
         .expect((res) => {
@@ -97,20 +100,22 @@ describe('Auth API (e2e)', () => {
 
     it('rejects invalid password', () =>
       request(app.getHttpServer())
-        .post('/auth/login')
+        .post(api('/auth/login'))
         .send({ email: testEmail, password: 'WrongPass1!' })
         .expect(401));
   });
 
   describe('GET /auth/early-bird-status', () => {
     it('returns early bird status', () =>
-      request(app.getHttpServer()).get('/auth/early-bird-status').expect(200));
+      request(app.getHttpServer())
+        .get(api('/auth/early-bird-status'))
+        .expect(200));
   });
 
   describe('POST /auth/forgot-password', () => {
     it('accepts valid email', () =>
       request(app.getHttpServer())
-        .post('/auth/forgot-password')
+        .post(api('/auth/forgot-password'))
         .send({ email: testEmail })
         .expect((res) => expect([200, 202, 404]).toContain(res.status)));
   });
@@ -120,7 +125,7 @@ describe('Auth API (e2e)', () => {
 
     beforeAll(async () => {
       const res = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post(api('/auth/login'))
         .send({ email: testEmail, password: testPassword });
       const body = res.body as Record<string, unknown>;
       token = typeof body.accessToken === 'string' ? body.accessToken : '';
@@ -128,7 +133,7 @@ describe('Auth API (e2e)', () => {
 
     it('returns profile with valid token', () =>
       request(app.getHttpServer())
-        .get('/auth/me')
+        .get(api('/auth/me'))
         .set('Authorization', `Bearer ${token}`)
         .expect(200)
         .expect((res) => {
@@ -139,6 +144,6 @@ describe('Auth API (e2e)', () => {
         }));
 
     it('rejects without token', () =>
-      request(app.getHttpServer()).get('/auth/me').expect(401));
+      request(app.getHttpServer()).get(api('/auth/me')).expect(401));
   });
 });

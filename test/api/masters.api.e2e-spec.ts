@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Masters API (e2e)', () => {
   let app: INestApplication<App>;
@@ -16,12 +18,13 @@ describe('Masters API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
   });
 
   it('GET /masters returns paginated list', () =>
     request(app.getHttpServer())
-      .get('/masters')
+      .get(api('/masters'))
       .query({ limit: 5, page: 1 })
       .expect(200)
       .expect((res) => {
@@ -35,22 +38,26 @@ describe('Masters API (e2e)', () => {
       }));
 
   it('GET /masters/filters returns filters', () =>
-    request(app.getHttpServer()).get('/masters/filters').expect(200));
+    request(app.getHttpServer()).get(api('/masters/filters')).expect(200));
 
   it('GET /masters/landing-stats returns stats', () =>
-    request(app.getHttpServer()).get('/masters/landing-stats').expect(200));
+    request(app.getHttpServer())
+      .get(api('/masters/landing-stats'))
+      .expect(200));
 
   it('GET /masters/popular returns list', () =>
-    request(app.getHttpServer()).get('/masters/popular').expect(200));
+    request(app.getHttpServer()).get(api('/masters/popular')).expect(200));
 
   it('GET /masters/new returns list', () =>
-    request(app.getHttpServer()).get('/masters/new').expect(200));
+    request(app.getHttpServer()).get(api('/masters/new')).expect(200));
 
   it('GET /masters/profile/me requires auth', () =>
-    request(app.getHttpServer()).get('/masters/profile/me').expect(401));
+    request(app.getHttpServer()).get(api('/masters/profile/me')).expect(401));
 
   it('GET /masters/:slug returns master when exists', async () => {
-    const listRes = await request(app.getHttpServer()).get('/masters?limit=1');
+    const listRes = await request(app.getHttpServer())
+      .get(api('/masters'))
+      .query({ limit: 1 });
     const body = listRes.body as unknown;
     const list = Array.isArray(body)
       ? body
@@ -65,7 +72,9 @@ describe('Masters API (e2e)', () => {
     ) {
       const slug = (list[0] as { slug: string }).slug;
       if (slug)
-        await request(app.getHttpServer()).get(`/masters/${slug}`).expect(200);
+        await request(app.getHttpServer())
+          .get(api(`/masters/${slug}`))
+          .expect(200);
     }
   });
 });

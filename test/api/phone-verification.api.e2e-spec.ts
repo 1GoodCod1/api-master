@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Phone Verification API (e2e)', () => {
   let app: INestApplication<App>;
@@ -16,17 +18,20 @@ describe('Phone Verification API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
   });
 
   it('POST /phone-verification/send-code returns expected status', () =>
     request(app.getHttpServer())
-      .post('/phone-verification/send-code')
+      .post(api('/phone-verification/send-code'))
       .send({ phone: '+37360123456' })
       .expect((res) =>
         expect([200, 201, 400, 401, 429]).toContain(res.status),
       ));
 
   it('GET /phone-verification/status requires auth', () =>
-    request(app.getHttpServer()).get('/phone-verification/status').expect(401));
+    request(app.getHttpServer())
+      .get(api('/phone-verification/status'))
+      .expect(401));
 });

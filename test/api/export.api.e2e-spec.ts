@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getMasterId } from '../api-helpers';
 
 describe('Export API (e2e)', () => {
@@ -18,6 +20,7 @@ describe('Export API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     masterId = await getMasterId(app);
   });
@@ -25,14 +28,14 @@ describe('Export API (e2e)', () => {
   it('GET /export/leads/csv/:masterId requires auth', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/export/leads/csv/${masterId}`)
+      .get(api(`/export/leads/csv/${masterId}`))
       .expect(401);
   });
 
   it('POST /export/queue/excel/:masterId requires auth', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .post(`/export/queue/excel/${masterId}`)
+      .post(api(`/export/queue/excel/${masterId}`))
       .expect(401);
   });
 });

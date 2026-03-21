@@ -1,6 +1,7 @@
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
+import { requestContext } from '../common/request-context/request-context.storage';
 
 const PII_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
   { regex: /\b[\w.-]+@[\w.-]+\.\w{2,}\b/g, replacement: '***@***.***' },
@@ -24,8 +25,25 @@ const piiRedactor = winston.format((info) => {
   return info;
 });
 
+const attachRequestIdJson = winston.format((info) => {
+  const requestId = requestContext.getStore()?.requestId;
+  if (requestId) {
+    info.requestId = requestId;
+  }
+  return info;
+});
+
+const prefixRequestIdConsole = winston.format((info) => {
+  const requestId = requestContext.getStore()?.requestId;
+  if (requestId && typeof info.message === 'string') {
+    info.message = `[${requestId}] ${info.message}`;
+  }
+  return info;
+});
+
 const fileFormat = winston.format.combine(
   winston.format.timestamp(),
+  attachRequestIdJson(),
   piiRedactor(),
   winston.format.json(),
 );
@@ -36,6 +54,7 @@ export const winstonConfig = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.ms(),
+        prefixRequestIdConsole(),
         nestWinstonModuleUtilities.format.nestLike('Master-Hub', {
           colors: true,
           prettyPrint: true,

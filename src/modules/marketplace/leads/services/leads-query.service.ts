@@ -126,7 +126,7 @@ export class LeadsQueryService {
           this.prisma.lead.count({ where: baseWhere }),
         ]);
 
-        const items = this.mapLeadsWithEncodedId(rawLeads);
+        const items = this.mapLeadsWithMasterEncodedId(rawLeads);
         return buildPaginatedResponse(
           items as unknown as Array<{ id: string; createdAt: Date }>,
           total,
@@ -138,12 +138,11 @@ export class LeadsQueryService {
     );
   }
 
-  private mapLeadsWithEncodedId(
+  private mapLeadsWithMasterEncodedId(
     leads: Array<{ id: string; master?: { id: string } | null }>,
   ) {
     return leads.map((lead) => ({
       ...lead,
-      encodedId: encodeId(lead.id),
       master: lead.master
         ? { ...lead.master, encodedId: encodeId(lead.master.id) }
         : lead.master,
@@ -216,7 +215,7 @@ export class LeadsQueryService {
       this.prisma.lead.count({ where: baseWhere }),
     ]);
 
-    const items = this.mapLeadsWithEncodedId(rawLeads);
+    const items = this.mapLeadsWithMasterEncodedId(rawLeads);
     return buildPaginatedResponse(
       items as unknown as Array<{ id: string; createdAt: Date }>,
       total,
@@ -259,7 +258,7 @@ export class LeadsQueryService {
 
     if (!lead) throw new NotFoundException('Lead not found');
 
-    const withEncoded = this.mapLeadsWithEncodedId([lead])[0];
+    const withEncoded = this.mapLeadsWithMasterEncodedId([lead])[0];
     if (authUser.role === 'ADMIN') return withEncoded;
     if (authUser.role === 'CLIENT') {
       if (lead.clientId !== authUser.id) {

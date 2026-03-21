@@ -3,7 +3,8 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
-import { decodeId, encodeId } from '../../shared/utils/id-encoder';
+import { decodeId } from '../../shared/utils/id-encoder';
+import { generateShortId } from '../../shared/utils/generate-id';
 import { LeadsValidationService } from './services/leads-validation.service';
 import { LeadsClientDataService } from './services/leads-client-data.service';
 import { LeadsSpamService } from './services/leads-spam.service';
@@ -69,6 +70,7 @@ export class LeadsService {
 
     const lead = await this.prisma.lead.create({
       data: {
+        id: generateShortId(),
         masterId,
         clientPhone: resolvedClientPhone,
         clientName: resolvedClientName,
@@ -104,7 +106,7 @@ export class LeadsService {
       message,
     });
 
-    return { ...lead, encodedId: encodeId(lead.id) };
+    return lead;
   }
 
   // ==================== ДЕЛЕГИРОВАНИЕ ====================

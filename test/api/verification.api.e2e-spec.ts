@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getClientToken } from '../api-helpers';
 
 describe('Verification API (e2e)', () => {
@@ -18,22 +20,25 @@ describe('Verification API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     token = await getClientToken(app, 'verif');
   });
 
   it('GET /verification/my-status requires auth', () =>
-    request(app.getHttpServer()).get('/verification/my-status').expect(401));
+    request(app.getHttpServer())
+      .get(api('/verification/my-status'))
+      .expect(401));
 
   it('GET /verification/my-status returns status or 403 when authenticated', () =>
     request(app.getHttpServer())
-      .get('/verification/my-status')
+      .get(api('/verification/my-status'))
       .set('Authorization', `Bearer ${token}`)
       .expect((res) => expect([200, 403]).toContain(res.status)));
 
   it('POST /verification/submit requires auth', () =>
     request(app.getHttpServer())
-      .post('/verification/submit')
+      .post(api('/verification/submit'))
       .send({ documents: [] })
       .expect(401));
 });

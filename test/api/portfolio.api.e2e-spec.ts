@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getMasterId } from '../api-helpers';
 
 describe('Portfolio API (e2e)', () => {
@@ -18,6 +20,7 @@ describe('Portfolio API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     masterId = await getMasterId(app);
   });
@@ -25,20 +28,20 @@ describe('Portfolio API (e2e)', () => {
   it('GET /portfolio/master/:masterId returns portfolio (public)', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/portfolio/master/${masterId}`)
+      .get(api(`/portfolio/master/${masterId}`))
       .expect(200);
   });
 
   it('GET /portfolio/master/:masterId/tags returns tags (public)', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/portfolio/master/${masterId}/tags`)
+      .get(api(`/portfolio/master/${masterId}/tags`))
       .expect(200);
   });
 
   it('POST /portfolio requires auth', () =>
     request(app.getHttpServer())
-      .post('/portfolio')
+      .post(api('/portfolio'))
       .send({ title: 'Test', masterId: masterId || 'any' })
       .expect(401));
 });

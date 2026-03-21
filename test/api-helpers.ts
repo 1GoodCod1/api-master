@@ -4,9 +4,12 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { api } from './api/e2e-prefix';
 
 export async function getMasterId(app: INestApplication<App>): Promise<string> {
-  const res = await request(app.getHttpServer()).get('/masters?limit=1');
+  const res = await request(app.getHttpServer())
+    .get(api('/masters'))
+    .query({ limit: 1 });
   const body = res.body as unknown;
   const masters: unknown = Array.isArray(body)
     ? body
@@ -29,7 +32,7 @@ export async function getClientToken(
   const ts = Date.now();
   const email = `${prefix}-${ts}@test.local`;
   const phone = `+37360${String(ts).slice(-7)}`;
-  await request(app.getHttpServer()).post('/auth/register').send({
+  await request(app.getHttpServer()).post(api('/auth/register')).send({
     email,
     phone,
     password: 'TestPass1!@#',
@@ -38,7 +41,7 @@ export async function getClientToken(
     role: 'CLIENT',
   });
   const loginRes = await request(app.getHttpServer())
-    .post('/auth/login')
+    .post(api('/auth/login'))
     .send({ email, password: 'TestPass1!@#' });
   const body = loginRes.body as Record<string, unknown>;
   return typeof body.accessToken === 'string' ? body.accessToken : '';
@@ -50,7 +53,7 @@ export async function getAdminToken(
   const ts = Date.now();
   const email = `admin-${ts}@test.local`;
   const phone = `+37360${String(ts).slice(-7)}`;
-  await request(app.getHttpServer()).post('/auth/register').send({
+  await request(app.getHttpServer()).post(api('/auth/register')).send({
     email,
     phone,
     password: 'TestPass1!@#',
@@ -59,7 +62,7 @@ export async function getAdminToken(
     role: 'ADMIN',
   });
   const loginRes = await request(app.getHttpServer())
-    .post('/auth/login')
+    .post(api('/auth/login'))
     .send({ email, password: 'TestPass1!@#' });
   const body = loginRes.body as Record<string, unknown>;
   return typeof body.accessToken === 'string' ? body.accessToken : '';

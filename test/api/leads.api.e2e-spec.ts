@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Leads API (e2e)', () => {
   let app: INestApplication<App>;
@@ -23,9 +25,10 @@ describe('Leads API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpServer()).post(api('/auth/register')).send({
       email: testEmail,
       phone: testPhone,
       password: testPassword,
@@ -35,15 +38,15 @@ describe('Leads API (e2e)', () => {
     });
 
     const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post(api('/auth/login'))
       .send({ email: testEmail, password: testPassword });
     const loginBody = loginRes.body as Record<string, unknown>;
     accessToken =
       typeof loginBody.accessToken === 'string' ? loginBody.accessToken : '';
 
-    const mastersRes = await request(app.getHttpServer()).get(
-      '/masters?limit=1',
-    );
+    const mastersRes = await request(app.getHttpServer())
+      .get(api('/masters'))
+      .query({ limit: 1 });
     const body = mastersRes.body as unknown;
     const masters: unknown = Array.isArray(body)
       ? body
@@ -62,17 +65,17 @@ describe('Leads API (e2e)', () => {
 
   it('POST /leads requires auth', () =>
     request(app.getHttpServer())
-      .post('/leads')
+      .post(api('/leads'))
       .send({ masterId: 'any', message: 'test' })
       .expect(401));
 
   it('GET /leads requires auth', () =>
-    request(app.getHttpServer()).get('/leads').expect(401));
+    request(app.getHttpServer()).get(api('/leads')).expect(401));
 
   it('POST /leads creates lead when authenticated', async () => {
     if (!masterId) return;
     const res = await request(app.getHttpServer())
-      .post('/leads')
+      .post(api('/leads'))
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         masterId,
@@ -86,5 +89,5 @@ describe('Leads API (e2e)', () => {
   });
 
   it('GET /leads/stats requires auth', () =>
-    request(app.getHttpServer()).get('/leads/stats').expect(401));
+    request(app.getHttpServer()).get(api('/leads/stats')).expect(401));
 });

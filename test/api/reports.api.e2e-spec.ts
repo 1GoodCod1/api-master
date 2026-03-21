@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getClientToken } from '../api-helpers';
 
 describe('Reports API (e2e)', () => {
@@ -18,22 +20,23 @@ describe('Reports API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     token = await getClientToken(app, 'reports');
   });
 
   it('GET /reports/my-reports requires auth', () =>
-    request(app.getHttpServer()).get('/reports/my-reports').expect(401));
+    request(app.getHttpServer()).get(api('/reports/my-reports')).expect(401));
 
   it('GET /reports/my-reports returns list when authenticated', () =>
     request(app.getHttpServer())
-      .get('/reports/my-reports')
+      .get(api('/reports/my-reports'))
       .set('Authorization', `Bearer ${token}`)
       .expect(200));
 
   it('POST /reports requires auth', () =>
     request(app.getHttpServer())
-      .post('/reports')
+      .post(api('/reports'))
       .send({ type: 'MASTER', targetId: 'any', reason: 'test' })
       .expect(401));
 });

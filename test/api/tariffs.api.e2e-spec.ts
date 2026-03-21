@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Tariffs API (e2e)', () => {
   let app: INestApplication<App>;
@@ -16,17 +18,18 @@ describe('Tariffs API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
   });
 
   it('GET /tariffs returns list', () =>
-    request(app.getHttpServer()).get('/tariffs').expect(200));
+    request(app.getHttpServer()).get(api('/tariffs')).expect(200));
 
   it('GET /tariffs/active returns active', () =>
-    request(app.getHttpServer()).get('/tariffs/active').expect(200));
+    request(app.getHttpServer()).get(api('/tariffs/active')).expect(200));
 
   it('GET /tariffs/:id returns tariff when exists', async () => {
-    const listRes = await request(app.getHttpServer()).get('/tariffs');
+    const listRes = await request(app.getHttpServer()).get(api('/tariffs'));
     const list = listRes.body as unknown[];
     if (
       list.length > 0 &&
@@ -35,13 +38,15 @@ describe('Tariffs API (e2e)', () => {
       'id' in list[0]
     ) {
       const id = (list[0] as { id: string }).id;
-      await request(app.getHttpServer()).get(`/tariffs/${id}`).expect(200);
+      await request(app.getHttpServer())
+        .get(api(`/tariffs/${id}`))
+        .expect(200);
     }
   });
 
   it('POST /tariffs requires auth', () =>
     request(app.getHttpServer())
-      .post('/tariffs')
+      .post(api('/tariffs'))
       .send({ name: 'Test', price: 10 })
       .expect(401));
 });

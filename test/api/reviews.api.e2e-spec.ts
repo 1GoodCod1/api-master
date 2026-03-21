@@ -7,6 +7,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Reviews API (e2e)', () => {
   let app: INestApplication<App>;
@@ -19,11 +21,12 @@ describe('Reviews API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
 
-    const mastersRes = await request(app.getHttpServer()).get(
-      '/masters?limit=1',
-    );
+    const mastersRes = await request(app.getHttpServer())
+      .get(api('/masters'))
+      .query({ limit: 1 });
     const body = mastersRes.body as unknown;
     const masters: unknown = Array.isArray(body)
       ? body
@@ -40,7 +43,7 @@ describe('Reviews API (e2e)', () => {
         : '';
 
     const regRes = await request(app.getHttpServer())
-      .post('/auth/register')
+      .post(api('/auth/register'))
       .send({
         email: `reviews-api-${Date.now()}@test.local`,
         phone: `+37360${String(Date.now()).slice(-7)}`,
@@ -57,14 +60,14 @@ describe('Reviews API (e2e)', () => {
   it('GET /reviews/master/:masterId returns reviews', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/reviews/master/${masterId}`)
+      .get(api(`/reviews/master/${masterId}`))
       .expect(200);
   });
 
   it('GET /reviews/can-create/:masterId returns canCreate when authenticated', async () => {
     if (!masterId) return;
     let req = request(app.getHttpServer()).get(
-      `/reviews/can-create/${masterId}`,
+      api(`/reviews/can-create/${masterId}`),
     );
     if (clientToken) req = req.set('Authorization', `Bearer ${clientToken}`);
     await req.expect(clientToken ? 200 : 401);
@@ -73,14 +76,14 @@ describe('Reviews API (e2e)', () => {
   it('GET /reviews/stats/:masterId returns stats or requires auth', async () => {
     if (!masterId) return;
     const res = await request(app.getHttpServer()).get(
-      `/reviews/stats/${masterId}`,
+      api(`/reviews/stats/${masterId}`),
     );
     expect([200, 401]).toContain(res.status);
   });
 
   it('POST /reviews requires auth', () =>
     request(app.getHttpServer())
-      .post('/reviews')
+      .post(api('/reviews'))
       .send({ masterId, rating: 5, text: 'Test' })
       .expect(401));
 });

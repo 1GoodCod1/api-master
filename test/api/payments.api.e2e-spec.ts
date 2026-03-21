@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getClientToken, getMasterId } from '../api-helpers';
 
 describe('Payments API (e2e)', () => {
@@ -19,6 +21,7 @@ describe('Payments API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     token = await getClientToken(app, 'pay');
     masterId = await getMasterId(app);
@@ -27,22 +30,22 @@ describe('Payments API (e2e)', () => {
   it('GET /payments/master/:masterId requires auth', async () => {
     if (!masterId) return;
     await request(app.getHttpServer())
-      .get(`/payments/master/${masterId}`)
+      .get(api(`/payments/master/${masterId}`))
       .expect(401);
   });
 
   it('GET /payments/my-payments requires auth', () =>
-    request(app.getHttpServer()).get('/payments/my-payments').expect(401));
+    request(app.getHttpServer()).get(api('/payments/my-payments')).expect(401));
 
   it('GET /payments/my-payments returns list or 403 when authenticated', () =>
     request(app.getHttpServer())
-      .get('/payments/my-payments')
+      .get(api('/payments/my-payments'))
       .set('Authorization', `Bearer ${token}`)
       .expect((res) => expect([200, 403]).toContain(res.status)));
 
   it('POST /payments/create-checkout requires auth', () =>
     request(app.getHttpServer())
-      .post('/payments/create-checkout')
+      .post(api('/payments/create-checkout'))
       .send({ tariffId: 'any', successUrl: 'http://x', cancelUrl: 'http://x' })
       .expect(401));
 });

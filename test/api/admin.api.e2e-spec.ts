@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getAdminToken } from '../api-helpers';
 
 describe('Admin API (e2e)', () => {
@@ -18,37 +20,38 @@ describe('Admin API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     adminToken = await getAdminToken(app);
   });
 
   it('GET /admin/dashboard requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/dashboard').expect(401));
+    request(app.getHttpServer()).get(api('/admin/dashboard')).expect(401));
 
   it('GET /admin/dashboard returns 200 or 403 when authenticated', () =>
     request(app.getHttpServer())
-      .get('/admin/dashboard')
+      .get(api('/admin/dashboard'))
       .set('Authorization', `Bearer ${adminToken}`)
       .expect((res) => expect([200, 401, 403]).toContain(res.status)));
 
   it('GET /admin/users requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/users').expect(401));
+    request(app.getHttpServer()).get(api('/admin/users')).expect(401));
 
   it('GET /admin/masters requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/masters').expect(401));
+    request(app.getHttpServer()).get(api('/admin/masters')).expect(401));
 
   it('GET /admin/leads requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/leads').expect(401));
+    request(app.getHttpServer()).get(api('/admin/leads')).expect(401));
 
   it('GET /admin/reviews requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/reviews').expect(401));
+    request(app.getHttpServer()).get(api('/admin/reviews')).expect(401));
 
   it('GET /admin/payments requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/payments').expect(401));
+    request(app.getHttpServer()).get(api('/admin/payments')).expect(401));
 
   it('GET /admin/analytics requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/analytics').expect(401));
+    request(app.getHttpServer()).get(api('/admin/analytics')).expect(401));
 
   it('GET /admin/system/info requires admin auth', () =>
-    request(app.getHttpServer()).get('/admin/system/info').expect(401));
+    request(app.getHttpServer()).get(api('/admin/system/info')).expect(401));
 });

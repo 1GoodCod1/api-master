@@ -486,7 +486,7 @@ model City {
 }
 
 model Lead {
-  id          String     @id @default(uuid())
+  id          String     @id
   masterId    String
   master      Master     @relation(fields: [masterId], references: [id], onDelete: Cascade)
   clientPhone String

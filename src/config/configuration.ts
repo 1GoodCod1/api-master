@@ -2,6 +2,7 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   buildId: process.env.BUILD_ID || 'local',
   port: parseInt(process.env.PORT || '4000', 10),
+  /** Public API origin (no trailing slash). REST routes are under /api/v1 (see http-app.ts). */
   apiUrl: process.env.API_URL || 'http://localhost:4000',
   frontendUrl:
     process.env.FRONTEND_URL ||
@@ -144,5 +145,31 @@ export default () => ({
   rateLimit: {
     ttl: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10),
     limit: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    /**
+     * Shared throttler state across API replicas (Redis).
+     * Default: production = on, development = in-memory unless RATE_LIMIT_REDIS_STORAGE=true.
+     */
+    useRedisStorage:
+      process.env.RATE_LIMIT_REDIS_STORAGE === 'true'
+        ? true
+        : process.env.RATE_LIMIT_REDIS_STORAGE === 'false'
+          ? false
+          : process.env.NODE_ENV === 'production',
+  },
+
+  /**
+   * When httpOnly refresh cookie is present, require Origin/Referer to match CORS (CSRF mitigation).
+   * Default: enabled in production only. Dev: set COOKIE_ORIGIN_CHECK=true to enforce.
+   */
+  security: {
+    cookieOriginCheckEnabled:
+      process.env.NODE_ENV === 'production'
+        ? process.env.COOKIE_ORIGIN_CHECK !== 'false'
+        : process.env.COOKIE_ORIGIN_CHECK === 'true',
+  },
+
+  /** Persist full HTTP request/response audit (off by default — high volume & PII risk). */
+  audit: {
+    httpEnabled: process.env.AUDIT_HTTP_ENABLED === 'true',
   },
 });

@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import { getRequestId } from '../request-context/request-context.storage';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -22,36 +23,38 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status: number;
-    let message: string | object;
+    let rawBody: string | object;
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       const prismaResult = this.mapPrismaError(exception);
       status = prismaResult.status;
-      message = prismaResult.message;
+      rawBody = prismaResult.message;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
-      message = exception.getResponse();
+      rawBody = exception.getResponse();
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
-      message = { statusCode: status, message: 'Internal server error' };
+      rawBody = {
+        statusCode: status,
+        message: 'Internal server error',
+      };
     }
 
     const isProd = this.configService
       ? this.configService.get<string>('nodeEnv') === 'production'
       : process.env.NODE_ENV === 'production';
-    const safeMessage =
-      isProd && status >= 500
-        ? { statusCode: status, message: 'Internal server error' }
-        : typeof message === 'string'
-          ? { message }
-          : message;
+
+    const payload = this.buildErrorPayload(status, rawBody, isProd);
+    const requestId = getRequestId();
 
     const errorResponse = {
       success: false,
+      statusCode: status,
+      ...payload,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      ...safeMessage,
+      ...(requestId ? { requestId } : {}),
     };
 
     const isAuthClientError =
@@ -59,18 +62,54 @@ export class HttpExceptionFilter implements ExceptionFilter {
       typeof request.url === 'string' &&
       (request.url.includes('/auth/refresh') ||
         request.url.includes('/auth/login'));
+    const logSuffix = requestId ? ` requestId=${requestId}` : '';
     if (isAuthClientError) {
       this.logger.warn(
-        `${request.method} ${request.url} - ${status} - ${JSON.stringify(message)}`,
+        `${request.method} ${request.url} - ${status} - ${JSON.stringify(rawBody)}${logSuffix}`,
       );
     } else {
       this.logger.error(
-        `${request.method} ${request.url} - ${status} - ${JSON.stringify(message)}`,
+        `${request.method} ${request.url} - ${status} - ${JSON.stringify(rawBody)}${logSuffix}`,
         exception instanceof Error ? exception.stack : '',
       );
     }
 
     response.status(status).json(errorResponse);
+  }
+
+  private buildErrorPayload(
+    status: number,
+    raw: string | object,
+    hideProd500Details: boolean,
+  ): Record<string, unknown> {
+    if (hideProd500Details && status >= 500) {
+      return { message: 'Internal server error' };
+    }
+
+    if (typeof raw === 'string') {
+      return { message: raw };
+    }
+
+    const o = raw as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+
+    if (o.message !== undefined) {
+      out.message = o.message;
+    } else if (typeof o.error === 'string') {
+      out.message = o.error;
+    } else {
+      out.message = 'Request failed';
+    }
+
+    if (typeof o.error === 'string') {
+      out.error = o.error;
+    }
+
+    if (o.fields !== undefined) {
+      out.fields = o.fields;
+    }
+
+    return out;
   }
 
   private mapPrismaError(exception: Prisma.PrismaClientKnownRequestError): {

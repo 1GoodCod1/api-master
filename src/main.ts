@@ -16,10 +16,12 @@ import {
   getHelmetConfig,
   createShutdownHandler,
 } from './config';
+import { applyGlobalPrefix } from './config/http-app';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor';
+import { requestIdMiddleware } from './common/request-context/request-id.middleware';
 
 const isShuttingDownRef = { current: false };
 
@@ -39,6 +41,10 @@ async function bootstrap() {
         credentials: useHttpOnlyCookie,
       },
     });
+
+    applyGlobalPrefix(app);
+
+    app.use(requestIdMiddleware);
 
     if (useHttpOnlyCookie) {
       app.use(cookieParser());
@@ -94,6 +100,7 @@ async function bootstrap() {
       );
     }
     logger.log(`Приложение запущено на: http://localhost:${port}`);
+    logger.log(`REST API base path: /api/v1`);
     if (!isProd) {
       logger.log(`Swagger документация: http://localhost:${port}/docs`);
     }

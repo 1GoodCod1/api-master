@@ -335,7 +335,7 @@ export class TasksActivityService {
 
   /**
    * Реактивация мастера (опционально)
-   * Примечание: Реактивация происходит автоматически в ActivityTrackerMiddleware
+   * Примечание: Реактивация происходит автоматически в ActivityTrackerInterceptor
    * Этот метод оставлен для ручной реактивации или дополнительной логики
    */
   async reactivateMaster(masterId: string): Promise<void> {

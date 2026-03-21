@@ -1,31 +1,26 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 
-interface PoolConnectClient {
+const STATEMENT_TIMEOUT_MS = 60_000; // 60s max per query to prevent pool exhaustion
+
+/** pg's PoolClient has internal `connection.stream` at runtime; @types/pg omits it */
+type PoolClientWithStream = PoolClient & {
   connection?: {
     stream?: {
       setKeepAlive?: (enable: boolean, initialDelayMs: number) => void;
     };
   };
-  query?: (sql: string) => Promise<unknown>;
-}
+};
 
-interface PgPool {
-  on(event: 'connect', listener: (client: PoolConnectClient) => void): void;
-  removeAllListeners?: (event?: string) => void;
-  end(): Promise<void>;
-}
-
-const STATEMENT_TIMEOUT_MS = 60_000; // 60s max per query to prevent pool exhaustion
-
-function attachKeepAliveToPool(pool: PgPool): void {
-  pool.on('connect', (client) => {
+function attachKeepAliveToPool(pool: Pool): void {
+  pool.on('connect', (client: PoolClient) => {
+    const c = client as PoolClientWithStream;
     try {
-      client.connection?.stream?.setKeepAlive?.(true, 60_000);
+      c.connection?.stream?.setKeepAlive?.(true, 60_000);
     } catch {
       // ignore keepalive setup errors
     }
@@ -41,30 +36,28 @@ function attachKeepAliveToPool(pool: PgPool): void {
 function createPgPool(
   connectionString: string,
   nodeEnv: string = process.env.NODE_ENV || 'development',
-): PgPool {
+): Pool {
   const isTest = nodeEnv === 'test';
-  // pg Pool types may not resolve in eslint's type-aware analysis
 
-  const rawPool: unknown = new Pool({
+  const pool = new Pool({
     connectionString,
     max: isTest ? 3 : 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000, // 10s for Docker/cold DB; was 2s
     allowExitOnIdle: true,
   });
-  const pool = rawPool as PgPool;
 
   attachKeepAliveToPool(pool);
   return pool;
 }
 
-async function closePgPool(pool: PgPool | undefined): Promise<void> {
+async function closePgPool(pool: Pool | undefined): Promise<void> {
   if (!pool) {
     return;
   }
 
   try {
-    pool.removeAllListeners?.();
+    pool.removeAllListeners();
     await pool.end();
   } catch {
     // ignore pool end errors
@@ -76,8 +69,8 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private readonly pool: PgPool;
-  private readonly replicaPools: PgPool[] = [];
+  private readonly pool: Pool;
+  private readonly replicaPools: Pool[] = [];
   private readonly replicaClients: PrismaClient[] = [];
   private readonly extendedClient: PrismaClient;
   private readonly nodeEnv: string;

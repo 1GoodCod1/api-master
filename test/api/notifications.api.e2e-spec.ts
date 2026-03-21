@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 import { getClientToken } from '../api-helpers';
 
 describe('Notifications API (e2e)', () => {
@@ -18,22 +20,23 @@ describe('Notifications API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
     token = await getClientToken(app, 'notif');
   });
 
   it('GET /notifications requires auth', () =>
-    request(app.getHttpServer()).get('/notifications').expect(401));
+    request(app.getHttpServer()).get(api('/notifications')).expect(401));
 
   it('GET /notifications returns list when authenticated', () =>
     request(app.getHttpServer())
-      .get('/notifications')
+      .get(api('/notifications'))
       .set('Authorization', `Bearer ${token}`)
       .expect(200));
 
   it('GET /notifications/unread-count returns count when authenticated', () =>
     request(app.getHttpServer())
-      .get('/notifications/unread-count')
+      .get(api('/notifications/unread-count'))
       .set('Authorization', `Bearer ${token}`)
       .expect(200));
 });

@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Bookings API (e2e)', () => {
   let app: INestApplication<App>;
@@ -17,6 +19,7 @@ describe('Bookings API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
 
     const mastersRes = await request(app.getHttpServer()).get(
@@ -44,14 +47,14 @@ describe('Bookings API (e2e)', () => {
     future.setDate(future.getDate() + 7);
     const dateStr = future.toISOString().slice(0, 10);
     await request(app.getHttpServer())
-      .get(`/bookings/master/${masterId}/available-slots`)
+      .get(api(`/bookings/master/${masterId}/available-slots`))
       .query({ date: dateStr })
       .expect(200);
   });
 
   it('POST /bookings requires auth', () =>
     request(app.getHttpServer())
-      .post('/bookings')
+      .post(api('/bookings'))
       .send({
         masterId: masterId || 'm1',
         startTime: new Date().toISOString(),
@@ -62,11 +65,11 @@ describe('Bookings API (e2e)', () => {
   it('GET /bookings/master/:masterId returns bookings or requires auth', async () => {
     if (!masterId) return;
     const res = await request(app.getHttpServer()).get(
-      `/bookings/master/${masterId}`,
+      api(`/bookings/master/${masterId}`),
     );
     expect([200, 401]).toContain(res.status);
   });
 
   it('GET /bookings/my-bookings requires auth', () =>
-    request(app.getHttpServer()).get('/bookings/my-bookings').expect(401));
+    request(app.getHttpServer()).get(api('/bookings/my-bookings')).expect(401));
 });

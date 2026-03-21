@@ -6,6 +6,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { api } from './e2e-prefix';
 
 describe('Search API (e2e)', () => {
   let app: INestApplication<App>;
@@ -16,12 +18,13 @@ describe('Search API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    applyE2eGlobalPrefix(app);
     await app.init();
   });
 
   it('GET /search/masters returns masters', () =>
     request(app.getHttpServer())
-      .get('/search/masters')
+      .get(api('/search/masters'))
       .query({ q: 'test', limit: 5 })
       .expect(200)
       .expect((res) => {

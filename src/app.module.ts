@@ -1,22 +1,26 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { join } from 'path';
 import type { Response } from 'express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bull';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TerminusModule } from '@nestjs/terminus';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import configuration from './config/configuration';
 import { createBullOptions } from './config/bull.config';
-import { ActivityTrackerMiddleware } from './middleware/activity-tracker.middleware';
+import { ActivityTrackerInterceptor } from './common/interceptors/activity-tracker.interceptor';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { CookieOriginGuard } from './common/guards/cookie-origin.guard';
 
 // Shared modules
 import { PrismaModule } from './modules/shared/database/prisma.module';
 import { RedisModule } from './modules/shared/redis/redis.module';
+import { RedisService } from './modules/shared/redis/redis.service';
 import { CacheModule } from './modules/shared/cache/cache.module';
 
 // Feature modules
@@ -47,7 +51,18 @@ import { ReferralsModule } from './modules/engagement/referrals/referrals.module
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    ActivityTrackerMiddleware,
+    {
+      provide: APP_GUARD,
+      useClass: CookieOriginGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityTrackerInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
   ],
   imports: [
     // Configuration
@@ -79,18 +94,24 @@ import { ReferralsModule } from './modules/engagement/referrals/referrals.module
     // System modules
     ScheduleModule.forRoot(),
 
-    // Rate limiting
+    // Rate limiting (Redis storage in production for shared limits across pods)
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        throttlers: [
-          {
-            ttl: configService.get<number>('rateLimit.ttl', 900000),
-            limit: configService.get<number>('rateLimit.limit', 100),
-          },
-        ],
-      }),
-      inject: [ConfigService],
+      imports: [ConfigModule, RedisModule],
+      useFactory: (configService: ConfigService, redis: RedisService) => {
+        const ttl = configService.get<number>('rateLimit.ttl', 900000);
+        const limit = configService.get<number>('rateLimit.limit', 100);
+        const useRedis = configService.get<boolean>(
+          'rateLimit.useRedisStorage',
+          false,
+        );
+        return {
+          throttlers: [{ ttl, limit }],
+          ...(useRedis
+            ? { storage: new ThrottlerStorageRedisService(redis.getClient()) }
+            : {}),
+        };
+      },
+      inject: [ConfigService, RedisService],
     }),
 
     BullModule.forRootAsync({
@@ -131,8 +152,4 @@ import { ReferralsModule } from './modules/engagement/referrals/referrals.module
     ReferralsModule,
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ActivityTrackerMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

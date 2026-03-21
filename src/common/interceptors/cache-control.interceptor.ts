@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import type { Request } from 'express';
+import { stripApiPrefix } from '../utils/api-route.util';
 
 /**
  * Adds Cache-Control headers for public GET endpoints to enable browser/CDN caching.
@@ -21,7 +22,7 @@ export class CacheControlInterceptor implements NestInterceptor {
     }>();
 
     if (request.method === 'GET') {
-      const path = request.path;
+      const path = stripApiPrefix(request.path);
 
       // Categories and cities: 1h
       if (path === '/categories' || path === '/cities') {
