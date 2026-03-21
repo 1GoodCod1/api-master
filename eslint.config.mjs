@@ -18,7 +18,7 @@ export default defineConfig([
         ...globals.node,
         ...globals.jest,
       },
-      sourceType: 'commonjs',
+      sourceType: 'module',
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
@@ -34,16 +34,30 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      '@typescript-eslint/consistent-type-imports': [
+        'warn',
+        { fixStyle: 'separate-type-imports' },
+      ],
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'warn',
+        { ignorePrimitives: { string: true, number: true, boolean: false } },
+      ],
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      'eqeqeq': ['warn', 'always', { null: 'ignore' }],
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
   {
-    files: ['test/unit/**/*.ts'],
+    files: ['test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
   {

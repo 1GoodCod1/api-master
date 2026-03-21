@@ -135,7 +135,7 @@ export class BookingsService {
   private ensureMasterAccess(masterId: string, user: BookingsAuthUser): void {
     if (user.role === 'ADMIN') return;
     const master = user.masterProfile;
-    if (!master || master.id !== masterId) {
+    if (master?.id !== masterId) {
       throw new ForbiddenException('You can only access your own data');
     }
   }

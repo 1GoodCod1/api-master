@@ -33,7 +33,7 @@ export class AdminUsersService {
       page = 1,
       limit = 20,
       cursor,
-    } = filters || {};
+    } = filters ?? {};
 
     let verifiedBoolean: boolean | undefined;
     if (verified !== undefined && verified !== null) {

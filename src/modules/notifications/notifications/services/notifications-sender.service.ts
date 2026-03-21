@@ -113,7 +113,7 @@ export class NotificationsSenderService {
         chat_id: chatId,
         text: message,
         parse_mode: 'HTML',
-        disable_notification: options?.silent || false,
+        disable_notification: options?.silent ?? false,
       });
       this.logger.log('Telegram-сообщение успешно отправлено');
     } catch (error: unknown) {
@@ -274,7 +274,7 @@ export class NotificationsSenderService {
         chat_id: chatId,
         text: message,
         parse_mode: options?.parseMode || 'HTML',
-        disable_notification: options?.disableNotification || false,
+        disable_notification: options?.disableNotification ?? false,
       });
 
       this.logger.log(`Telegram job ${job.id} sent`);

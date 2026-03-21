@@ -1,12 +1,12 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { LoginService } from '../../../src/modules/auth/auth/services/login.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { TokenService } from '../../../src/modules/auth/auth/services/token.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
-jest.mock('bcrypt', () => ({
-  compare: jest.fn(),
+jest.mock('argon2', () => ({
+  verify: jest.fn(),
 }));
 
 type PrismaLoginMock = {
@@ -81,7 +81,7 @@ describe('LoginService', () => {
       isBanned: false,
       masterProfile: null,
     } as never);
-    (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    (argon2.verify as jest.Mock).mockResolvedValue(false);
 
     await expect(
       service.login(
@@ -126,7 +126,7 @@ describe('LoginService', () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
-    expect(bcrypt.compare).not.toHaveBeenCalled();
+    expect(argon2.verify).not.toHaveBeenCalled();
     expect(prisma.loginHistory.create).not.toHaveBeenCalled();
   });
 
@@ -143,7 +143,7 @@ describe('LoginService', () => {
       masterProfile: { id: 'm1' },
     } as never);
     prisma.ipBlacklist.findFirst.mockResolvedValue(null);
-    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
     tokenService.generateAccessToken.mockReturnValue('access-token');
     tokenService.generateRefreshToken.mockResolvedValue('refresh-token');
     prisma.$transaction.mockResolvedValue([] as never);

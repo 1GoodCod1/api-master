@@ -31,22 +31,20 @@ export class MastersPhotosService {
       });
 
       // Если не найдено по slug, пробуем по id
-      if (!m) {
-        m = await this.prisma.master.findUnique({
-          where: { id: masterIdOrSlug },
-          select: {
-            id: true,
-            avatarFileId: true,
-            photos: {
-              orderBy: { createdAt: 'desc' },
-              take: Math.min(15, Math.max(1, Number(limit) || 15)),
-              select: {
-                file: true,
-              },
+      m ??= await this.prisma.master.findUnique({
+        where: { id: masterIdOrSlug },
+        select: {
+          id: true,
+          avatarFileId: true,
+          photos: {
+            orderBy: { createdAt: 'desc' },
+            take: Math.min(15, Math.max(1, Number(limit) || 15)),
+            select: {
+              file: true,
             },
           },
-        });
-      }
+        },
+      });
 
       if (!m) throw new NotFoundException('Master not found');
 

@@ -1,4 +1,4 @@
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 
 export class ConfigHelper {
   static getString(
@@ -25,6 +25,6 @@ export class ConfigHelper {
     defaultValue: boolean = false,
   ): boolean {
     const value = configService.get<boolean>(key);
-    return value !== undefined ? value : defaultValue;
+    return value ?? defaultValue;
   }
 }

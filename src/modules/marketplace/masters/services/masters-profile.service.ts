@@ -118,54 +118,52 @@ export class MastersProfileService {
     });
 
     // Если не найдено по slug, пробуем по id
-    if (!master) {
-      master = await this.prisma.master.findUnique({
-        where: { id: idOrSlug },
-        include: {
-          avatarFile: true,
-          photos: {
-            orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
-            take: 15,
-            include: {
-              file: {
-                select: {
-                  id: true,
-                  path: true,
-                  mimetype: true,
-                  size: true,
-                  filename: true,
-                  createdAt: true,
-                },
+    master ??= await this.prisma.master.findUnique({
+      where: { id: idOrSlug },
+      include: {
+        avatarFile: true,
+        photos: {
+          orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+          take: 15,
+          include: {
+            file: {
+              select: {
+                id: true,
+                path: true,
+                mimetype: true,
+                size: true,
+                filename: true,
+                createdAt: true,
               },
-            },
-          },
-          category: true,
-          city: true,
-          reviews: {
-            where: { status: ReviewStatus.VISIBLE },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-          },
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              isVerified: true,
-            },
-          },
-          _count: {
-            select: {
-              reviews: {
-                where: { status: ReviewStatus.VISIBLE },
-              },
-              leads: true,
             },
           },
         },
-      });
-    }
+        category: true,
+        city: true,
+        reviews: {
+          where: { status: ReviewStatus.VISIBLE },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            isVerified: true,
+          },
+        },
+        _count: {
+          select: {
+            reviews: {
+              where: { status: ReviewStatus.VISIBLE },
+            },
+            leads: true,
+          },
+        },
+      },
+    });
 
     if (!master) {
       throw new NotFoundException('Master not found');

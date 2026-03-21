@@ -105,7 +105,7 @@ export class LeadsActionsService {
       );
 
       // Если статус перешёл в AVAILABLE — отправляем уведомления
-      if (updatedMaster && updatedMaster.availabilityStatus === 'AVAILABLE') {
+      if (updatedMaster?.availabilityStatus === 'AVAILABLE') {
         void this.notifySubscribersAboutAvailability(lead.masterId).catch((e) =>
           this.logger.error('notifySubscribersAboutAvailability failed', e),
         );

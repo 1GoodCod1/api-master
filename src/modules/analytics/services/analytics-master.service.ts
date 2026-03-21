@@ -228,7 +228,7 @@ export class AnalyticsMasterService {
       );
 
       result.push(
-        existing || {
+        existing ?? {
           date,
           leadsCount: 0,
           viewsCount: 0,

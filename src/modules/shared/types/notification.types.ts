@@ -1,4 +1,4 @@
-import { NotificationType } from '@prisma/client';
+import type { NotificationType } from '@prisma/client';
 
 export interface SMSJobData {
   to: string;

@@ -28,20 +28,17 @@ export class ReportsValidationService {
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
     if (!user) throw new NotFoundException('User not found');
 
-    let validLead: { id: string } | null = null;
-    if (leadId) {
-      validLead = await this.prisma.lead.findFirst({
-        where: {
-          id: leadId,
-          masterId,
-          OR: [{ clientId }, { clientPhone: user.phone }],
-        },
-      });
-    } else {
-      validLead = await this.prisma.lead.findFirst({
-        where: { masterId, OR: [{ clientId }, { clientPhone: user.phone }] },
-      });
-    }
+    const validLead = leadId
+      ? await this.prisma.lead.findFirst({
+          where: {
+            id: leadId,
+            masterId,
+            OR: [{ clientId }, { clientPhone: user.phone }],
+          },
+        })
+      : await this.prisma.lead.findFirst({
+          where: { masterId, OR: [{ clientId }, { clientPhone: user.phone }] },
+        });
 
     if (!validLead) {
       throw new ForbiddenException(

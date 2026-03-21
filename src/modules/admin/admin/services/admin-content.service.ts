@@ -23,7 +23,7 @@ export class AdminContentService {
     page?: number;
     limit?: number;
   }) {
-    const { status, dateFrom, dateTo, page = 1, limit = 50 } = filters || {};
+    const { status, dateFrom, dateTo, page = 1, limit = 50 } = filters ?? {};
     const skip = (page - 1) * limit;
 
     const where: Prisma.LeadWhereInput = {};
@@ -89,7 +89,7 @@ export class AdminContentService {
     page?: number;
     limit?: number;
   }) {
-    const { status, page = 1, limit = 50 } = filters || {};
+    const { status, page = 1, limit = 50 } = filters ?? {};
     const skip = (page - 1) * limit;
 
     const where: Prisma.ReviewWhereInput = {};
@@ -162,7 +162,7 @@ export class AdminContentService {
     page?: number;
     limit?: number;
   }) {
-    const { status, page = 1, limit = 50 } = filters || {};
+    const { status, page = 1, limit = 50 } = filters ?? {};
     const skip = (page - 1) * limit;
 
     const where: Prisma.PaymentWhereInput = {};

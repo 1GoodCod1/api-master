@@ -24,7 +24,7 @@ export class AdminReviewsService {
     limit?: number;
     cursor?: string;
   }) {
-    const { status, page = 1, limit = 50, cursor } = filters || {};
+    const { status, page = 1, limit = 50, cursor } = filters ?? {};
     const limitNumber = Number(limit) || 50;
 
     const where: Prisma.ReviewWhereInput = {};

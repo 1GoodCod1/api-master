@@ -39,7 +39,7 @@ export class ReviewsActionService {
     const { masterId, leadId, rating, criteria, fileIds } = createReviewDto;
 
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
-    if (!user || !user.phone) {
+    if (!user?.phone) {
       throw new BadRequestException(
         'Пользователь или телефон не найдены. Пожалуйста, заполните профиль.',
       );
@@ -103,8 +103,9 @@ export class ReviewsActionService {
     // Валидация критериев
     this.validateCriteria(criteria);
 
-    const safeFileIds =
-      fileIds && fileIds.length ? fileIds.slice(0, 5).filter(Boolean) : [];
+    const safeFileIds = fileIds?.length
+      ? fileIds.slice(0, 5).filter(Boolean)
+      : [];
     let displayName =
       createReviewDto.clientName?.trim() || lead.clientName?.trim() || null;
     if (!displayName && user) {

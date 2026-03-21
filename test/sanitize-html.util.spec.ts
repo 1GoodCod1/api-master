@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument -- Test payloads use intentional any */
 import {
   sanitizeStrict,
   sanitizeBasic,

@@ -1,7 +1,7 @@
 import { PrismaClient, TariffType, UserRole } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,7 +27,7 @@ async function main() {
   );
 
   // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 10);
+  const adminPassword = await argon2.hash('admin123');
   await prisma.user.upsert({
     where: { email: 'admin@master-hub.md' },
     update: {},

@@ -40,7 +40,7 @@ export class BookingsValidationService {
     const { masterId, leadId } = dto;
     let resolvedPhone = clientPhone;
     let resolvedName = clientName;
-    let resolvedClientId: string | null = null;
+    let resolvedClientId: string | null;
     const resolvedLeadId: string | null = leadId ?? null;
 
     if (authUser.role === 'MASTER') {
@@ -66,7 +66,7 @@ export class BookingsValidationService {
           clientId: true,
         },
       });
-      if (!lead || lead.masterId !== masterId) {
+      if (lead?.masterId !== masterId) {
         throw new BadRequestException(
           'Lead not found or does not belong to this master.',
         );
@@ -91,7 +91,7 @@ export class BookingsValidationService {
           where: { id: leadId },
           select: { id: true, masterId: true, clientId: true, status: true },
         });
-        if (!lead || lead.masterId !== masterId) {
+        if (lead?.masterId !== masterId) {
           throw new BadRequestException(
             'Lead not found or does not belong to this master.',
           );

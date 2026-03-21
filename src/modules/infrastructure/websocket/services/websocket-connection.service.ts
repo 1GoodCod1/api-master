@@ -48,7 +48,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
       (client.data as SocketData).userId = userId;
 
       // Сохраняем соединение в локальной мапе
-      const userSockets = this.userConnections.get(userId) || [];
+      const userSockets = this.userConnections.get(userId) ?? [];
       userSockets.push(client.id);
       this.userConnections.set(userId, userSockets);
 
@@ -115,7 +115,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
     const userId = (client.data as SocketData).userId;
 
     if (userId) {
-      const userSockets = this.userConnections.get(userId) || [];
+      const userSockets = this.userConnections.get(userId) ?? [];
       const updatedSockets = userSockets.filter((id) => id !== client.id);
 
       if (updatedSockets.length === 0) {

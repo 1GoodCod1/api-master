@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -86,7 +87,7 @@ export class MastersSearchService {
       search: search || null,
       tariffType: tariffType || null,
       minRating: minRating || null,
-      isFeatured: isFeatured !== undefined ? isFeatured : null,
+      isFeatured: isFeatured ?? null,
       minPrice: minPrice ?? null,
       maxPrice: maxPrice ?? null,
       availableNow: availableNow ?? null,
@@ -100,8 +101,7 @@ export class MastersSearchService {
         const now = new Date();
 
         // Prisma where для total
-        type MasterWhere = import('@prisma/client').Prisma.MasterWhereInput;
-        const where: MasterWhere = {
+        const where: Prisma.MasterWhereInput = {
           user: { isBanned: false },
         };
         if (categoryId) where.categoryId = categoryId;
@@ -123,7 +123,7 @@ export class MastersSearchService {
         }
 
         // Поиск по имени, описанию, категории (умный поиск)
-        if (search && search.trim()) {
+        if (search?.trim()) {
           const searchTerm = search.trim();
           where.OR = [
             {
@@ -403,7 +403,7 @@ export class MastersSearchService {
         SELECT MIN(eff)::float8 AS min_val, MAX(eff)::float8 AS max_val FROM effective
       `;
       const row = result?.[0];
-      if (!row || row.min_val == null || row.max_val == null) return null;
+      if (row?.min_val == null || row.max_val == null) return null;
       return { min: Number(row.min_val), max: Number(row.max_val) };
     } catch (e) {
       this.logger.warn(

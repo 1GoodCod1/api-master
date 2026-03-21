@@ -51,7 +51,7 @@ export class ValidationPipe implements PipeTransform {
       if (err.children && err.children.length > 0) {
         acc[err.property] = this.formatErrors(err.children);
       } else {
-        acc[err.property] = Object.values(err.constraints || {});
+        acc[err.property] = Object.values(err.constraints ?? {});
       }
       return acc;
     }, {});

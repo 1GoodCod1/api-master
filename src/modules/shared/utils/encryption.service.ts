@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { promisify } from 'util';
@@ -7,6 +7,7 @@ const scryptAsync = promisify(crypto.scrypt);
 
 @Injectable()
 export class EncryptionService {
+  private readonly logger = new Logger(EncryptionService.name);
   private readonly algorithm = 'aes-256-gcm';
   private readonly keyLength = 32; // 256 bits
   private readonly ivLength = 16; // 128 bits
@@ -21,7 +22,7 @@ export class EncryptionService {
       if (nodeEnv === 'production') {
         throw new Error('ENCRYPTION_KEY is not set in environment variables');
       }
-      console.warn(
+      this.logger.warn(
         '⚠️ WARNING: Using default ENCRYPTION_KEY for development. DO NOT USE IN PRODUCTION!',
       );
       key = 'development-key-change-this-in-production-32chars-minimum';
@@ -53,8 +54,8 @@ export class EncryptionService {
       // Возвращаем IV + AuthTag + зашифрованные данные
       return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
     } catch (error) {
-      console.error('Encryption error:', error);
-      throw new Error('Failed to encrypt data');
+      this.logger.error('Encryption error', error);
+      throw new Error('Failed to encrypt data', { cause: error });
     }
   }
 
@@ -87,8 +88,8 @@ export class EncryptionService {
 
       return decrypted;
     } catch (error) {
-      console.error('Decryption error:', error);
-      throw new Error('Failed to decrypt data');
+      this.logger.error('Decryption error', error);
+      throw new Error('Failed to decrypt data', { cause: error });
     }
   }
 

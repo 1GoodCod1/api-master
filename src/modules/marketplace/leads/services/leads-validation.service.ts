@@ -76,7 +76,7 @@ export class LeadsValidationService {
       }
 
       // Ролевая проверка — только авторизованные клиенты
-      if (!authUser || authUser.role !== 'CLIENT') {
+      if (authUser?.role !== 'CLIENT') {
         throw new ForbiddenException(
           'Only authorized clients can create leads. Please register or log in.',
         );

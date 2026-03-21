@@ -55,7 +55,7 @@ export class UsersAvatarService {
       select: { id: true, role: true, avatarFileId: true },
     });
 
-    if (!user || user.role !== 'CLIENT') {
+    if (user?.role !== 'CLIENT') {
       throw new NotFoundException('Профиль клиента не найден');
     }
 

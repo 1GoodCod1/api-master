@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { LoginDto } from '../dto/login.dto';
 import { TokenService } from './token.service';
@@ -46,7 +46,7 @@ export class LoginService {
       }
 
       // 3. Валидация пароля и логирование неудачных попыток
-      if (!user || !(await bcrypt.compare(password, user.password))) {
+      if (!user || !(await argon2.verify(user.password, password))) {
         if (user) {
           await this.lockout.recordFailed(email, ipAddress);
           await this.logLoginAttempt(
@@ -151,7 +151,7 @@ export class LoginService {
     try {
       const user = await this.prisma.user.findUnique({ where: { email } });
 
-      if (user && (await bcrypt.compare(password, user.password))) {
+      if (user && (await argon2.verify(user.password, password))) {
         const { password: _pwd, ...result } = user;
         void _pwd;
         return result;

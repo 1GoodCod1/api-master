@@ -85,7 +85,8 @@ RUN apk add --no-cache dumb-init
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
 COPY . .
 RUN npm run prisma:generate

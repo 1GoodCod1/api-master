@@ -27,7 +27,7 @@ export class ActivityTrackerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     const user = (req as RequestWithOptionalUser).user;
 
-    if (user && user.role === 'MASTER') {
+    if (user?.role === 'MASTER') {
       this.debouncedActivityUpdate(user.id).catch(() => {});
     }
 

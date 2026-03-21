@@ -31,7 +31,7 @@ export class AuditLogQueryService {
       endDate,
       page = 1,
       limit = 50,
-    } = filters || {};
+    } = filters ?? {};
 
     const skip = (page - 1) * limit;
 

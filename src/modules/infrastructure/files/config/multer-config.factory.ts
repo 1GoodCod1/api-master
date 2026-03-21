@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import type { StorageEngine } from 'multer';
 import { diskStorage } from 'multer';
 import { extname } from 'path';

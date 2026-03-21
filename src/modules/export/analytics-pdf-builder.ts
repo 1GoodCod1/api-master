@@ -1,4 +1,5 @@
 import path from 'path';
+import type PDFDocument from 'pdfkit';
 import { getAnalyticsPdfTranslations } from './analytics-pdf-translations';
 
 /** Цветовая палитра PDF */
@@ -12,7 +13,7 @@ const COLORS = {
   white: '#ffffff',
 } as const;
 
-type Doc = InstanceType<typeof import('pdfkit')>;
+type Doc = InstanceType<typeof PDFDocument>;
 
 interface AnalyticsPdfData {
   masterName: string;
@@ -112,7 +113,7 @@ export function buildAnalyticsPdf(
   const margin = 50;
   const pageWidth = 595;
   const contentWidth = pageWidth - margin * 2;
-  let y = margin;
+  let y = 110;
 
   // Заголовок с акцентной полосой
   doc.rect(0, 0, pageWidth, 80).fill(COLORS.primary);
@@ -133,8 +134,6 @@ export function buildAnalyticsPdf(
     64,
     { align: 'center', width: contentWidth },
   );
-
-  y = 100;
 
   // Секция информации о профиле
   y = drawSectionHeader(doc, t.profileInfo, y);

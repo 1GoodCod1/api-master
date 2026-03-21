@@ -4,7 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import type { User, Master } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -42,7 +42,7 @@ export class RegistrationService {
     await this.ensureUserUnique(registerDto.email, registerDto.phone);
 
     // 3. Хеширование пароля
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+    const hashedPassword = await argon2.hash(registerDto.password);
 
     let user: User;
     let master: Master | undefined;

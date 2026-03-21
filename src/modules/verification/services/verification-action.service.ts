@@ -54,10 +54,7 @@ export class VerificationActionService {
           where: { masterId: user.masterProfile.id },
         });
 
-      if (
-        existingVerification &&
-        existingVerification.status === VerificationStatus.PENDING
-      ) {
+      if (existingVerification?.status === VerificationStatus.PENDING) {
         throw new BadRequestException(
           'Заявка на верификацию уже подана и ожидает рассмотрения',
         );

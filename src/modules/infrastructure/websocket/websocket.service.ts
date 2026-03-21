@@ -68,7 +68,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
    */
   async handleDisconnect(client: Socket) {
     const result = await this.connectionService.handleDisconnect(client);
-    if (result && result.userId && result.isLastConnection) {
+    if (result?.userId && result.isLastConnection) {
       this.messagingService.sendToAdmins('user:offline', {
         userId: result.userId,
       });

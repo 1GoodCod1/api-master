@@ -1,4 +1,5 @@
 import path from 'path';
+import type PDFDocument from 'pdfkit';
 import { formatUserName } from '../../shared/utils/format-name.util';
 
 /** PDF color palette — professional, GDPR-friendly */
@@ -12,7 +13,7 @@ const COLORS = {
   white: '#ffffff',
 } as const;
 
-type Doc = InstanceType<typeof import('pdfkit')>;
+type Doc = InstanceType<typeof PDFDocument>;
 
 export interface PersonalDataPdfUser {
   email: string;
@@ -323,7 +324,7 @@ export function buildPersonalDataPdf(
   const margin = 50;
   const pageWidth = 595;
   const contentWidth = pageWidth - margin * 2;
-  let y = margin;
+  let y = 110;
 
   // Header
   doc.rect(0, 0, pageWidth, 90).fill(COLORS.primary);
@@ -344,8 +345,6 @@ export function buildPersonalDataPdf(
       68,
       { align: 'center', width: contentWidth },
     );
-
-  y = 110;
 
   // Profile section
   y = drawSectionHeader(doc, t.profile, y);

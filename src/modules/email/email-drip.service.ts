@@ -89,7 +89,7 @@ export class EmailDripService {
       where: { userId_chainType: { userId, chainType } },
     });
 
-    if (existing && existing.status === 'ACTIVE') {
+    if (existing?.status === 'ACTIVE') {
       this.logger.debug(`Chain ${chainType} already active for user ${userId}`);
       return;
     }

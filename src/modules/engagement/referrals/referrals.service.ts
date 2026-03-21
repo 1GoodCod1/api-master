@@ -277,7 +277,7 @@ export class ReferralsService {
       },
     });
 
-    if (!referralCode || !referralCode.isActive) {
+    if (!referralCode?.isActive) {
       return { valid: false };
     }
 

@@ -71,7 +71,7 @@ export class NotificationsActionService {
     try {
       const userId = params.userId ?? null;
       const metadata = {
-        ...(params.metadata || {}),
+        ...(params.metadata ?? {}),
         ...(params.recipient ? { recipient: params.recipient } : {}),
       };
       const hasMetadata = Object.keys(metadata).length > 0;

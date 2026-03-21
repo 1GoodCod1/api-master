@@ -44,7 +44,7 @@ function createPgPool(
 ): PgPool {
   const isTest = nodeEnv === 'test';
   // pg Pool types may not resolve in eslint's type-aware analysis
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Pool from pg
+
   const rawPool: unknown = new Pool({
     connectionString,
     max: isTest ? 3 : 20,

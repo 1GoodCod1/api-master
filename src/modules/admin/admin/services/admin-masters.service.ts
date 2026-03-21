@@ -34,7 +34,7 @@ export class AdminMastersService {
       page = 1,
       limit = 20,
       cursor,
-    } = filters || {};
+    } = filters ?? {};
     const limitNumber = Number(limit) || 20;
 
     const where: Prisma.MasterWhereInput = {

@@ -1,4 +1,4 @@
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import type { RedisOptions } from 'ioredis';
 
 export function createBullOptions(configService: ConfigService) {

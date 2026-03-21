@@ -47,7 +47,7 @@ export class PaymentsQueryService {
 
       return {
         totalPayments,
-        totalRevenue: totalRevenue._sum.amount || 0,
+        totalRevenue: totalRevenue._sum.amount ?? 0,
         recentPayments,
       };
     } catch (err) {

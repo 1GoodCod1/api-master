@@ -179,7 +179,7 @@ export class FilesActionService {
       where: { id: userId },
       select: { id: true, role: true, avatarFileId: true },
     });
-    if (!user || user.role !== 'CLIENT') return null;
+    if (user?.role !== 'CLIENT') return null;
 
     const exists = await this.prisma.clientPhoto.findUnique({
       where: { userId_fileId: { userId: user.id, fileId } },

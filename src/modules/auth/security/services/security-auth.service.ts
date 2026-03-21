@@ -4,7 +4,7 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
 
@@ -61,6 +61,7 @@ export class SecurityAuthService {
    * @param userId ID пользователя
    * @param limit Лимит записей
    */
+
   async getLoginHistory(userId: string, limit: number = 10) {
     return this.prisma.loginHistory.findMany({
       where: { userId },
@@ -85,20 +86,17 @@ export class SecurityAuthService {
     if (!user.password)
       throw new BadRequestException('Пароль для этого аккаунта не задан');
 
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
+    const isPasswordValid = await argon2.verify(user.password, currentPassword);
     if (!isPasswordValid)
       throw new UnauthorizedException('Текущий пароль указан неверно');
 
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    const isSamePassword = await argon2.verify(user.password, newPassword);
     if (isSamePassword)
       throw new BadRequestException(
         'Новый пароль должен отличаться от текущего',
       );
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await argon2.hash(newPassword);
 
     await this.prisma.user.update({
       where: { id: userId },

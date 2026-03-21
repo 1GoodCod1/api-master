@@ -136,7 +136,7 @@ export class MastersSearchSqlService {
     // -----------------------------------------------------------------------
     let fulltextRankSql: Prisma.Sql | null = null;
 
-    if (search && search.trim()) {
+    if (search?.trim()) {
       const searchTerm = search.trim();
       const searchPattern = `%${searchTerm}%`;
       const words = searchTerm.split(/\s+/).filter((w) => w.length >= 2);

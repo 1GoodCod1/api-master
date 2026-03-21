@@ -25,7 +25,7 @@ export class PaymentsWebhookService {
     const payment = await this.prisma.payment.findUnique({
       where: { id: orderId },
     });
-    if (!payment || payment.status !== PaymentStatus.PENDING) return;
+    if (payment?.status !== PaymentStatus.PENDING) return;
     const meta =
       (payment.metadata as {
         provider?: string;

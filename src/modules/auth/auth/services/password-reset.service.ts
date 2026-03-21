@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { EmailService } from '../../../email/email.service';
@@ -135,7 +135,7 @@ export class PasswordResetService {
       }
 
       // Хешируем новый пароль
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await argon2.hash(password);
 
       // Обновляем пароль и помечаем токен как использованный
       await this.prisma.$transaction(async (tx) => {

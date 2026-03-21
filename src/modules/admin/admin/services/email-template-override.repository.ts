@@ -50,8 +50,8 @@ export class EmailTemplateOverrideRepository {
         bodyHtml: data.bodyHtml ?? null,
       },
       update: {
-        subject: data.subject !== undefined ? data.subject : undefined,
-        bodyHtml: data.bodyHtml !== undefined ? data.bodyHtml : undefined,
+        subject: data.subject ?? undefined,
+        bodyHtml: data.bodyHtml ?? undefined,
       },
     });
   }

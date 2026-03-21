@@ -29,7 +29,7 @@ export class AdminLeadsService {
       page = 1,
       limit = 50,
       cursor,
-    } = filters || {};
+    } = filters ?? {};
     const limitNumber = Number(limit) || 50;
 
     const where: Prisma.LeadWhereInput = {};

@@ -299,6 +299,6 @@ export class RecommendationsEngineService {
     scores: Map<string, RecommendationScore>,
     masterId: string,
   ): RecommendationScore {
-    return scores.get(masterId) || { masterId, score: 0, reasons: [] };
+    return scores.get(masterId) ?? { masterId, score: 0, reasons: [] };
   }
 }
