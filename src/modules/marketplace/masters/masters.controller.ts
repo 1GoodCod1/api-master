@@ -23,6 +23,7 @@ import { TelegramConnectService } from '../../notifications/notifications/servic
 import { UpdateMasterDto } from './dto/update-master.dto';
 import { UpdateMasterServicesDto } from './dto/update-services.dto';
 import { SearchMastersDto } from './dto/search-masters.dto';
+import { SuggestQueryDto } from './dto/suggest-query.dto';
 import { SetMasterAvatarDto } from './dto/set-avatar.dto';
 import { UpdateOnlineStatusDto } from './dto/update-online-status.dto';
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
@@ -51,6 +52,12 @@ export class MastersController {
   @ApiOperation({ summary: 'Search masters with filters' })
   async findAll(@Query() searchDto: SearchMastersDto) {
     return this.mastersService.findAll(searchDto);
+  }
+
+  @Get('suggest')
+  @ApiOperation({ summary: 'Smart search suggestions (categories, masters, services) with fuzzy matching' })
+  async getSuggestions(@Query() dto: SuggestQueryDto) {
+    return this.mastersService.getSuggestions(dto);
   }
 
   @Get('filters')

@@ -61,6 +61,9 @@ export class CategoriesQueryService {
         c."slug",
         c."description",
         c."icon",
+        c."iconKey",
+        c."iconUrl",
+        c."translations",
         c."isActive",
         c."sortOrder",
         c."createdAt",
@@ -73,6 +76,7 @@ export class CategoriesQueryService {
       LEFT JOIN "users" u ON u."id" = m."userId"
       ${whereClause}
       GROUP BY c."id", c."name", c."slug", c."description", c."icon",
+        c."iconKey", c."iconUrl", c."translations",
         c."isActive", c."sortOrder", c."createdAt", c."updatedAt"
       ORDER BY c."sortOrder" ASC
     `;

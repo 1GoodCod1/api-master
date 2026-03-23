@@ -127,7 +127,9 @@ export class BookingsActionService {
           start,
           booking.id,
         )
-        .catch((e) => this.logger.error('notifyBookingPendingForMaster failed', e));
+        .catch((e) =>
+          this.logger.error('notifyBookingPendingForMaster failed', e),
+        );
     }
 
     return booking;

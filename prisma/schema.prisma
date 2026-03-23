@@ -461,7 +461,14 @@ model Category {
   name        String   @unique
   slug        String   @unique
   description String?
+  /// Emoji fallback (legacy) или короткий символ
   icon        String?
+  /// Имя компонента Lucide React, напр. Droplets, Wrench (см. админку)
+  iconKey     String?
+  /// Кастомная иконка (URL после загрузки в файлы / CDN)
+  iconUrl     String?
+  /// { "ro": { "name": "..." }, "ru": { "name": "..." }, "en": { "name": "..." } }
+  translations Json?
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -476,6 +483,8 @@ model City {
   id        String   @id @default(uuid())
   name      String   @unique
   slug      String   @unique
+  /// { "ro": { "name": "..." }, "ru": { "name": "..." }, "en": { "name": "..." } }
+  translations Json?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -28,10 +28,12 @@ const prisma = new PrismaClient({ adapter });
 const DEMO_EMAIL_PREFIX = 'seed-demo-';
 const DEMO_MASTER_SLUG_PREFIX = 'seed-demo-m-';
 const DEMO_CRITERIA = ['quality', 'speed', 'price', 'politeness'] as const;
-const DEMO_MASTER_COUNT = 28;
-const DEMO_CLIENT_COUNT = 55;
+/** Больше данных для стенда / локальной разработки */
+const DEMO_MASTER_COUNT = 72;
+const DEMO_CLIENT_COUNT = 140;
+/** Минимум отзывов только если хватает уникальных клиентов с заявками */
 const DEMO_MIN_REVIEWS_PER_MASTER = 4;
-const DEMO_MAX_REVIEWS_PER_MASTER = 22;
+const DEMO_MAX_REVIEWS_PER_MASTER = 34;
 
 const DEMO_FIRST_NAMES = [
   'Андрей',
@@ -44,6 +46,12 @@ const DEMO_FIRST_NAMES = [
   'Анна',
   'Сергей',
   'Наталья',
+  'Виктор',
+  'Людмила',
+  'Николай',
+  'Кристина',
+  'Петру',
+  'Дорин',
 ] as const;
 const DEMO_LAST_NAMES = [
   'Попеску',
@@ -54,6 +62,9 @@ const DEMO_LAST_NAMES = [
   'Туркану',
   'Бодю',
   'Григоришин',
+  'Лупу',
+  'Кожухарь',
+  'Морару',
 ] as const;
 const DEMO_REVIEW_COMMENTS = [
   'Всё сделали быстро и аккуратно, рекомендую.',
@@ -64,6 +75,12 @@ const DEMO_REVIEW_COMMENTS = [
   'Нормально, без сюрпризов.',
   'Лучший мастер в городе, всё объяснил.',
   'Хорошо, но можно было быстрее.',
+  'Приехал со своим инструментом, без суеты.',
+  'Договорились по цене и сдержал слово.',
+  'Фото до/после — огонь, жена довольна.',
+  'Перезвонил через час, как и обещал.',
+  'Видно опыт: с первого взгляда понял, в чём дело.',
+  'Единственный минус — очередь, но оно того стоило.',
 ] as const;
 
 const DEMO_LEAD_MESSAGES = [
@@ -74,7 +91,96 @@ const DEMO_LEAD_MESSAGES = [
   'Нужен мастер с опытом, повторное обращение.',
   'Подскажите, работаете ли в выходные?',
   'Готовы оплатить наличными, нужен чек.',
+  'Можно ли завтра утром? Этаж 4, лифт есть.',
+  'Ищу мастера с отзывами и гарантией на работы.',
+  'Нужен повторный визит — доделать мелочи после ремонта.',
 ] as const;
+
+const DEMO_MASTER_REPLY_TEMPLATES = [
+  'Спасибо за отзыв! Буду рад снова помочь — обращайтесь.',
+  'Благодарю! Если что-то вспомнится — пишите, подскажу.',
+  'Очень приятно! Работаем дальше — звоните в любое время.',
+  'Признателен за доверие. Гарантия на работы у нас в силе.',
+] as const;
+
+type DemoLeadRow = {
+  id: string;
+  masterId: string;
+  clientPhone: string;
+  clientId: string | null;
+  clientName: string | null;
+  status: LeadStatus;
+};
+
+function demoUniqueLeadsPerClient(leads: DemoLeadRow[]): DemoLeadRow[] {
+  const seen = new Set<string>();
+  const out: DemoLeadRow[] = [];
+  for (const l of leads) {
+    const key = l.clientId ?? l.clientPhone;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(l);
+  }
+  return out;
+}
+
+function demoBuildMasterDescription(
+  categoryName: string,
+  cityName: string,
+  index: number,
+  years: number,
+): string {
+  const hooks = [
+    `Живу и работаю в ${cityName}. ${categoryName} — то, чем занимаюсь каждый день: без «отмазок» и с нормальной гарантией.`,
+    `Беру заказы по ${cityName} и ближайшим населённым пунктам. Специализация: ${categoryName}. Опыт около ${years} лет — смотрите отзывы ниже.`,
+    `Делаю «как для себя»: ${categoryName}, аккуратно, с фотоотчётом по запросу. Район: ${cityName}.`,
+    `Прозрачная смета до старта. ${categoryName} — мой основной профиль, работаю официально и по договорённости.`,
+  ];
+  return hooks[index % hooks.length] ?? hooks[0];
+}
+
+function demoServicePairForCategory(categorySlug: string): {
+  a: string;
+  b: string;
+} {
+  const map: Record<string, { a: string; b: string }> = {
+    santehnika: {
+      a: 'Аварийный выезд / устранение протечки',
+      b: 'Монтаж смесителя и сантехники',
+    },
+    elektrika: {
+      a: 'Прокладка линии и розеток',
+      b: 'Щиток: диагностика и сборка',
+    },
+    plitka: {
+      a: 'Укладка плитки «под ключ»',
+      b: 'Затирка и герметизация швов',
+    },
+    avto: { a: 'Диагностика и мелкий ремонт', b: 'ТО и замена расходников' },
+    'foto-video': {
+      a: 'Съёмка мероприятия / портрет',
+      b: 'Монтаж ролика, цветокоррекция',
+    },
+    manikyur: {
+      a: 'Маникюр с покрытием',
+      b: 'Наращивание / дизайн',
+    },
+    massazh: {
+      a: 'Классический / расслабляющий массаж',
+      b: 'Спортивный / лимфодренаж',
+    },
+    uborka: {
+      a: 'Генеральная уборка квартиры',
+      b: 'Химчистка мебели / ковров',
+    },
+  };
+  return (
+    map[categorySlug] ?? {
+      a: 'Стандартный выезд и консультация',
+      b: 'Расширенный пакет работ',
+    }
+  );
+}
 
 function demoPick<T>(arr: readonly T[]): T {
   const idx = randomInt(arr.length);
@@ -141,12 +247,12 @@ async function seedDemoMastersClientsReviews(
 
   const categories = await client.category.findMany({
     where: { isActive: true },
-    select: { id: true },
+    select: { id: true, name: true, slug: true },
     orderBy: { sortOrder: 'asc' },
   });
   const cities = await client.city.findMany({
     where: { isActive: true },
-    select: { id: true },
+    select: { id: true, name: true },
     orderBy: { name: 'asc' },
   });
 
@@ -183,6 +289,7 @@ async function seedDemoMastersClientsReviews(
   );
 
   const masterRecords: { id: string; userId: string }[] = [];
+  const masterLeads = new Map<string, DemoLeadRow[]>();
 
   for (let i = 1; i <= DEMO_MASTER_COUNT; i++) {
     const phone = `+37361${String(100000 + i).slice(1)}`;
@@ -193,16 +300,24 @@ async function seedDemoMastersClientsReviews(
     }
     const cityId = cityPick.id;
     const categoryId = categoryPick.id;
+    const experienceYears = randomInt(1, 22);
+    const svc = demoServicePairForCategory(categoryPick.slug);
+    const description = demoBuildMasterDescription(
+      categoryPick.name,
+      cityPick.name,
+      i,
+      experienceYears,
+    );
 
     const tariffRoll = randomInt(100);
     let tariffType: TariffType = TariffType.BASIC;
     let tariffExpiresAt: Date | null = null;
     let isFeatured = false;
-    if (tariffRoll < 25) {
+    if (tariffRoll < 22) {
       tariffType = TariffType.PREMIUM;
       tariffExpiresAt = in30d;
       isFeatured = randomInt(100) < 40;
-    } else if (tariffRoll < 55) {
+    } else if (tariffRoll < 48) {
       tariffType = TariffType.VIP;
       tariffExpiresAt = in30d;
     }
@@ -219,29 +334,29 @@ async function seedDemoMastersClientsReviews(
         masterProfile: {
           create: {
             slug: `${DEMO_MASTER_SLUG_PREFIX}${String(i).padStart(3, '0')}`,
-            description: `Демо-мастер #${i}. Опыт ${randomInt(1, 17)} лет. Работаю качественно, с гарантией.`,
+            description,
             services: [
               {
-                title: 'Стандартная услуга',
-                price: randomInt(200, 2500),
+                title: svc.a,
+                price: randomInt(200, 2800),
                 durationMin: 60,
               },
               {
-                title: 'Расширенный пакет',
-                price: randomInt(500, 4000),
+                title: svc.b,
+                price: randomInt(450, 4200),
                 durationMin: 120,
               },
             ],
             cityId,
             categoryId,
-            experienceYears: randomInt(1, 21),
+            experienceYears,
             tariffType,
             tariffExpiresAt,
             isFeatured,
             pendingVerification: false,
-            isOnline: randomInt(100) < 35,
+            isOnline: randomInt(100) < 38,
             availabilityStatus: AvailabilityStatus.AVAILABLE,
-            views: randomInt(0, 500),
+            views: randomInt(0, 1200),
             leadsCount: 0,
           },
         },
@@ -254,6 +369,7 @@ async function seedDemoMastersClientsReviews(
       throw new Error('Demo seed: masterProfile missing after create');
     }
     masterRecords.push({ id: mp.id, userId: user.id });
+    masterLeads.set(mp.id, []);
   }
   console.log(
     `🛠️ Created ${DEMO_MASTER_COUNT} demo masters (password: demo123), slugs ${DEMO_MASTER_SLUG_PREFIX}001…`,
@@ -266,23 +382,34 @@ async function seedDemoMastersClientsReviews(
     if (!master) {
       continue;
     }
-    /** «Популярные» мастера — много заявок (как для блока популярных в поиске) */
+    /** Слои: сверху — «топ» по заявкам; снизу — новички и малоактивные */
     let nLeads: number;
-    if (mi < 6) {
-      nLeads = randomInt(42, 96);
-    } else if (mi < 12) {
-      nLeads = randomInt(18, 41);
+    if (mi < 10) {
+      nLeads = randomInt(65, 120);
+    } else if (mi < 22) {
+      nLeads = randomInt(32, 68);
+    } else if (mi < 40) {
+      nLeads = randomInt(14, 36);
+    } else if (mi < 56) {
+      nLeads = randomInt(6, 22);
+    } else if (mi < 66) {
+      nLeads = randomInt(2, 12);
     } else {
-      nLeads = randomInt(0, 10);
+      nLeads = randomInt(0, 6);
+    }
+
+    const bucket = masterLeads.get(master.id);
+    if (!bucket) {
+      throw new Error('Demo seed: master lead bucket missing');
     }
 
     for (let k = 0; k < nLeads; k++) {
-      const registered = randomInt(100) < 72;
+      const registered = randomInt(100) < 76;
       let clientPhone: string;
       let clientId: string | null;
       let clientName: string | null;
       if (registered) {
-        const cl = clientUsers[k % clientUsers.length];
+        const cl = clientUsers[randomInt(clientUsers.length)];
         if (!cl) {
           throw new Error('Demo seed: clientUsers empty');
         }
@@ -298,9 +425,9 @@ async function seedDemoMastersClientsReviews(
 
       const roll = randomInt(100);
       let status: LeadStatus;
-      if (roll < 12) {
+      if (roll < 10) {
         status = LeadStatus.NEW;
-      } else if (roll < 30) {
+      } else if (roll < 26) {
         status = LeadStatus.IN_PROGRESS;
       } else if (roll < 90) {
         status = LeadStatus.CLOSED;
@@ -308,17 +435,26 @@ async function seedDemoMastersClientsReviews(
         status = LeadStatus.SPAM;
       }
 
+      const leadId = randomUUID();
       await client.lead.create({
         data: {
-          id: randomUUID(),
+          id: leadId,
           masterId: master.id,
           clientPhone,
           clientId,
           clientName,
           message: demoPick(DEMO_LEAD_MESSAGES),
           status,
-          isPremium: randomInt(100) < 10,
+          isPremium: randomInt(100) < 12,
         },
+      });
+      bucket.push({
+        id: leadId,
+        masterId: master.id,
+        clientPhone,
+        clientId,
+        clientName,
+        status,
       });
       leadRows++;
     }
@@ -329,31 +465,48 @@ async function seedDemoMastersClientsReviews(
     });
   }
   console.log(
-    `📬 Created ${leadRows} demo leads (first 6 masters: ~42–95 each; next 6: ~18–40; others: 0–9).`,
+    `📬 Created ${leadRows} demo leads (tiered volumes; см. логику по индексу мастера).`,
   );
 
   let reviewCount = 0;
   let replyCount = 0;
 
   for (const master of masterRecords) {
-    const nReviews = randomInt(
-      DEMO_MIN_REVIEWS_PER_MASTER,
-      DEMO_MAX_REVIEWS_PER_MASTER + 1,
+    const leads = masterLeads.get(master.id) ?? [];
+    /** Один отзыв на клиента; не больше числа заявок и не больше уникальных клиентов */
+    const eligible = demoUniqueLeadsPerClient(leads).filter(
+      (l) => l.status !== LeadStatus.SPAM,
     );
-    const shuffled = [...clientUsers].sort(() => randomInt(3) - 1);
-    const chosen = shuffled.slice(0, Math.min(nReviews, shuffled.length));
+    const maxReviews = Math.min(
+      eligible.length,
+      DEMO_MAX_REVIEWS_PER_MASTER,
+      leads.length,
+    );
 
-    for (const cl of chosen) {
+    let nReviews = 0;
+    if (maxReviews > 0) {
+      const minReviews = Math.min(DEMO_MIN_REVIEWS_PER_MASTER, maxReviews);
+      nReviews = randomInt(minReviews, maxReviews + 1);
+    }
+
+    const shuffled = [...eligible].sort(() => randomInt(3) - 1);
+    const chosenLeads = shuffled.slice(0, nReviews);
+
+    for (let ri = 0; ri < chosenLeads.length; ri++) {
+      const leadRow = chosenLeads[ri];
+      if (!leadRow) continue;
+
       const rating = demoWeightedRating();
       const comment =
-        randomInt(100) < 85 ? demoPick(DEMO_REVIEW_COMMENTS) : null;
+        randomInt(100) < 88 ? demoPick(DEMO_REVIEW_COMMENTS) : null;
 
       const review = await client.review.create({
         data: {
           masterId: master.id,
-          clientId: cl.id,
-          clientPhone: cl.phone,
-          clientName: cl.firstName ?? 'Клиент',
+          clientId: leadRow.clientId,
+          clientPhone: leadRow.clientPhone,
+          clientName: leadRow.clientName ?? 'Клиент',
+          leadId: leadRow.id,
           rating,
           comment,
           status: ReviewStatus.VISIBLE,
@@ -367,12 +520,14 @@ async function seedDemoMastersClientsReviews(
       });
       reviewCount++;
 
-      if (randomInt(100) < 45) {
+      /** Первый отзыв всегда с ответом мастера — как в фильтре «популярные» (visible + reply) */
+      const addReply = ri === 0 || randomInt(100) < 48;
+      if (addReply) {
         await client.reviewReply.create({
           data: {
             reviewId: review.id,
             masterId: master.id,
-            content: 'Спасибо за отзыв! Буду рад снова помочь — обращайтесь.',
+            content: demoPick(DEMO_MASTER_REPLY_TEMPLATES),
           },
         });
         replyCount++;
@@ -380,6 +535,20 @@ async function seedDemoMastersClientsReviews(
     }
 
     await demoUpdateMasterAggregates(client, master.id);
+
+    const after = await client.master.findUnique({
+      where: { id: master.id },
+      select: { leadsCount: true, totalReviews: true },
+    });
+    if (
+      after &&
+      after.totalReviews > 0 &&
+      after.leadsCount < after.totalReviews
+    ) {
+      throw new Error(
+        `Demo seed invariant failed: master ${master.id} leadsCount=${after.leadsCount} < totalReviews=${after.totalReviews}`,
+      );
+    }
   }
 
   console.log(
@@ -412,104 +581,502 @@ async function main(): Promise<void> {
   });
   console.log('👑 Admin: admin@master-hub.md / admin123');
 
-  // Create categories (услуги для Молдовы, enhanced)
-  const categoriesData = [
-    { name: 'Ремонт техники', slug: 'remont-tehniki', icon: '🔧' },
-    { name: 'Ремонт телефонов и ПК', slug: 'remont-telefonov-pk', icon: '📱' },
-    { name: 'Строительство', slug: 'stroitelstvo', icon: '🏗️' },
-    { name: 'Отделочные работы', slug: 'otdelochnye-raboty', icon: '🎨' },
-    { name: 'Сантехника', slug: 'santehnika', icon: '🚿' },
-    { name: 'Электрика', slug: 'elektrika', icon: '⚡' },
-    { name: 'Мебель', slug: 'mebel', icon: '🛋️' },
-    { name: 'Уборка и клининг', slug: 'uborka-klining', icon: '🧹' },
-    { name: 'Курьерские услуги', slug: 'kurierskie-uslugi', icon: '🚚' },
+  // Категории: canonical name = ro; переводы + Lucide iconKey для UI
+  const categories: {
+    name: string;
+    slug: string;
+    icon: string;
+    iconKey: string;
+    sortOrder: number;
+    translations: {
+      ro: { name: string };
+      ru: { name: string };
+      en: { name: string };
+    };
+  }[] = [
     {
-      name: 'Грузоперевозки и переезды',
-      slug: 'gruzoperevozki-pereezdy',
-      icon: '📦',
-    },
-    { name: 'Услуги красоты', slug: 'uslugi-krasoty', icon: '💇' },
-    { name: 'Фото и видеосъёмка', slug: 'foto-video', icon: '📷' },
-    { name: 'Ремонт авто', slug: 'remont-avto', icon: '🚗' },
-    { name: 'Ландшафт и сад', slug: 'landshaft-sad', icon: '🌳' },
-    { name: 'Кровля и фасад', slug: 'krovlya-fasad', icon: '🏠' },
-    { name: 'Окна и двери', slug: 'okna-dveri', icon: '🪟' },
-    {
-      name: 'Кондиционеры и вентиляция',
-      slug: 'kondicionery-ventilyaciya',
-      icon: '❄️',
+      slug: 'santehnika',
+      name: 'Instalații sanitare',
+      icon: '🚿',
+      iconKey: 'Droplets',
+      sortOrder: 10,
+      translations: {
+        ro: { name: 'Instalații sanitare' },
+        ru: { name: 'Сантехника' },
+        en: { name: 'Plumbing' },
+      },
     },
     {
-      name: 'Сварка и металлообработка',
-      slug: 'svarka-metalloobrabotka',
-      icon: '⚙️',
+      slug: 'elektrika',
+      name: 'Electricitate',
+      icon: '⚡',
+      iconKey: 'Zap',
+      sortOrder: 20,
+      translations: {
+        ro: { name: 'Electricitate' },
+        ru: { name: 'Электрика' },
+        en: { name: 'Electrical' },
+      },
     },
     {
-      name: 'Репетиторство и обучение',
-      slug: 'repetitorstvo-obuchenie',
-      icon: '📚',
+      slug: 'plitka',
+      name: 'Lucrări cu plăci ceramice',
+      icon: '🧱',
+      iconKey: 'LayoutGrid',
+      sortOrder: 30,
+      translations: {
+        ro: { name: 'Lucrări cu plăci ceramice' },
+        ru: { name: 'Плиточные работы' },
+        en: { name: 'Tiling' },
+      },
     },
-    { name: 'Свадьбы и праздники', slug: 'svadby-prazdniki', icon: '🎉' },
-    { name: 'Юридические услуги', slug: 'yuridicheskie-uslugi', icon: '⚖️' },
-    { name: 'Бухгалтерия и налоги', slug: 'buhgalteriya-nalogi', icon: '📊' },
-    { name: 'Уход за детьми', slug: 'uhod-za-detmi', icon: '👶' },
-    { name: 'Уход за животными', slug: 'uhod-za-zhivotnymi', icon: '🐕' },
-    { name: 'Ритуальные услуги', slug: 'ritualnye-uslugi', icon: '🕯️' },
     {
-      name: 'Ремонт бытовой техники',
-      slug: 'remont-bytovoy-tehniki',
+      slug: 'otdelochnye-raboty',
+      name: 'Lucrări de finisaj',
+      icon: '🔨',
+      iconKey: 'Hammer',
+      sortOrder: 40,
+      translations: {
+        ro: { name: 'Lucrări de finisaj' },
+        ru: { name: 'Отделочные работы' },
+        en: { name: 'Finishing works' },
+      },
+    },
+    {
+      slug: 'krovlya-fasad',
+      name: 'Acoperiș și fațadă',
+      icon: '🏠',
+      iconKey: 'Home',
+      sortOrder: 50,
+      translations: {
+        ro: { name: 'Acoperiș și fațadă' },
+        ru: { name: 'Кровля и фасад' },
+        en: { name: 'Roofing & facade' },
+      },
+    },
+    {
+      slug: 'okna-dveri',
+      name: 'Ferestre și uși',
+      icon: '🪟',
+      iconKey: 'DoorOpen',
+      sortOrder: 60,
+      translations: {
+        ro: { name: 'Ferestre și uși' },
+        ru: { name: 'Окна и двери' },
+        en: { name: 'Windows & doors' },
+      },
+    },
+    {
+      slug: 'bytovaya-tehnika',
+      name: 'Reparații electrocasnice',
       icon: '🔌',
+      iconKey: 'Plug',
+      sortOrder: 70,
+      translations: {
+        ro: { name: 'Reparații electrocasnice' },
+        ru: { name: 'Ремонт бытовой техники' },
+        en: { name: 'Home appliances repair' },
+      },
     },
-    { name: 'Установка техники', slug: 'ustanovka-tehniki', icon: '📺' },
     {
-      name: 'Дезинсекция и дератизация',
-      slug: 'dezinsektciya-deratizaciya',
-      icon: '🐛',
+      slug: 'remont-telefonov-pk',
+      name: 'Reparații telefoane și PC',
+      icon: '📱',
+      iconKey: 'Smartphone',
+      sortOrder: 80,
+      translations: {
+        ro: { name: 'Reparații telefoane și PC' },
+        ru: { name: 'Ремонт телефонов и ПК' },
+        en: { name: 'Phone & PC repair' },
+      },
+    },
+    {
+      slug: 'ustanovka-tehniki',
+      name: 'Instalare echipamente',
+      icon: '📺',
+      iconKey: 'Tv',
+      sortOrder: 90,
+      translations: {
+        ro: { name: 'Instalare echipamente' },
+        ru: { name: 'Установка техники' },
+        en: { name: 'Equipment installation' },
+      },
+    },
+    {
+      slug: 'kondicionery-otoplenie',
+      name: 'Climatizare și încălzire',
+      icon: '❄️',
+      iconKey: 'Snowflake',
+      sortOrder: 100,
+      translations: {
+        ro: { name: 'Climatizare și încălzire' },
+        ru: { name: 'Кондиционеры и отопление' },
+        en: { name: 'HVAC' },
+      },
+    },
+    {
+      slug: 'pereezdy',
+      name: 'Transport marfă și mutări',
+      icon: '🚚',
+      iconKey: 'Truck',
+      sortOrder: 110,
+      translations: {
+        ro: { name: 'Transport marfă și mutări' },
+        ru: { name: 'Грузоперевозки и переезды' },
+        en: { name: 'Moving & cargo' },
+      },
+    },
+    {
+      slug: 'master-na-chas',
+      name: 'Meșter pentru o oră',
+      icon: '🧰',
+      iconKey: 'Wrench',
+      sortOrder: 120,
+      translations: {
+        ro: { name: 'Meșter pentru o oră' },
+        ru: { name: 'Мастер на час' },
+        en: { name: 'Handyman' },
+      },
+    },
+    {
+      slug: 'vyvoz-musora',
+      name: 'Evacuare gunoi',
+      icon: '🗑️',
+      iconKey: 'Trash2',
+      sortOrder: 130,
+      translations: {
+        ro: { name: 'Evacuare gunoi' },
+        ru: { name: 'Вывоз мусора' },
+        en: { name: 'Waste removal' },
+      },
+    },
+    {
+      slug: 'uborka',
+      name: 'Curățenie',
+      icon: '🧹',
+      iconKey: 'SparklesIcon',
+      sortOrder: 140,
+      translations: {
+        ro: { name: 'Curățenie' },
+        ru: { name: 'Уборка и клининг' },
+        en: { name: 'Cleaning' },
+      },
+    },
+    {
+      slug: 'mebel',
+      name: 'Mobilier',
+      icon: '🛋️',
+      iconKey: 'Sofa',
+      sortOrder: 150,
+      translations: {
+        ro: { name: 'Mobilier' },
+        ru: { name: 'Сборка и ремонт мебели' },
+        en: { name: 'Furniture' },
+      },
+    },
+    {
+      slug: 'landshaft',
+      name: 'Peisagistică și grădină',
+      icon: '🌳',
+      iconKey: 'TreePine',
+      sortOrder: 160,
+      translations: {
+        ro: { name: 'Peisagistică și grădină' },
+        ru: { name: 'Ландшафт и участок' },
+        en: { name: 'Landscaping' },
+      },
+    },
+    {
+      slug: 'internet',
+      name: 'Internet și videosecuritate',
+      icon: '📡',
+      iconKey: 'Wifi',
+      sortOrder: 170,
+      translations: {
+        ro: { name: 'Internet și videosecuritate' },
+        ru: { name: 'Интернет и видеонаблюдение' },
+        en: { name: 'Internet & CCTV' },
+      },
+    },
+    {
+      slug: 'avto',
+      name: 'Service auto',
+      icon: '🚗',
+      iconKey: 'Car',
+      sortOrder: 180,
+      translations: {
+        ro: { name: 'Service auto' },
+        ru: { name: 'Автосервис' },
+        en: { name: 'Car service' },
+      },
+    },
+    {
+      slug: 'foto-video',
+      name: 'Fotografie și video',
+      icon: '📷',
+      iconKey: 'Camera',
+      sortOrder: 185,
+      translations: {
+        ro: { name: 'Fotografie și video' },
+        ru: { name: 'Фото и видео' },
+        en: { name: 'Photo & video' },
+      },
+    },
+    {
+      slug: 'manikyur',
+      name: 'Manichiură',
+      icon: '💅',
+      iconKey: 'Brush',
+      sortOrder: 190,
+      translations: {
+        ro: { name: 'Manichiură' },
+        ru: { name: 'Маникюр' },
+        en: { name: 'Manicure' },
+      },
+    },
+    {
+      slug: 'massazh',
+      name: 'Masaj',
+      icon: '💆',
+      iconKey: 'HeartPulse',
+      sortOrder: 195,
+      translations: {
+        ro: { name: 'Masaj' },
+        ru: { name: 'Массаж' },
+        en: { name: 'Massage' },
+      },
     },
   ];
 
-  for (const category of categoriesData) {
+  for (const category of categories) {
     await prisma.category.upsert({
       where: { slug: category.slug },
-      update: {},
-      create: category,
+      update: {
+        name: category.name,
+        icon: category.icon,
+        iconKey: category.iconKey,
+        translations: category.translations,
+        sortOrder: category.sortOrder,
+      },
+      create: {
+        name: category.name,
+        slug: category.slug,
+        icon: category.icon,
+        iconKey: category.iconKey,
+        translations: category.translations,
+        sortOrder: category.sortOrder,
+      },
     });
   }
-  console.log('📂 Categories created');
+  console.log('📂 Categories created (ro/ru/en + iconKey)');
 
-  // Create cities (города и муниципии Молдовы)
-  const citiesData = [
-    { name: 'Кишинёв', slug: 'chisinau' },
-    { name: 'Бельцы', slug: 'balti' },
-    { name: 'Бендеры', slug: 'bender' },
-    { name: 'Тирасполь', slug: 'tiraspol' },
-    { name: 'Кагул', slug: 'cahul' },
-    { name: 'Унгены', slug: 'ungeni' },
-    { name: 'Сорока', slug: 'soroca' },
-    { name: 'Орхей', slug: 'orhei' },
-    { name: 'Дубоссары', slug: 'dubasari' },
-    { name: 'Комрат', slug: 'comrat' },
-    { name: 'Стрэшень', slug: 'straseni' },
-    { name: 'Дрокия', slug: 'drochia' },
-    { name: 'Чадыр-Лунга', slug: 'ceadir-lunga' },
-    { name: 'Единец', slug: 'edinet' },
-    { name: 'Хынчешть', slug: 'hincesti' },
-    { name: 'Флорешть', slug: 'floresti' },
-    { name: 'Тараклия', slug: 'taraclia' },
-    { name: 'Ниспорены', slug: 'nisporeni' },
-    { name: 'Кантемир', slug: 'cantemir' },
-    { name: 'Бричень', slug: 'briceni' },
-    { name: 'Алений-Ной', slug: 'anenii-noi' },
+  // Города: canonical name = ro; переводы ru/en
+  const citiesData: {
+    name: string;
+    slug: string;
+    translations: {
+      ro: { name: string };
+      ru: { name: string };
+      en: { name: string };
+    };
+  }[] = [
+    {
+      slug: 'chisinau',
+      name: 'Chișinău',
+      translations: {
+        ro: { name: 'Chișinău' },
+        ru: { name: 'Кишинёв' },
+        en: { name: 'Chișinău' },
+      },
+    },
+    {
+      slug: 'balti',
+      name: 'Bălți',
+      translations: {
+        ro: { name: 'Bălți' },
+        ru: { name: 'Бельцы' },
+        en: { name: 'Bălți' },
+      },
+    },
+    {
+      slug: 'cahul',
+      name: 'Cahul',
+      translations: {
+        ro: { name: 'Cahul' },
+        ru: { name: 'Кагул' },
+        en: { name: 'Cahul' },
+      },
+    },
+    {
+      slug: 'comrat',
+      name: 'Comrat',
+      translations: {
+        ro: { name: 'Comrat' },
+        ru: { name: 'Комрат' },
+        en: { name: 'Comrat' },
+      },
+    },
+    {
+      slug: 'ungeni',
+      name: 'Ungheni',
+      translations: {
+        ro: { name: 'Ungheni' },
+        ru: { name: 'Унгены' },
+        en: { name: 'Ungheni' },
+      },
+    },
+    {
+      slug: 'orhei',
+      name: 'Orhei',
+      translations: {
+        ro: { name: 'Orhei' },
+        ru: { name: 'Орхей' },
+        en: { name: 'Orhei' },
+      },
+    },
+    {
+      slug: 'soroca',
+      name: 'Soroca',
+      translations: {
+        ro: { name: 'Soroca' },
+        ru: { name: 'Сорока' },
+        en: { name: 'Soroca' },
+      },
+    },
+    {
+      slug: 'hincesti',
+      name: 'Hîncești',
+      translations: {
+        ro: { name: 'Hîncești' },
+        ru: { name: 'Хынчешть' },
+        en: { name: 'Hîncești' },
+      },
+    },
+    {
+      slug: 'floresti',
+      name: 'Florești',
+      translations: {
+        ro: { name: 'Florești' },
+        ru: { name: 'Флорешть' },
+        en: { name: 'Florești' },
+      },
+    },
+    {
+      slug: 'edinet',
+      name: 'Edineț',
+      translations: {
+        ro: { name: 'Edineț' },
+        ru: { name: 'Единец' },
+        en: { name: 'Edineț' },
+      },
+    },
+    {
+      slug: 'straseni',
+      name: 'Strășeni',
+      translations: {
+        ro: { name: 'Strășeni' },
+        ru: { name: 'Стрэшень' },
+        en: { name: 'Strășeni' },
+      },
+    },
+    {
+      slug: 'ceadir-lunga',
+      name: 'Ceadîr-Lunga',
+      translations: {
+        ro: { name: 'Ceadîr-Lunga' },
+        ru: { name: 'Чадыр-Лунга' },
+        en: { name: 'Ceadîr-Lunga' },
+      },
+    },
+    {
+      slug: 'taraclia',
+      name: 'Taraclia',
+      translations: {
+        ro: { name: 'Taraclia' },
+        ru: { name: 'Тараклия' },
+        en: { name: 'Taraclia' },
+      },
+    },
+    {
+      slug: 'cantemir',
+      name: 'Cantemir',
+      translations: {
+        ro: { name: 'Cantemir' },
+        ru: { name: 'Кантемир' },
+        en: { name: 'Cantemir' },
+      },
+    },
+    {
+      slug: 'causeni',
+      name: 'Căușeni',
+      translations: {
+        ro: { name: 'Căușeni' },
+        ru: { name: 'Кэушень' },
+        en: { name: 'Căușeni' },
+      },
+    },
+    {
+      slug: 'ialoveni',
+      name: 'Ialoveni',
+      translations: {
+        ro: { name: 'Ialoveni' },
+        ru: { name: 'Яловены' },
+        en: { name: 'Ialoveni' },
+      },
+    },
+    {
+      slug: 'calarasi',
+      name: 'Călărași',
+      translations: {
+        ro: { name: 'Călărași' },
+        ru: { name: 'Кэлэраш' },
+        en: { name: 'Călărași' },
+      },
+    },
+    {
+      slug: 'criuleni',
+      name: 'Criuleni',
+      translations: {
+        ro: { name: 'Criuleni' },
+        ru: { name: 'Криулень' },
+        en: { name: 'Criuleni' },
+      },
+    },
+    {
+      slug: 'briceni',
+      name: 'Briceni',
+      translations: {
+        ro: { name: 'Briceni' },
+        ru: { name: 'Бричень' },
+        en: { name: 'Briceni' },
+      },
+    },
+    {
+      slug: 'anenii-noi',
+      name: 'Anenii Noi',
+      translations: {
+        ro: { name: 'Anenii Noi' },
+        ru: { name: 'Анений-Ной' },
+        en: { name: 'Anenii Noi' },
+      },
+    },
   ];
 
   for (const city of citiesData) {
     await prisma.city.upsert({
       where: { slug: city.slug },
-      update: {},
-      create: city,
+      update: {
+        name: city.name,
+        translations: city.translations,
+      },
+      create: {
+        name: city.name,
+        slug: city.slug,
+        translations: city.translations,
+      },
     });
   }
-  console.log('🏙️ Cities created');
+  console.log('🏙️ Cities created (ro/ru/en)');
 
   // Create tariffs
   // Feature lists must match backend logic (files.service, analytics, export, masters, plan.ts)

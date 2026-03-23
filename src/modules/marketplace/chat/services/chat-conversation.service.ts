@@ -48,7 +48,13 @@ export class ChatConversationService {
         master: {
           select: {
             id: true,
-            user: { select: { firstName: true, lastName: true } },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
             isOnline: true,
             lastActivityAt: true,
             avatarFile: { select: { path: true } },
@@ -108,7 +114,13 @@ export class ChatConversationService {
           select: {
             id: true,
             userId: true,
-            user: { select: { firstName: true, lastName: true } },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
             isOnline: true,
             lastActivityAt: true,
             avatarFile: { select: { path: true } },
@@ -137,7 +149,13 @@ export class ChatConversationService {
           select: {
             id: true,
             userId: true,
-            user: { select: { firstName: true, lastName: true } },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
             isOnline: true,
             lastActivityAt: true,
             avatarFile: { select: { path: true } },
@@ -197,7 +215,13 @@ export class ChatConversationService {
         master: {
           select: {
             id: true,
-            user: { select: { firstName: true, lastName: true } },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
             avatarFile: { select: { path: true } },
           },
         },

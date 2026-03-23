@@ -70,7 +70,9 @@ export class BookingsNotificationService {
         metadata: {
           bookingId,
           masterId,
-          masterName: formatUserName(master.user.firstName, master.user.lastName) || undefined,
+          masterName:
+            formatUserName(master.user.firstName, master.user.lastName) ||
+            undefined,
           clientName: clientName || undefined,
           startTime: formatDateTime(start),
         },

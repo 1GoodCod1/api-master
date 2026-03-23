@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { RequestWithOptionalUser } from '../../../common/decorators/get-user.decorator';
 import { decodeId, encodeId } from '../../shared/utils/id-encoder';
 import { SearchMastersDto } from './dto/search-masters.dto';
+import { SuggestQueryDto } from './dto/suggest-query.dto';
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
 import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
 import type { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
@@ -74,6 +75,10 @@ export class MastersService {
 
   async getNewMasters(limit: number = 10) {
     return this.searchService.getNewMasters(limit);
+  }
+
+  async getSuggestions(dto: SuggestQueryDto) {
+    return this.searchService.getSuggestions(dto);
   }
 
   // ==================== ПРОФИЛИ ====================

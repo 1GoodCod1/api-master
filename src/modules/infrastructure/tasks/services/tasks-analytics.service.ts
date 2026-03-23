@@ -16,125 +16,144 @@ export class TasksAnalyticsService {
   ) {}
 
   /**
-   * Агрегация аналитики за прошедшие сутки (для мастеров и системы).
-   * Использует timezone Moldova (Europe/Chisinau) для корректных границ "вчера".
+   * Агрегация аналитики за последние 3 дня (для мастеров и системы).
+   * Backfill за 3 дня гарантирует, что пропущенные дни (из-за рестарта, ошибок)
+   * будут пересчитаны корректно.
+   * Использует timezone Moldova (Europe/Chisinau) для корректных границ дней.
    */
   async aggregateAnalytics() {
     const todayStart = getStartOfTodayInMoldova();
-    const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
-    const dayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
+    const BACKFILL_DAYS = 14;
 
-    // Получаем всех мастеров
     const masters = await this.prisma.master.findMany({
       select: { id: true, userId: true },
     });
 
-    for (const master of masters) {
-      const dateRange = { gte: yesterday, lt: dayEnd };
+    for (let dayOffset = 1; dayOffset <= BACKFILL_DAYS; dayOffset++) {
+      const dayStart = new Date(
+        todayStart.getTime() - dayOffset * 24 * 60 * 60 * 1000,
+      );
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const dateRange = { gte: dayStart, lt: dayEnd };
 
-      const [leads, reviewsAgg, views] = await Promise.all([
-        this.prisma.lead.count({
-          where: { masterId: master.id, createdAt: dateRange },
-        }),
-        this.prisma.review.aggregate({
+      for (const master of masters) {
+        const [leads, reviewsAgg, views] = await Promise.all([
+          this.prisma.lead.count({
+            where: { masterId: master.id, createdAt: dateRange },
+          }),
+          this.prisma.review.aggregate({
+            where: {
+              masterId: master.id,
+              status: ReviewStatus.VISIBLE,
+              OR: [
+                { moderatedAt: dateRange },
+                { moderatedAt: null, createdAt: dateRange },
+              ],
+            },
+            _count: true,
+            _avg: { rating: true },
+          }),
+          this.prisma.userActivity.count({
+            where: {
+              masterId: master.id,
+              action: 'view',
+              createdAt: dateRange,
+              ...(master.userId && {
+                OR: [{ userId: null }, { userId: { not: master.userId } }],
+              }),
+            },
+          }),
+        ]);
+
+        const reviewsCount = reviewsAgg._count;
+        const avgRating = reviewsAgg._avg.rating ?? 0;
+
+        await this.prisma.masterAnalytics.upsert({
           where: {
-            masterId: master.id,
-            status: ReviewStatus.VISIBLE,
-            OR: [
-              { moderatedAt: dateRange },
-              { moderatedAt: null, createdAt: dateRange },
-            ],
+            masterId_date: { masterId: master.id, date: dayStart },
           },
-          _count: true,
-          _avg: { rating: true },
-        }),
-        this.prisma.userActivity.count({
-          where: {
-            masterId: master.id,
-            action: 'view',
-            createdAt: dateRange,
-            ...(master.userId && {
-              OR: [{ userId: null }, { userId: { not: master.userId } }],
-            }),
+          update: {
+            leadsCount: leads,
+            viewsCount: views,
+            reviewsCount,
+            rating: avgRating,
+            revenue: 0,
           },
-        }),
-      ]);
-
-      const reviewsCount = reviewsAgg._count;
-      const avgRating = reviewsAgg._avg.rating ?? 0;
-
-      await this.prisma.masterAnalytics.upsert({
-        where: {
-          masterId_date: { masterId: master.id, date: yesterday },
-        },
-        update: {
-          leadsCount: leads,
-          viewsCount: views,
-          reviewsCount,
-          rating: avgRating,
-          revenue: 0,
-        },
-        create: {
-          masterId: master.id,
-          date: yesterday,
-          leadsCount: leads,
-          viewsCount: views,
-          reviewsCount,
-          rating: avgRating,
-          revenue: 0,
-        },
-      });
+          create: {
+            masterId: master.id,
+            date: dayStart,
+            leadsCount: leads,
+            viewsCount: views,
+            reviewsCount,
+            rating: avgRating,
+            revenue: 0,
+          },
+        });
+      }
     }
 
-    // Системная аналитика
-    const [
-      totalUsers,
-      totalMasters,
-      totalLeads,
-      totalReviews,
-      activeUsers,
-      redisKeys,
-    ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.master.count(),
-      this.prisma.lead.count({
-        where: {
-          createdAt: {
-            gte: yesterday,
-            lt: dayEnd,
-          },
-        },
-      }),
-      this.prisma.review.count({
-        where: {
-          createdAt: {
-            gte: yesterday,
-            lt: dayEnd,
-          },
-        },
-      }),
-      this.prisma.user.count({
-        where: {
-          lastLoginAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        },
-      }),
-      this.redis.getClient().dbsize(),
-    ]);
+    // Системная аналитика (только за вчера, чтобы не дублировать)
+    const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000);
 
-    await this.prisma.systemAnalytics.create({
-      data: {
-        date: yesterday,
+    const existingSystemAnalytics = await this.prisma.systemAnalytics.findFirst(
+      {
+        where: { date: yesterday },
+      },
+    );
+
+    if (!existingSystemAnalytics) {
+      const [
         totalUsers,
         totalMasters,
         totalLeads,
         totalReviews,
-        totalRevenue: 0,
         activeUsers,
         redisKeys,
-      },
-    });
+      ] = await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.master.count(),
+        this.prisma.lead.count({
+          where: {
+            createdAt: {
+              gte: yesterday,
+              lt: yesterdayEnd,
+            },
+          },
+        }),
+        this.prisma.review.count({
+          where: {
+            createdAt: {
+              gte: yesterday,
+              lt: yesterdayEnd,
+            },
+          },
+        }),
+        this.prisma.user.count({
+          where: {
+            lastLoginAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            },
+          },
+        }),
+        this.redis.getClient().dbsize(),
+      ]);
 
-    this.logger.log('Аналитика агрегирована за вчера');
+      await this.prisma.systemAnalytics.create({
+        data: {
+          date: yesterday,
+          totalUsers,
+          totalMasters,
+          totalLeads,
+          totalReviews,
+          totalRevenue: 0,
+          activeUsers,
+          redisKeys,
+        },
+      });
+    }
+
+    this.logger.log(`Аналитика агрегирована за последние ${BACKFILL_DAYS} дня`);
   }
 
   /**

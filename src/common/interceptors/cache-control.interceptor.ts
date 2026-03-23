@@ -9,10 +9,9 @@ import type { Request } from 'express';
 import { stripApiPrefix } from '../utils/api-route.util';
 
 /**
- * Adds Cache-Control headers for public GET endpoints to enable browser/CDN caching.
- * - Categories, cities: 1h (rarely change)
- * - Masters popular: 2min
- * - Masters search, new, landing-stats, filters, profile, promotions: 5min
+ * Cache-Control для публичных GET.
+ * - development: без долгого HTTP-кеша (удобнее отладка, согласовано с фронтом)
+ * - production: короткий max-age для каталогов и фильтров, дольше — для поиска/профиля
  */
 @Injectable()
 export class CacheControlInterceptor implements NestInterceptor {
@@ -24,25 +23,53 @@ export class CacheControlInterceptor implements NestInterceptor {
 
     if (request.method === 'GET') {
       const path = stripApiPrefix(request.path);
+      const isProd = process.env.NODE_ENV === 'production';
 
-      // Categories and cities: 1h
+      // Categories and cities
       if (path === '/categories' || path === '/cities') {
-        response.setHeader(
-          'Cache-Control',
-          'public, max-age=3600, stale-while-revalidate=60',
-        );
+        if (isProd) {
+          response.setHeader(
+            'Cache-Control',
+            'public, max-age=120, stale-while-revalidate=300',
+          );
+        } else {
+          response.setHeader(
+            'Cache-Control',
+            'private, no-cache, must-revalidate',
+          );
+        }
       }
-      // Popular masters: shorter TTL (aligns with Redis popularMasters)
+      // Popular masters (aligns with Redis popularMasters)
       else if (path === '/masters/popular') {
-        response.setHeader(
-          'Cache-Control',
-          'public, max-age=120, stale-while-revalidate=30',
-        );
+        if (isProd) {
+          response.setHeader(
+            'Cache-Control',
+            'public, max-age=120, stale-while-revalidate=30',
+          );
+        } else {
+          response.setHeader(
+            'Cache-Control',
+            'private, no-cache, must-revalidate',
+          );
+        }
       }
-      // Other masters public endpoints, promotions active: 5min
+      // Masters filters — часто меняются при правках категорий/городов
+      else if (path === '/masters/filters') {
+        if (isProd) {
+          response.setHeader(
+            'Cache-Control',
+            'public, max-age=60, stale-while-revalidate=120',
+          );
+        } else {
+          response.setHeader(
+            'Cache-Control',
+            'private, no-cache, must-revalidate',
+          );
+        }
+      }
+      // Masters search, new, landing-stats, promotions active
       else if (
         path === '/masters' ||
-        path === '/masters/filters' ||
         path === '/masters/new' ||
         path === '/masters/landing-stats' ||
         path === '/promotions/active'
@@ -52,7 +79,7 @@ export class CacheControlInterceptor implements NestInterceptor {
           'public, max-age=300, stale-while-revalidate=60',
         );
       }
-      // Master profile by slug (e.g. /masters/john-doe), master photos
+      // Master profile by slug, master photos
       else if (
         /^\/masters\/[^/]+$/.test(path) ||
         /^\/masters\/[^/]+\/photos$/.test(path)

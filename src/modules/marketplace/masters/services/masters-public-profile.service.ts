@@ -87,10 +87,9 @@ export class MastersPublicProfileService {
 
   /**
    * Обработка инкремента просмотров с отслеживанием активности.
-   * Учитываются только просмотры от клиентов (role=CLIENT):
-   * - анонимные просмотры не учитываются;
+   * Учитываются просмотры от клиентов (role=CLIENT) и анонимных посетителей:
    * - исключены владелец профиля и другие мастера;
-   * - 1 запись на клиента в день (повторные просмотры не учитываются).
+   * - 1 запись на посетителя в день (дедупликация по userId / sessionId / IP).
    */
   private async handleViewIncrement(
     masterId: string,
@@ -102,31 +101,36 @@ export class MastersPublicProfileService {
     cityId?: string,
     userRole?: string,
   ) {
-    if (!userId || userRole !== 'CLIENT') return;
+    // Мастера не считаем (ни свой профиль, ни чужие)
+    if (userRole === 'MASTER') return;
 
     const todayStart = getStartOfTodayInMoldova();
 
-    const viewerCacheKey = `cache:viewer:${userId}:is-master`;
-    let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
+    // Для авторизованных пользователей: проверяем, не мастер ли он и не свой ли профиль
+    if (userId) {
+      const viewerCacheKey = `cache:viewer:${userId}:is-master`;
+      let viewerIsMaster = await this.cache.get<boolean>(viewerCacheKey);
 
-    if (viewerIsMaster === null) {
-      const [profileMaster, viewerMaster] = await Promise.all([
-        this.prisma.master.findUnique({
-          where: { id: masterId },
-          select: { userId: true },
-        }),
-        this.prisma.master.findUnique({
-          where: { userId },
-          select: { id: true },
-        }),
-      ]);
-      if (profileMaster?.userId === userId) return;
-      viewerIsMaster = !!viewerMaster;
-      await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
+      if (viewerIsMaster === null) {
+        const [profileMaster, viewerMaster] = await Promise.all([
+          this.prisma.master.findUnique({
+            where: { id: masterId },
+            select: { userId: true },
+          }),
+          this.prisma.master.findUnique({
+            where: { userId },
+            select: { id: true },
+          }),
+        ]);
+        if (profileMaster?.userId === userId) return;
+        viewerIsMaster = !!viewerMaster;
+        await this.cache.set(viewerCacheKey, viewerIsMaster, 60);
+      }
+
+      if (viewerIsMaster) return;
     }
 
-    if (viewerIsMaster) return;
-
+    // Дедупликация: 1 просмотр на посетителя в день (по userId, sessionId или IP)
     const viewerIdent = userId
       ? { userId }
       : sessionId
