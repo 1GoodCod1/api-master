@@ -2,9 +2,47 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, ReportStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 
+export type AdminReportsStats = {
+  total: number;
+  pendingCount: number;
+  reviewedCount: number;
+  resolvedCount: number;
+  rejectedCount: number;
+};
+
 @Injectable()
 export class ReportsQueryService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Агрегаты по всем жалобам (без фильтра пагинации) — карточки админки
+   */
+  async getStats(): Promise<AdminReportsStats> {
+    const [total, pendingCount, reviewedCount, resolvedCount, rejectedCount] =
+      await Promise.all([
+        this.prisma.report.count(),
+        this.prisma.report.count({
+          where: { status: ReportStatus.PENDING },
+        }),
+        this.prisma.report.count({
+          where: { status: ReportStatus.REVIEWED },
+        }),
+        this.prisma.report.count({
+          where: { status: ReportStatus.RESOLVED },
+        }),
+        this.prisma.report.count({
+          where: { status: ReportStatus.REJECTED },
+        }),
+      ]);
+
+    return {
+      total,
+      pendingCount,
+      reviewedCount,
+      resolvedCount,
+      rejectedCount,
+    };
+  }
 
   /**
    * Получить все жалобы в системе (для панели администратора)
@@ -48,11 +86,37 @@ export class ReportsQueryService {
     });
   }
 
-  private getIncludes() {
+  private getIncludes(): Prisma.ReportInclude {
     return {
-      client: { select: { id: true, email: true, phone: true } },
+      client: {
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+          avatarFile: { select: { path: true } },
+          clientPhotos: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: { file: { select: { path: true } } },
+          },
+        },
+      },
       master: {
-        include: { user: { select: { id: true, email: true, phone: true } } },
+        select: {
+          avatarFile: { select: { path: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              firstName: true,
+              lastName: true,
+              avatarFile: { select: { path: true } },
+            },
+          },
+        },
       },
       lead: true,
     };

@@ -71,6 +71,17 @@ export class ReportsService {
     return this.queryService.findAll(status);
   }
 
+  /** Счётчики по статусам для карточек админки */
+  async getStats() {
+    return this.queryService.getStats();
+  }
+
+  /** Полный список для CSV (тот же набор полей, что и findAll) */
+  async exportAll(status?: string) {
+    const reports = await this.queryService.findAll(status);
+    return { reports };
+  }
+
   /**
    * Список жалоб клиента
    */

@@ -213,6 +213,23 @@ export class AdminController {
     });
   }
 
+  @Get('reviews/stats')
+  @ApiOperation({
+    summary: 'Review counts by status (global totals, no pagination)',
+  })
+  getReviewsStats() {
+    return this.adminService.getReviewsStats();
+  }
+
+  @Get('reviews/export')
+  @ApiOperation({
+    summary: 'Export all reviews matching optional status (no pagination)',
+  })
+  @ApiQuery({ name: 'status', required: false })
+  getReviewsExport(@Query('status') status?: string) {
+    return this.adminService.getReviewsExport({ status });
+  }
+
   @Get('reviews')
   @ApiOperation({ summary: 'Get reviews list' })
   @ApiQuery({ name: 'status', required: false })
@@ -241,6 +258,23 @@ export class AdminController {
     @Body('reason') reason?: string,
   ) {
     return this.adminService.moderateReview(id, status, reason);
+  }
+
+  @Get('payments/stats')
+  @ApiOperation({
+    summary: 'Payment counts and revenue (global totals, admin only)',
+  })
+  getPaymentsStats() {
+    return this.adminService.getPaymentsStats();
+  }
+
+  @Get('payments/export')
+  @ApiOperation({
+    summary: 'Export all payments matching optional status (admin only)',
+  })
+  @ApiQuery({ name: 'status', required: false })
+  getPaymentsExport(@Query('status') status?: string) {
+    return this.adminService.getPaymentsExport({ status });
   }
 
   @Get('payments')

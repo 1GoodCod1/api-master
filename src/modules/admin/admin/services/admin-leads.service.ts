@@ -66,6 +66,18 @@ export class AdminLeadsService {
       this.prisma.lead.findMany({
         where: whereWithCursor,
         include: {
+          client: {
+            select: {
+              avatarFile: { select: { path: true } },
+              clientPhotos: {
+                orderBy: { order: 'asc' },
+                take: 1,
+                select: {
+                  file: { select: { path: true } },
+                },
+              },
+            },
+          },
           master: {
             select: {
               avatarFile: { select: { path: true } },
@@ -74,6 +86,7 @@ export class AdminLeadsService {
                   firstName: true,
                   lastName: true,
                   phone: true,
+                  avatarFile: { select: { path: true } },
                 },
               },
             },
@@ -152,11 +165,28 @@ export class AdminLeadsService {
     const leads = await this.prisma.lead.findMany({
       where,
       include: {
+        client: {
+          select: {
+            avatarFile: { select: { path: true } },
+            clientPhotos: {
+              orderBy: { order: 'asc' },
+              take: 1,
+              select: {
+                file: { select: { path: true } },
+              },
+            },
+          },
+        },
         master: {
           select: {
             avatarFile: { select: { path: true } },
             user: {
-              select: { firstName: true, lastName: true, phone: true },
+              select: {
+                firstName: true,
+                lastName: true,
+                phone: true,
+                avatarFile: { select: { path: true } },
+              },
             },
           },
         },

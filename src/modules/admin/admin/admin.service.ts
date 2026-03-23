@@ -5,8 +5,14 @@ import {
   AdminLeadsService,
   type AdminLeadsStats,
 } from './services/admin-leads.service';
-import { AdminReviewsService } from './services/admin-reviews.service';
-import { AdminPaymentsService } from './services/admin-payments.service';
+import {
+  AdminReviewsService,
+  type AdminReviewsStats,
+} from './services/admin-reviews.service';
+import {
+  AdminPaymentsService,
+  type AdminPaymentsStats,
+} from './services/admin-payments.service';
 import { AdminAuditService } from './services/admin-audit.service';
 import { AdminAnalyticsService } from './services/admin-analytics.service';
 import {
@@ -194,6 +200,14 @@ export class AdminService {
     return this.reviewsService.getReviews(filters);
   }
 
+  async getReviewsStats(): Promise<AdminReviewsStats> {
+    return this.reviewsService.getReviewsStats();
+  }
+
+  async getReviewsExport(filters?: { status?: string }) {
+    return this.reviewsService.getReviewsExport(filters);
+  }
+
   async moderateReview(reviewId: string, status: string, reason?: string) {
     return this.reviewsService.moderateReview(reviewId, status, reason);
   }
@@ -205,6 +219,14 @@ export class AdminService {
     cursor?: string;
   }) {
     return this.paymentsService.getPayments(filters);
+  }
+
+  async getPaymentsStats(): Promise<AdminPaymentsStats> {
+    return this.paymentsService.getPaymentsStats();
+  }
+
+  async getPaymentsExport(filters?: { status?: string }) {
+    return this.paymentsService.getPaymentsExport(filters);
   }
 
   // ==================== АНАЛИТИКА ====================

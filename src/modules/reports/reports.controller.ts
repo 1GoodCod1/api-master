@@ -59,6 +59,29 @@ export class ReportsController {
     return { count };
   }
 
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Report counts by status (global totals, admin only)',
+  })
+  async getStats() {
+    return this.reportsService.getStats();
+  }
+
+  @Get('export')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Export all reports matching optional status (admin only)',
+  })
+  @ApiQuery({ name: 'status', required: false })
+  async export(@Query('status') status?: string) {
+    return this.reportsService.exportAll(status);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

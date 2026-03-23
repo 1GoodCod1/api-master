@@ -8,6 +8,14 @@ import {
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
 
+export type AdminReviewsStats = {
+  total: number;
+  pendingCount: number;
+  visibleCount: number;
+  hiddenCount: number;
+  reportedCount: number;
+};
+
 /**
  * Сервис для управления отзывами в админке
  */
@@ -48,9 +56,26 @@ export class AdminReviewsService {
       this.prisma.review.findMany({
         where: whereWithCursor,
         include: {
+          client: {
+            select: {
+              avatarFile: { select: { path: true } },
+              clientPhotos: {
+                orderBy: { order: 'asc' },
+                take: 1,
+                select: { file: { select: { path: true } } },
+              },
+            },
+          },
           master: {
             select: {
-              user: { select: { firstName: true, lastName: true } },
+              avatarFile: { select: { path: true } },
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  avatarFile: { select: { path: true } },
+                },
+              },
             },
           },
           reviewFiles: {
@@ -90,6 +115,82 @@ export class AdminReviewsService {
         nextCursor,
       },
     };
+  }
+
+  async getReviewsStats(): Promise<AdminReviewsStats> {
+    const [total, pendingCount, visibleCount, hiddenCount, reportedCount] =
+      await Promise.all([
+        this.prisma.review.count(),
+        this.prisma.review.count({
+          where: { status: ReviewStatus.PENDING },
+        }),
+        this.prisma.review.count({
+          where: { status: ReviewStatus.VISIBLE },
+        }),
+        this.prisma.review.count({
+          where: { status: ReviewStatus.HIDDEN },
+        }),
+        this.prisma.review.count({
+          where: { status: ReviewStatus.REPORTED },
+        }),
+      ]);
+
+    return {
+      total,
+      pendingCount,
+      visibleCount,
+      hiddenCount,
+      reportedCount,
+    };
+  }
+
+  async getReviewsExport(filters?: { status?: string }) {
+    const { status } = filters ?? {};
+    const where: Prisma.ReviewWhereInput = {};
+    if (status) where.status = status as ReviewStatus;
+
+    const reviews = await this.prisma.review.findMany({
+      where,
+      include: {
+        client: {
+          select: {
+            avatarFile: { select: { path: true } },
+            clientPhotos: {
+              orderBy: { order: 'asc' },
+              take: 1,
+              select: { file: { select: { path: true } } },
+            },
+          },
+        },
+        master: {
+          select: {
+            avatarFile: { select: { path: true } },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
+          },
+        },
+        reviewFiles: {
+          include: {
+            file: {
+              select: {
+                id: true,
+                path: true,
+                filename: true,
+                mimetype: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return { reviews };
   }
 
   async moderateReview(reviewId: string, status?: string, _reason?: string) {
