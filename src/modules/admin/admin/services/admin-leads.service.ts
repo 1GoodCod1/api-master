@@ -7,6 +7,14 @@ import {
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
 
+export type AdminLeadsStats = {
+  total: number;
+  newCount: number;
+  inProgressCount: number;
+  closedCount: number;
+  premiumCount: number;
+};
+
 /**
  * Сервис для управления лидами в админке
  */
@@ -60,6 +68,7 @@ export class AdminLeadsService {
         include: {
           master: {
             select: {
+              avatarFile: { select: { path: true } },
               user: {
                 select: {
                   firstName: true,
@@ -94,6 +103,68 @@ export class AdminLeadsService {
         nextCursor,
       },
     };
+  }
+
+  async getLeadsStats(filters?: {
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<AdminLeadsStats> {
+    const { dateFrom, dateTo } = filters ?? {};
+    const where: Prisma.LeadWhereInput = {};
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = dateFrom;
+      if (dateTo) where.createdAt.lte = dateTo;
+    }
+
+    const [total, newCount, inProgressCount, closedCount, premiumCount] =
+      await Promise.all([
+        this.prisma.lead.count({ where }),
+        this.prisma.lead.count({
+          where: { ...where, status: 'NEW' as LeadStatus },
+        }),
+        this.prisma.lead.count({
+          where: { ...where, status: 'IN_PROGRESS' as LeadStatus },
+        }),
+        this.prisma.lead.count({
+          where: { ...where, status: 'CLOSED' as LeadStatus },
+        }),
+        this.prisma.lead.count({ where: { ...where, isPremium: true } }),
+      ]);
+
+    return { total, newCount, inProgressCount, closedCount, premiumCount };
+  }
+
+  async getLeadsExport(filters?: {
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }) {
+    const { status, dateFrom, dateTo } = filters ?? {};
+    const where: Prisma.LeadWhereInput = {};
+    if (status) where.status = status as LeadStatus;
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = dateFrom;
+      if (dateTo) where.createdAt.lte = dateTo;
+    }
+
+    const leads = await this.prisma.lead.findMany({
+      where,
+      include: {
+        master: {
+          select: {
+            avatarFile: { select: { path: true } },
+            user: {
+              select: { firstName: true, lastName: true, phone: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return { leads };
   }
 
   async getRecentLeads(limit: number = 10) {

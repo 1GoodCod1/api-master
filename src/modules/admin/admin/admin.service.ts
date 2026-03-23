@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AdminUsersService } from './services/admin-users.service';
 import { AdminMastersService } from './services/admin-masters.service';
-import { AdminLeadsService } from './services/admin-leads.service';
+import {
+  AdminLeadsService,
+  type AdminLeadsStats,
+} from './services/admin-leads.service';
 import { AdminReviewsService } from './services/admin-reviews.service';
 import { AdminPaymentsService } from './services/admin-payments.service';
 import { AdminAuditService } from './services/admin-audit.service';
@@ -104,6 +107,14 @@ export class AdminService {
     return this.usersService.getUsers(filters);
   }
 
+  async getUsersStats(filters?: {
+    role?: string;
+    verified?: string | boolean;
+    banned?: string | boolean;
+  }) {
+    return this.usersService.getUsersStats(filters);
+  }
+
   async updateUser(
     userId: string,
     data: {
@@ -128,6 +139,14 @@ export class AdminService {
     return this.mastersService.getMasters(filters);
   }
 
+  async getMastersStats(filters?: {
+    verified?: boolean;
+    featured?: boolean;
+    tariff?: string;
+  }) {
+    return this.mastersService.getMastersStats(filters);
+  }
+
   async updateMaster(
     masterId: string,
     data: {
@@ -149,6 +168,21 @@ export class AdminService {
     cursor?: string;
   }) {
     return this.leadsService.getLeads(filters);
+  }
+
+  async getLeadsStats(filters?: {
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<AdminLeadsStats> {
+    return this.leadsService.getLeadsStats(filters);
+  }
+
+  async getLeadsExport(filters?: {
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }) {
+    return await this.leadsService.getLeadsExport(filters);
   }
 
   async getReviews(filters?: {

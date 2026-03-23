@@ -28,6 +28,13 @@ import { AdminUpdateUserDto } from './dto/update-user.dto';
 import { AdminUpdateMasterDto } from './dto/update-master.dto';
 import { BroadcastEmailDto } from './dto/broadcast-email.dto';
 
+/** Query string booleans: only "true"/"false" apply a filter; missing or "" → no filter */
+function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return undefined;
+}
+
 @ApiTags('Admin')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,6 +47,25 @@ export class AdminController {
   @ApiOperation({ summary: 'Get admin dashboard data' })
   async getDashboard() {
     return this.adminService.getDashboardData();
+  }
+
+  @Get('users/stats')
+  @ApiOperation({
+    summary: 'User counts for current filters (independent of page/limit)',
+  })
+  @ApiQuery({ name: 'role', required: false })
+  @ApiQuery({ name: 'verified', required: false, type: Boolean })
+  @ApiQuery({ name: 'banned', required: false, type: Boolean })
+  async getUsersStats(
+    @Query('role') role?: string,
+    @Query('verified') verified?: string,
+    @Query('banned') banned?: string,
+  ) {
+    return this.adminService.getUsersStats({
+      role,
+      verified: parseOptionalQueryBool(verified),
+      banned: parseOptionalQueryBool(banned),
+    });
   }
 
   @Get('users')
@@ -60,12 +86,8 @@ export class AdminController {
   ) {
     return this.adminService.getUsers({
       role,
-      verified:
-        verified !== undefined && verified !== null
-          ? verified === 'true'
-          : undefined,
-      banned:
-        banned !== undefined && banned !== null ? banned === 'true' : undefined,
+      verified: parseOptionalQueryBool(verified),
+      banned: parseOptionalQueryBool(banned),
       page: Number(page),
       limit: Number(limit),
       cursor,
@@ -76,6 +98,25 @@ export class AdminController {
   @ApiOperation({ summary: 'Update user' })
   async updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
     return this.adminService.updateUser(id, dto);
+  }
+
+  @Get('masters/stats')
+  @ApiOperation({
+    summary: 'Master counts & avg rating for current filters (no pagination)',
+  })
+  @ApiQuery({ name: 'verified', required: false, type: Boolean })
+  @ApiQuery({ name: 'featured', required: false, type: Boolean })
+  @ApiQuery({ name: 'tariff', required: false })
+  async getMastersStats(
+    @Query('verified') verified?: string,
+    @Query('featured') featured?: string,
+    @Query('tariff') tariff?: string,
+  ) {
+    return this.adminService.getMastersStats({
+      verified: parseOptionalQueryBool(verified),
+      featured: parseOptionalQueryBool(featured),
+      tariff,
+    });
   }
 
   @Get('masters')
@@ -95,8 +136,8 @@ export class AdminController {
     @Query('cursor') cursor?: string,
   ) {
     return this.adminService.getMasters({
-      verified: verified ? verified === 'true' : undefined,
-      featured: featured ? featured === 'true' : undefined,
+      verified: parseOptionalQueryBool(verified),
+      featured: parseOptionalQueryBool(featured),
       tariff,
       page: Number(page),
       limit: Number(limit),
@@ -111,6 +152,39 @@ export class AdminController {
     @Body() dto: AdminUpdateMasterDto,
   ) {
     return this.adminService.updateMaster(id, dto);
+  }
+
+  @Get('leads/stats')
+  @ApiOperation({ summary: 'Lead counts by status (no pagination)' })
+  @ApiQuery({ name: 'dateFrom', required: false, type: String })
+  @ApiQuery({ name: 'dateTo', required: false, type: String })
+  getLeadsStats(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.adminService.getLeadsStats({
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+    });
+  }
+
+  @Get('leads/export')
+  @ApiOperation({
+    summary: 'Export all leads (no pagination) for CSV download',
+  })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'dateFrom', required: false, type: String })
+  @ApiQuery({ name: 'dateTo', required: false, type: String })
+  getLeadsExport(
+    @Query('status') status?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.adminService.getLeadsExport({
+      status,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
+    });
   }
 
   @Get('leads')

@@ -19,23 +19,12 @@ export class AdminMastersService {
     private readonly cache: CacheService,
   ) {}
 
-  async getMasters(filters?: {
+  private buildMastersWhereFromFilters(filters?: {
     verified?: boolean;
     featured?: boolean;
     tariff?: string;
-    page?: number;
-    limit?: number;
-    cursor?: string;
-  }) {
-    const {
-      verified,
-      featured,
-      tariff,
-      page = 1,
-      limit = 20,
-      cursor,
-    } = filters ?? {};
-    const limitNumber = Number(limit) || 20;
+  }): Prisma.MasterWhereInput {
+    const { verified, featured, tariff } = filters ?? {};
 
     const where: Prisma.MasterWhereInput = {
       user: {
@@ -46,6 +35,70 @@ export class AdminMastersService {
 
     if (featured !== undefined) where.isFeatured = featured;
     if (tariff) where.tariffType = tariff as TariffType;
+    return where;
+  }
+
+  /**
+   * Aggregates for current list filters — independent of pagination.
+   */
+  async getMastersStats(filters?: {
+    verified?: boolean;
+    featured?: boolean;
+    tariff?: string;
+  }) {
+    const where = this.buildMastersWhereFromFilters(filters);
+
+    const whereVerified: Prisma.MasterWhereInput = {
+      AND: [
+        where,
+        {
+          user: {
+            isBanned: false,
+            isVerified: true,
+          },
+        },
+      ],
+    };
+
+    const whereFeatured: Prisma.MasterWhereInput = {
+      AND: [where, { isFeatured: true }],
+    };
+
+    const [total, verified, featured, avgAgg] = await Promise.all([
+      this.prisma.master.count({ where }),
+      this.prisma.master.count({ where: whereVerified }),
+      this.prisma.master.count({ where: whereFeatured }),
+      this.prisma.master.aggregate({
+        where,
+        _avg: { rating: true },
+      }),
+    ]);
+
+    const avgRating = avgAgg._avg.rating ?? 0;
+
+    return {
+      total,
+      stats: {
+        verified,
+        featured,
+        avgRating: Number.isFinite(avgRating) ? avgRating : 0,
+      },
+    };
+  }
+
+  async getMasters(filters?: {
+    verified?: boolean;
+    featured?: boolean;
+    tariff?: string;
+    page?: number;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const { page = 1, limit = 20, cursor } = filters ?? {};
+    const limitNumber = Number(limit) || 20;
+    const pageNumber = Number(page) || 1;
+
+    const where = this.buildMastersWhereFromFilters(filters);
 
     const cursorDecoded = decodeCreatedAtIdCursor(cursor);
     const useCursor = Boolean(cursor && cursorDecoded);
@@ -70,10 +123,21 @@ export class AdminMastersService {
               email: true,
               phone: true,
               isVerified: true,
+              firstName: true,
+              lastName: true,
+              avatarFile: { select: { path: true } },
             },
           },
+          avatarFile: { select: { path: true } },
           category: true,
           city: true,
+          photos: {
+            orderBy: { order: 'asc' },
+            take: 24,
+            include: {
+              file: { select: { path: true } },
+            },
+          },
           _count: {
             select: {
               leads: true,
@@ -86,22 +150,31 @@ export class AdminMastersService {
         orderBy,
         ...(useCursor
           ? { take: limitNumber + 1 }
-          : { skip: (Number(page) - 1) * limitNumber, take: limitNumber }),
+          : { skip: (pageNumber - 1) * limitNumber, take: limitNumber }),
       }),
       this.prisma.master.count({ where }),
     ]);
 
-    const masters = useCursor ? rawMasters.slice(0, limitNumber) : rawMasters;
+    const sliced = useCursor ? rawMasters.slice(0, limitNumber) : rawMasters;
     const nextCursor =
       useCursor && rawMasters.length > limitNumber
-        ? nextCursorFromLastCreatedAtId(masters)
+        ? nextCursorFromLastCreatedAtId(sliced)
         : null;
+
+    const masters = sliced.map((m) => ({
+      ...m,
+      fullName:
+        [m.user?.firstName, m.user?.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || null,
+    }));
 
     return {
       masters,
       pagination: {
         total,
-        page: useCursor ? 1 : page,
+        page: useCursor ? 1 : pageNumber,
         limit: limitNumber,
         totalPages: Math.ceil(total / limitNumber),
         nextCursor,
@@ -155,12 +228,14 @@ export class AdminMastersService {
   }
 
   async getRecentMasters(limit: number = 10) {
-    return this.prisma.master.findMany({
+    const rows = await this.prisma.master.findMany({
       include: {
         user: {
           select: {
             email: true,
             phone: true,
+            firstName: true,
+            lastName: true,
           },
         },
         category: true,
@@ -169,5 +244,13 @@ export class AdminMastersService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    return rows.map((m) => ({
+      ...m,
+      fullName:
+        [m.user?.firstName, m.user?.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || null,
+    }));
   }
 }

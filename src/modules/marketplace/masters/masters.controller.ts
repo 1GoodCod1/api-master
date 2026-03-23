@@ -55,7 +55,10 @@ export class MastersController {
   }
 
   @Get('suggest')
-  @ApiOperation({ summary: 'Smart search suggestions (categories, masters, services) with fuzzy matching' })
+  @ApiOperation({
+    summary:
+      'Smart search suggestions (categories, masters, services) with fuzzy matching',
+  })
   async getSuggestions(@Query() dto: SuggestQueryDto) {
     return this.mastersService.getSuggestions(dto);
   }

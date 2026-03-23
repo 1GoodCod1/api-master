@@ -18,7 +18,10 @@ export class SuggestQueryDto {
   @IsOptional()
   limit?: number = 8;
 
-  @ApiProperty({ required: false, description: 'City ID or slug to boost local results' })
+  @ApiProperty({
+    required: false,
+    description: 'City ID or slug to boost local results',
+  })
   @IsString()
   @IsOptional()
   cityId?: string;

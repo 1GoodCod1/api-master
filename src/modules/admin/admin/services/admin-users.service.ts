@@ -18,22 +18,13 @@ export class AdminUsersService {
     private readonly cache: CacheService,
   ) {}
 
-  async getUsers(filters?: {
+  /** List filters (role, verified, banned) — same rules as GET /admin/users. */
+  private buildUsersWhereFromFilters(filters?: {
     role?: string;
     verified?: string | boolean;
     banned?: string | boolean;
-    page?: number;
-    limit?: number;
-    cursor?: string;
-  }) {
-    const {
-      role,
-      verified,
-      banned,
-      page = 1,
-      limit = 20,
-      cursor,
-    } = filters ?? {};
+  }): Prisma.UserWhereInput {
+    const { role, verified, banned } = filters ?? {};
 
     let verifiedBoolean: boolean | undefined;
     if (verified !== undefined && verified !== null) {
@@ -52,13 +43,72 @@ export class AdminUsersService {
         bannedBoolean = banned;
       }
     }
-    const pageNumber = Number(page) || 1;
-    const limitNumber = Number(limit) || 20;
 
     const where: Prisma.UserWhereInput = {};
     if (role) where.role = role as UserRole;
     if (verifiedBoolean !== undefined) where.isVerified = verifiedBoolean;
     if (bannedBoolean !== undefined) where.isBanned = bannedBoolean;
+    return where;
+  }
+
+  /**
+   * Aggregates for the current filter set — independent of pagination.
+   * Used by GET /admin/users/stats so cards do not change when switching pages.
+   */
+  async getUsersStats(filters?: {
+    role?: string;
+    verified?: string | boolean;
+    banned?: string | boolean;
+  }) {
+    const where = this.buildUsersWhereFromFilters(filters);
+    const statsWhere = {
+      active: {
+        ...where,
+        isVerified: true,
+        isBanned: false,
+      } as Prisma.UserWhereInput,
+      pending: {
+        ...where,
+        isVerified: false,
+        isBanned: false,
+      } as Prisma.UserWhereInput,
+      blocked: {
+        ...where,
+        isBanned: true,
+      } as Prisma.UserWhereInput,
+    };
+
+    const [total, active, pending, blocked] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.count({ where: statsWhere.active }),
+      this.prisma.user.count({ where: statsWhere.pending }),
+      this.prisma.user.count({ where: statsWhere.blocked }),
+    ]);
+
+    return {
+      total,
+      stats: {
+        active,
+        pending,
+        blocked,
+      },
+    };
+  }
+
+  async getUsers(filters?: {
+    role?: string;
+    verified?: string | boolean;
+    banned?: string | boolean;
+    page?: number;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const { page = 1, limit = 20, cursor } = filters ?? {};
+
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+
+    const where = this.buildUsersWhereFromFilters(filters);
 
     const cursorDecoded = decodeCreatedAtIdCursor(cursor);
     const useCursor = Boolean(cursor && cursorDecoded);
@@ -73,6 +123,8 @@ export class AdminUsersService {
       id: true,
       email: true,
       phone: true,
+      firstName: true,
+      lastName: true,
       role: true,
       isVerified: true,
       isBanned: true,
@@ -133,7 +185,7 @@ export class AdminUsersService {
       users,
       pagination: {
         total,
-        page: useCursor ? 1 : page,
+        page: useCursor ? 1 : pageNumber,
         limit: limitNumber,
         totalPages: Math.ceil(total / limitNumber),
         nextCursor,
