@@ -72,6 +72,7 @@ export class ReviewsActionService {
         id: true,
         masterId: true,
         clientId: true,
+        clientPhone: true,
         status: true,
         clientName: true,
       },
@@ -80,7 +81,12 @@ export class ReviewsActionService {
     if (!lead) {
       throw new BadRequestException('Указанная заявка не найдена.');
     }
-    if (lead.clientId !== clientId) {
+    const phoneMatches =
+      Boolean(user.phone?.trim() && lead.clientPhone?.trim()) &&
+      user.phone.trim() === lead.clientPhone.trim();
+    const isLeadOwner =
+      lead.clientId === clientId || (lead.clientId == null && phoneMatches);
+    if (!isLeadOwner) {
       throw new ForbiddenException('Эта заявка принадлежит другому клиенту.');
     }
     if (lead.masterId !== masterId) {

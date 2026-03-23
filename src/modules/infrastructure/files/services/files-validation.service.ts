@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import {
   validateFileMagic,
+  validateLeadImageMagic,
   unlinkIfExists,
 } from '../../../shared/utils/file-magic';
 
@@ -16,11 +17,18 @@ export class FilesValidationService {
    * Проверить файл по magic bytes (защита от подмены расширения).
    * При ошибке удаляет файл с диска и выбрасывает BadRequestException.
    */
-  async assertValidFileContent(file: Express.Multer.File): Promise<void> {
+  async assertValidFileContent(
+    file: Express.Multer.File,
+    mode: 'default' | 'leadImage' = 'default',
+  ): Promise<void> {
     if (!file.path) return;
 
     try {
-      await validateFileMagic(file.path, file.originalname);
+      if (mode === 'leadImage') {
+        await validateLeadImageMagic(file.path, file.originalname);
+      } else {
+        await validateFileMagic(file.path, file.originalname);
+      }
     } catch (e) {
       await unlinkIfExists(file.path);
       throw new BadRequestException(

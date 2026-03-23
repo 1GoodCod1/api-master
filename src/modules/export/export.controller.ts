@@ -48,6 +48,18 @@ export class ExportController {
     await this.exportService.exportLeadsToCSV(masterId, req.user, res);
   }
 
+  @Get('leads/excel/:masterId')
+  @ApiOperation({ summary: 'Export leads to Excel (PREMIUM only)' })
+  @ApiResponse({ status: 200, description: 'XLSX file' })
+  @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
+  async exportLeadsExcel(
+    @Param('masterId') masterId: string,
+    @Req() req: RequestWithUser,
+    @Res() res: Response,
+  ) {
+    await this.exportService.exportLeadsToExcel(masterId, req.user, res);
+  }
+
   @Post('queue/:type/:masterId')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.ACCEPTED)

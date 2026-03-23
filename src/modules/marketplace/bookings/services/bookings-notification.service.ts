@@ -50,6 +50,39 @@ export class BookingsNotificationService {
     }
   }
 
+  /** Client booked time — notify master to confirm or reject */
+  async notifyBookingPendingForMaster(
+    masterId: string,
+    master: {
+      user: { id: string; firstName: string | null; lastName: string | null };
+    },
+    clientId: string | null,
+    clientName: string | undefined,
+    start: Date,
+    bookingId: string,
+  ): Promise<void> {
+    try {
+      await this.inAppNotifications.notify({
+        userId: master.user.id,
+        category: 'BOOKING_PENDING',
+        title: 'Новая запись от клиента',
+        message: `${clientName || 'Клиент'} хочет записаться на ${formatDateTime(start)}. Подтвердите или отклоните.`,
+        metadata: {
+          bookingId,
+          masterId,
+          masterName: formatUserName(master.user.firstName, master.user.lastName) || undefined,
+          clientName: clientName || undefined,
+          startTime: formatDateTime(start),
+        },
+        priority: 'high',
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send booking pending for master notification: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   async notifyBookingConfirmed(
     masterId: string,
     master: {

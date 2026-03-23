@@ -25,6 +25,7 @@ export class LeadsAnalyticsService {
 
       // 2. Инвалидируем кеш (профиль мастера — responseRate, лиды, статистика)
       await this.cache.invalidateMasterData(masterId);
+      // Popular masters cache (TTL 10 min) обновится сам — один лид не меняет топ-5
 
       // 3. Обновляем аналитическую таблицу за сегодня
       await this.updateDailyAnalytics(masterId);

@@ -8,11 +8,18 @@ import {
   sanitizePublicMaster,
   getEffectiveTariff,
 } from '../../../../common/helpers/plans';
+import { resolvePublicMasterAvatarPath } from '../../../../common/helpers/master-public-avatar';
+
 import { MastersSearchSqlService } from './masters-search-sql.service';
 
 @Injectable()
 export class MastersSearchService {
   private readonly logger = new Logger(MastersSearchService.name);
+
+  /** Минимум заявок для блока «популярные» + видимый отзыв с ответом мастера */
+  private static readonly MIN_LEADS_FOR_POPULAR_MASTERS = 9;
+  /** Средний рейтинг (по видимым отзывам, поле master.rating) */
+  private static readonly MIN_RATING_FOR_POPULAR_MASTERS = 4.6;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -235,6 +242,7 @@ export class MastersSearchService {
                 email: true,
                 phone: true,
                 isVerified: true,
+                avatarFile: { select: { path: true } },
               },
             },
             _count: {
@@ -254,15 +262,11 @@ export class MastersSearchService {
           items: ordered.map((master) => {
             const sanitized = sanitizePublicMaster(master);
             const eff = getEffectiveTariff(sanitized);
-            const avatarFile = master.avatarFile as
-              | { path?: string }
-              | null
-              | undefined;
             return {
               ...sanitized,
               effectiveTariffType: eff,
               tariffType: eff,
-              avatarUrl: avatarFile?.path ?? null,
+              avatarUrl: resolvePublicMasterAvatarPath(master),
               latitude: master.latitude ?? null,
               longitude: master.longitude ?? null,
               services: master.services ?? null,
@@ -288,8 +292,15 @@ export class MastersSearchService {
       cacheKey,
       async () => {
         const now = new Date();
-        const [categories, cities, tariffStats, ratingStats, priceRangeRaw] =
-          await Promise.all([
+        const [
+          categories,
+          cities,
+          tariffStats,
+          ratingStats,
+          priceRangeRaw,
+          availableNowCount,
+          hasPromotionCount,
+        ] = await Promise.all([
             this.prisma.category.findMany({
               where: { isActive: true },
               include: {
@@ -330,6 +341,25 @@ export class MastersSearchService {
               _avg: { rating: true },
             }),
             this.getPriceRangeFromServices(now),
+            this.prisma.master.count({
+              where: {
+                user: { isBanned: false },
+                isOnline: true,
+                availabilityStatus: 'AVAILABLE',
+              },
+            }),
+            this.prisma.master.count({
+              where: {
+                user: { isBanned: false },
+                promotions: {
+                  some: {
+                    isActive: true,
+                    validFrom: { lte: now },
+                    validUntil: { gte: now },
+                  },
+                },
+              },
+            }),
           ]);
 
         const priceRange = priceRangeRaw ?? { min: 0, max: 5000 };
@@ -361,12 +391,14 @@ export class MastersSearchService {
           },
           experienceRange: {
             min: 0,
-            max: 50, // Максимальный опыт лет
+            max: 50,
           },
           priceRange: {
             min: Math.max(0, Math.floor(priceRange.min)),
             max: Math.max(100, Math.ceil(priceRange.max)),
           },
+          availableNowCount,
+          hasPromotionCount,
         };
       },
       this.cache.ttl.searchFilters, // 1 hour
@@ -419,20 +451,50 @@ export class MastersSearchService {
       return await this.cache.getOrSet(
         cacheKey,
         async () => {
+          const now = new Date();
           const masters = await this.prisma.master.findMany({
             where: {
-              user: {
-                isBanned: false,
+              user: { isBanned: false },
+              rating: {
+                gte: MastersSearchService.MIN_RATING_FOR_POPULAR_MASTERS,
               },
-              isFeatured: true,
+              leadsCount: {
+                gte: MastersSearchService.MIN_LEADS_FOR_POPULAR_MASTERS,
+              },
+              reviews: {
+                some: {
+                  status: ReviewStatus.VISIBLE,
+                  replies: { some: {} },
+                },
+              },
             },
+            orderBy: [
+              { isFeatured: 'desc' },
+              { leadsCount: 'desc' },
+              { rating: 'desc' },
+            ],
+            take: limit,
             include: {
               user: {
-                select: { firstName: true, lastName: true, isVerified: true },
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  isVerified: true,
+                  avatarFile: { select: { path: true } },
+                },
               },
               avatarFile: true,
               category: true,
               city: true,
+              promotions: {
+                where: {
+                  isActive: true,
+                  validFrom: { lte: now },
+                  validUntil: { gte: now },
+                },
+                select: { discount: true },
+                take: 1,
+              },
               _count: {
                 select: {
                   reviews: {
@@ -441,27 +503,20 @@ export class MastersSearchService {
                 },
               },
             },
-            orderBy: [
-              { tariffType: 'desc' }, // PREMIUM > VIP > BASIC
-              { rating: 'desc' },
-              { leadsCount: 'desc' },
-            ],
-            take: limit,
           });
 
           return masters.map((m) => {
             const sanitized = sanitizePublicMaster(m);
-            const avatarFile = m.avatarFile as
-              | { path?: string }
-              | null
-              | undefined;
+            const activePromotion = m.promotions?.[0] ?? null;
             return {
               ...sanitized,
-              avatarUrl: avatarFile?.path ?? null,
+              avatarUrl: resolvePublicMasterAvatarPath(m),
+              activePromotion,
+              promotions: undefined,
             };
           });
         },
-        this.cache.ttl.popularMasters, // 10 minutes
+        this.cache.ttl.popularMasters,
       );
     } catch (error) {
       this.logger.warn(
@@ -485,7 +540,12 @@ export class MastersSearchService {
             },
             include: {
               user: {
-                select: { firstName: true, lastName: true, isVerified: true },
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  isVerified: true,
+                  avatarFile: { select: { path: true } },
+                },
               },
               avatarFile: true,
               category: true,
@@ -497,13 +557,9 @@ export class MastersSearchService {
 
           return masters.map((m) => {
             const sanitized = sanitizePublicMaster(m);
-            const avatarFile = m.avatarFile as
-              | { path?: string }
-              | null
-              | undefined;
             return {
               ...sanitized,
-              avatarUrl: avatarFile?.path ?? null,
+              avatarUrl: resolvePublicMasterAvatarPath(m),
             };
           });
         },

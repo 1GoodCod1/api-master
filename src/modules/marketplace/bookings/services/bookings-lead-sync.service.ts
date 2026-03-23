@@ -34,6 +34,11 @@ export class BookingsLeadSyncService {
     if (!booking.leadId) return;
 
     try {
+      if (newStatus === 'CONFIRMED') {
+        await this.updateLeadStatusOnCreate(booking.leadId);
+        return;
+      }
+
       if (newStatus === 'CANCELLED') {
         await this.prisma.$transaction(async (tx) => {
           await tx.lead.update({

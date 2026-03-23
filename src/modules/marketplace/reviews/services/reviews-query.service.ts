@@ -186,14 +186,30 @@ export class ReviewsQueryService {
    * Проверить, может ли клиент оставить отзыв (наличие закрытого заказа и отсутствие старого отзыва)
    */
   async canCreateReview(masterId: string, clientId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: clientId },
+      select: { phone: true },
+    });
+    if (!user?.phone?.trim()) {
+      return { canCreate: false, noClosedLead: true };
+    }
+
+    const clientPhone = user.phone.trim();
+
     // Use parallel count queries instead of fetching full objects
     const [existingCount, closedLead] = await Promise.all([
       this.prisma.review.count({
         where: { masterId, clientId },
       }),
       this.prisma.lead.findFirst({
-        where: { masterId, clientId, status: LeadStatus.CLOSED },
+        where: {
+          masterId,
+          status: LeadStatus.CLOSED,
+          // Как в findAllForClient: лид может быть без clientId (гость), но с тем же телефоном
+          OR: [{ clientId }, { clientPhone }],
+        },
         select: { id: true },
+        orderBy: { updatedAt: 'desc' },
       }),
     ]);
 

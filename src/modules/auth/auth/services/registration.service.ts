@@ -74,7 +74,7 @@ export class RegistrationService {
           registerDto.lastName!,
         );
 
-        // Премиум не выдаётся при регистрации — только после успешной верификации (первые 100, на 1 месяц)
+        // Премиум не выдаётся при регистрации — только после успешной верификации
         const newMaster = await tx.master.create({
           data: {
             userId: newUser.id,

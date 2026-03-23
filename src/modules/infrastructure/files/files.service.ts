@@ -20,9 +20,10 @@ export class FilesService {
     forLead?: string,
   ) {
     const userId = user?.id ?? null;
-    const skipClientGallery = this.parseForLead(forLead);
+    const forLeadAttachments = this.parseForLead(forLead);
     return this.actionService.uploadMany(files, userId, {
-      skipClientGallery,
+      skipClientGallery: forLeadAttachments,
+      leadAttachmentOnly: forLeadAttachments,
     });
   }
 

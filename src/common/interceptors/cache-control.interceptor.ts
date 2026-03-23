@@ -11,7 +11,8 @@ import { stripApiPrefix } from '../utils/api-route.util';
 /**
  * Adds Cache-Control headers for public GET endpoints to enable browser/CDN caching.
  * - Categories, cities: 1h (rarely change)
- * - Masters search, popular, new, landing-stats, filters, profile, promotions: 5min
+ * - Masters popular: 2min
+ * - Masters search, new, landing-stats, filters, profile, promotions: 5min
  */
 @Injectable()
 export class CacheControlInterceptor implements NestInterceptor {
@@ -31,11 +32,17 @@ export class CacheControlInterceptor implements NestInterceptor {
           'public, max-age=3600, stale-while-revalidate=60',
         );
       }
-      // Masters public endpoints, promotions active: 5min
+      // Popular masters: shorter TTL (aligns with Redis popularMasters)
+      else if (path === '/masters/popular') {
+        response.setHeader(
+          'Cache-Control',
+          'public, max-age=120, stale-while-revalidate=30',
+        );
+      }
+      // Other masters public endpoints, promotions active: 5min
       else if (
         path === '/masters' ||
         path === '/masters/filters' ||
-        path === '/masters/popular' ||
         path === '/masters/new' ||
         path === '/masters/landing-stats' ||
         path === '/promotions/active'

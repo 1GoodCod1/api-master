@@ -1,4 +1,12 @@
-import { PrismaClient, TariffType, UserRole } from '@prisma/client';
+import {
+  AvailabilityStatus,
+  LeadStatus,
+  PrismaClient,
+  ReviewStatus,
+  TariffType,
+  UserRole,
+} from '@prisma/client';
+import { randomInt, randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as argon2 from 'argon2';
@@ -6,9 +14,6 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -19,7 +24,373 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
+// --- demo masters / clients / reviews (seed-demo-*)
+const DEMO_EMAIL_PREFIX = 'seed-demo-';
+const DEMO_MASTER_SLUG_PREFIX = 'seed-demo-m-';
+const DEMO_CRITERIA = ['quality', 'speed', 'price', 'politeness'] as const;
+const DEMO_MASTER_COUNT = 28;
+const DEMO_CLIENT_COUNT = 55;
+const DEMO_MIN_REVIEWS_PER_MASTER = 4;
+const DEMO_MAX_REVIEWS_PER_MASTER = 22;
+
+const DEMO_FIRST_NAMES = [
+  'Андрей',
+  'Мария',
+  'Ион',
+  'Елена',
+  'Василе',
+  'Ольга',
+  'Дмитрий',
+  'Анна',
+  'Сергей',
+  'Наталья',
+] as const;
+const DEMO_LAST_NAMES = [
+  'Попеску',
+  'Русу',
+  'Чобану',
+  'Мельник',
+  'Кожокарь',
+  'Туркану',
+  'Бодю',
+  'Григоришин',
+] as const;
+const DEMO_REVIEW_COMMENTS = [
+  'Всё сделали быстро и аккуратно, рекомендую.',
+  'Остался доволен, приеду ещё.',
+  'Цена адекватная, мастер вежливый.',
+  'Немного задержались, но качество на высоте.',
+  'Супер работа, спасибо!',
+  'Нормально, без сюрпризов.',
+  'Лучший мастер в городе, всё объяснил.',
+  'Хорошо, но можно было быстрее.',
+] as const;
+
+const DEMO_LEAD_MESSAGES = [
+  'Здравствуйте, нужна консультация и ориентировочная стоимость.',
+  'Когда можете подъехать? Адрес напишу в личку.',
+  'Интересует срочный выезд, сегодня или завтра.',
+  'Есть фото — куда отправить?',
+  'Нужен мастер с опытом, повторное обращение.',
+  'Подскажите, работаете ли в выходные?',
+  'Готовы оплатить наличными, нужен чек.',
+] as const;
+
+function demoPick<T>(arr: readonly T[]): T {
+  const idx = randomInt(arr.length);
+  const el = arr[idx];
+  if (el === undefined) {
+    throw new Error('demoPick: empty array');
+  }
+  return el;
+}
+
+function demoWeightedRating(): number {
+  const r = randomInt(100);
+  if (r < 55) return 5;
+  if (r < 82) return 4;
+  if (r < 94) return 3;
+  if (r < 98) return 2;
+  return 1;
+}
+
+function demoClampCriteria(main: number): number {
+  const delta = randomInt(-1, 2);
+  return Math.min(5, Math.max(1, main + delta));
+}
+
+async function demoUpdateMasterAggregates(
+  client: PrismaClient,
+  masterId: string,
+): Promise<void> {
+  const reviews = await client.review.findMany({
+    where: { masterId, status: ReviewStatus.VISIBLE },
+    select: { rating: true },
+  });
+  if (reviews.length === 0) {
+    await client.master.update({
+      where: { id: masterId },
+      data: { rating: 0, totalReviews: 0 },
+    });
+    return;
+  }
+  const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+  await client.master.update({
+    where: { id: masterId },
+    data: { rating: avg, totalReviews: reviews.length },
+  });
+}
+
+async function seedDemoMastersClientsReviews(
+  client: PrismaClient,
+): Promise<void> {
+  console.log('🧪 Demo: cleaning previous seed-demo-* rows...');
+
+  const existingMasters = await client.master.findMany({
+    where: { slug: { startsWith: DEMO_MASTER_SLUG_PREFIX } },
+    select: { id: true },
+  });
+  const masterIds = existingMasters.map((m) => m.id);
+  if (masterIds.length > 0) {
+    await client.master.deleteMany({ where: { id: { in: masterIds } } });
+  }
+
+  await client.user.deleteMany({
+    where: { email: { startsWith: DEMO_EMAIL_PREFIX } },
+  });
+
+  const categories = await client.category.findMany({
+    where: { isActive: true },
+    select: { id: true },
+    orderBy: { sortOrder: 'asc' },
+  });
+  const cities = await client.city.findMany({
+    where: { isActive: true },
+    select: { id: true },
+    orderBy: { name: 'asc' },
+  });
+
+  if (categories.length === 0 || cities.length === 0) {
+    throw new Error('Demo seed: need at least one category and one city.');
+  }
+
+  const demoPassword = await argon2.hash('demo123');
+  const now = new Date();
+  const in30d = new Date(now);
+  in30d.setDate(in30d.getDate() + 30);
+
+  const clientUsers: { id: string; phone: string; firstName: string | null }[] =
+    [];
+
+  for (let i = 1; i <= DEMO_CLIENT_COUNT; i++) {
+    const phone = `+37362${String(100000 + i).slice(1)}`;
+    const u = await client.user.create({
+      data: {
+        email: `${DEMO_EMAIL_PREFIX}c-${String(i).padStart(3, '0')}@demo.local`,
+        phone,
+        password: demoPassword,
+        role: UserRole.CLIENT,
+        isVerified: true,
+        firstName: demoPick(DEMO_FIRST_NAMES),
+        lastName: demoPick(DEMO_LAST_NAMES),
+      },
+      select: { id: true, phone: true, firstName: true },
+    });
+    clientUsers.push(u);
+  }
+  console.log(
+    `👥 Created ${DEMO_CLIENT_COUNT} demo clients (password: demo123)`,
+  );
+
+  const masterRecords: { id: string; userId: string }[] = [];
+
+  for (let i = 1; i <= DEMO_MASTER_COUNT; i++) {
+    const phone = `+37361${String(100000 + i).slice(1)}`;
+    const cityPick = cities[randomInt(cities.length)];
+    const categoryPick = categories[randomInt(categories.length)];
+    if (!cityPick || !categoryPick) {
+      throw new Error('Demo seed: city/category pick failed');
+    }
+    const cityId = cityPick.id;
+    const categoryId = categoryPick.id;
+
+    const tariffRoll = randomInt(100);
+    let tariffType: TariffType = TariffType.BASIC;
+    let tariffExpiresAt: Date | null = null;
+    let isFeatured = false;
+    if (tariffRoll < 25) {
+      tariffType = TariffType.PREMIUM;
+      tariffExpiresAt = in30d;
+      isFeatured = randomInt(100) < 40;
+    } else if (tariffRoll < 55) {
+      tariffType = TariffType.VIP;
+      tariffExpiresAt = in30d;
+    }
+
+    const user = await client.user.create({
+      data: {
+        email: `${DEMO_EMAIL_PREFIX}m-${String(i).padStart(3, '0')}@demo.local`,
+        phone,
+        password: demoPassword,
+        role: UserRole.MASTER,
+        isVerified: true,
+        firstName: demoPick(DEMO_FIRST_NAMES),
+        lastName: demoPick(DEMO_LAST_NAMES),
+        masterProfile: {
+          create: {
+            slug: `${DEMO_MASTER_SLUG_PREFIX}${String(i).padStart(3, '0')}`,
+            description: `Демо-мастер #${i}. Опыт ${randomInt(1, 17)} лет. Работаю качественно, с гарантией.`,
+            services: [
+              {
+                title: 'Стандартная услуга',
+                price: randomInt(200, 2500),
+                durationMin: 60,
+              },
+              {
+                title: 'Расширенный пакет',
+                price: randomInt(500, 4000),
+                durationMin: 120,
+              },
+            ],
+            cityId,
+            categoryId,
+            experienceYears: randomInt(1, 21),
+            tariffType,
+            tariffExpiresAt,
+            isFeatured,
+            pendingVerification: false,
+            isOnline: randomInt(100) < 35,
+            availabilityStatus: AvailabilityStatus.AVAILABLE,
+            views: randomInt(0, 500),
+            leadsCount: 0,
+          },
+        },
+      },
+      include: { masterProfile: { select: { id: true } } },
+    });
+
+    const mp = user.masterProfile;
+    if (!mp) {
+      throw new Error('Demo seed: masterProfile missing after create');
+    }
+    masterRecords.push({ id: mp.id, userId: user.id });
+  }
+  console.log(
+    `🛠️ Created ${DEMO_MASTER_COUNT} demo masters (password: demo123), slugs ${DEMO_MASTER_SLUG_PREFIX}001…`,
+  );
+
+  let leadRows = 0;
+  let synthPhoneSeq = 0;
+  for (let mi = 0; mi < masterRecords.length; mi++) {
+    const master = masterRecords[mi];
+    if (!master) {
+      continue;
+    }
+    /** «Популярные» мастера — много заявок (как для блока популярных в поиске) */
+    let nLeads: number;
+    if (mi < 6) {
+      nLeads = randomInt(42, 96);
+    } else if (mi < 12) {
+      nLeads = randomInt(18, 41);
+    } else {
+      nLeads = randomInt(0, 10);
+    }
+
+    for (let k = 0; k < nLeads; k++) {
+      const registered = randomInt(100) < 72;
+      let clientPhone: string;
+      let clientId: string | null;
+      let clientName: string | null;
+      if (registered) {
+        const cl = clientUsers[k % clientUsers.length];
+        if (!cl) {
+          throw new Error('Demo seed: clientUsers empty');
+        }
+        clientPhone = cl.phone;
+        clientId = cl.id;
+        clientName = cl.firstName ?? 'Клиент';
+      } else {
+        synthPhoneSeq += 1;
+        clientPhone = `+373990${String(synthPhoneSeq).padStart(5, '0')}`;
+        clientId = null;
+        clientName = 'Гость';
+      }
+
+      const roll = randomInt(100);
+      let status: LeadStatus;
+      if (roll < 12) {
+        status = LeadStatus.NEW;
+      } else if (roll < 30) {
+        status = LeadStatus.IN_PROGRESS;
+      } else if (roll < 90) {
+        status = LeadStatus.CLOSED;
+      } else {
+        status = LeadStatus.SPAM;
+      }
+
+      await client.lead.create({
+        data: {
+          id: randomUUID(),
+          masterId: master.id,
+          clientPhone,
+          clientId,
+          clientName,
+          message: demoPick(DEMO_LEAD_MESSAGES),
+          status,
+          isPremium: randomInt(100) < 10,
+        },
+      });
+      leadRows++;
+    }
+
+    await client.master.update({
+      where: { id: master.id },
+      data: { leadsCount: nLeads },
+    });
+  }
+  console.log(
+    `📬 Created ${leadRows} demo leads (first 6 masters: ~42–95 each; next 6: ~18–40; others: 0–9).`,
+  );
+
+  let reviewCount = 0;
+  let replyCount = 0;
+
+  for (const master of masterRecords) {
+    const nReviews = randomInt(
+      DEMO_MIN_REVIEWS_PER_MASTER,
+      DEMO_MAX_REVIEWS_PER_MASTER + 1,
+    );
+    const shuffled = [...clientUsers].sort(() => randomInt(3) - 1);
+    const chosen = shuffled.slice(0, Math.min(nReviews, shuffled.length));
+
+    for (const cl of chosen) {
+      const rating = demoWeightedRating();
+      const comment =
+        randomInt(100) < 85 ? demoPick(DEMO_REVIEW_COMMENTS) : null;
+
+      const review = await client.review.create({
+        data: {
+          masterId: master.id,
+          clientId: cl.id,
+          clientPhone: cl.phone,
+          clientName: cl.firstName ?? 'Клиент',
+          rating,
+          comment,
+          status: ReviewStatus.VISIBLE,
+          reviewCriteria: {
+            create: DEMO_CRITERIA.map((criteria) => ({
+              criteria,
+              rating: demoClampCriteria(rating),
+            })),
+          },
+        },
+      });
+      reviewCount++;
+
+      if (randomInt(100) < 45) {
+        await client.reviewReply.create({
+          data: {
+            reviewId: review.id,
+            masterId: master.id,
+            content: 'Спасибо за отзыв! Буду рад снова помочь — обращайтесь.',
+          },
+        });
+        replyCount++;
+      }
+    }
+
+    await demoUpdateMasterAggregates(client, master.id);
+  }
+
+  console.log(
+    `⭐ Created ${reviewCount} visible reviews (${replyCount} with master replies); master.rating / totalReviews updated.`,
+  );
+  console.log(
+    '📋 Demo logins: seed-demo-m-001@demo.local … / seed-demo-c-001@demo.local … — password demo123',
+  );
+}
+
+async function main(): Promise<void> {
   console.log('🌱 Seeding database...');
   console.log(
     'DATABASE_URL:',
@@ -218,7 +589,11 @@ async function main() {
   }
   console.log('💎 Tariffs created');
 
-  console.log('✅ Seeding completed: admin, categories, cities, tariffs.');
+  await seedDemoMastersClientsReviews(prisma);
+
+  console.log(
+    '✅ Seeding completed: admin, categories, cities, tariffs, demo masters/clients/reviews.',
+  );
 }
 
 main()

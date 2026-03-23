@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { extname } from 'path';
+import { unlinkIfExists } from '../../../shared/utils/file-magic';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import { FilesValidationService } from './files-validation.service';
@@ -28,10 +30,21 @@ export class FilesActionService {
   async uploadFile(
     file: Express.Multer.File,
     userId?: string,
-    options?: { skipClientGallery?: boolean },
+    options?: { skipClientGallery?: boolean; leadAttachmentOnly?: boolean },
   ): Promise<UploadedDto> {
     this.validationService.assertFilePresent(file);
-    await this.validationService.assertValidFileContent(file);
+    if (options?.leadAttachmentOnly) {
+      try {
+        this.assertLeadImageMimeAndExt(file);
+      } catch (err) {
+        if (file.path) await unlinkIfExists(file.path);
+        throw err;
+      }
+    }
+    await this.validationService.assertValidFileContent(
+      file,
+      options?.leadAttachmentOnly ? 'leadImage' : 'default',
+    );
 
     const fileUrl = this.normalizeFileUrl(file);
     const fileRecord = await this.prisma.file.create({
@@ -88,7 +101,7 @@ export class FilesActionService {
   async uploadMany(
     files: Express.Multer.File[],
     userId: string | null,
-    options?: { skipClientGallery?: boolean },
+    options?: { skipClientGallery?: boolean; leadAttachmentOnly?: boolean },
   ): Promise<{ items: UploadedDto[] }> {
     if (!Array.isArray(files) || files.length === 0) {
       return { items: [] };
@@ -97,7 +110,10 @@ export class FilesActionService {
 
     const items: UploadedDto[] = [];
     for (const f of files) {
-      const saved = await this.uploadFile(f, userId ?? undefined, options);
+      const saved = await this.uploadFile(f, userId ?? undefined, {
+        skipClientGallery: options?.skipClientGallery,
+        leadAttachmentOnly: options?.leadAttachmentOnly,
+      });
       items.push(saved);
     }
     return { items };
@@ -105,6 +121,29 @@ export class FilesActionService {
 
   private isImage(mimetype?: string): boolean {
     return String(mimetype || '').startsWith('image/');
+  }
+
+  /** Вложения к заявке: только фото (проверка до magic bytes; для S3 без path тоже срабатывает). */
+  private assertLeadImageMimeAndExt(file: Express.Multer.File): void {
+    const m = String(file.mimetype || '').toLowerCase();
+    const allowedMime = new Set([
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ]);
+    if (!allowedMime.has(m)) {
+      throw new BadRequestException(
+        'Lead attachments must be images only (JPG, PNG, GIF, WebP)',
+      );
+    }
+    const ext = extname(file.originalname).slice(1).toLowerCase();
+    const allowedExt = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    if (!allowedExt.has(ext)) {
+      throw new BadRequestException(
+        'Use file extensions .jpg, .png, .gif, or .webp for lead photos',
+      );
+    }
   }
 
   private normalizeFileUrl(file: Express.Multer.File): string {

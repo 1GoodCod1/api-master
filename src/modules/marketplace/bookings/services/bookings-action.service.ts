@@ -67,12 +67,9 @@ export class BookingsActionService {
     this.validation.validateTimeSlot(start, end);
     await this.validation.ensureNoConflict(masterId, start, end);
 
-    // Master proposes time → PENDING (client must confirm).
-    // Client books directly → CONFIRMED.
-    const isMasterCreating = authUser.role === 'MASTER';
-    const initialStatus: BookingStatus = isMasterCreating
-      ? 'PENDING'
-      : 'CONFIRMED';
+    // Both master and client create bookings as PENDING.
+    // Master must confirm client bookings; client must confirm master bookings.
+    const initialStatus: BookingStatus = 'PENDING';
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -105,8 +102,10 @@ export class BookingsActionService {
       },
     });
 
-    if (initialStatus === 'PENDING') {
-      // Notify client that master proposed a time
+    const isMasterCreating = authUser.role === 'MASTER';
+
+    if (isMasterCreating) {
+      // Master proposed time → notify client to confirm/reject
       void this.notifications
         .notifyBookingPending(
           masterId,
@@ -118,12 +117,9 @@ export class BookingsActionService {
         )
         .catch((e) => this.logger.error('notifyBookingPending failed', e));
     } else {
-      // Client booked directly — move lead to IN_PROGRESS and notify
-      void this.leadSync
-        .updateLeadStatusOnCreate(resolved.resolvedLeadId)
-        .catch((e) => this.logger.error('updateLeadStatusOnCreate failed', e));
+      // Client booked → notify master to confirm/reject
       void this.notifications
-        .notifyBookingConfirmed(
+        .notifyBookingPendingForMaster(
           masterId,
           master,
           resolved.resolvedClientId,
@@ -131,7 +127,7 @@ export class BookingsActionService {
           start,
           booking.id,
         )
-        .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
+        .catch((e) => this.logger.error('notifyBookingPendingForMaster failed', e));
     }
 
     return booking;
@@ -318,7 +314,19 @@ export class BookingsActionService {
     void this.leadSync
       .updateLeadOnStatusChange(booking, newStatus)
       .catch((e) => this.logger.error('updateLeadOnStatusChange failed', e));
-    if (newStatus === 'CANCELLED') {
+
+    if (newStatus === 'CONFIRMED') {
+      void this.notifications
+        .notifyBookingConfirmed(
+          booking.masterId,
+          booking.master,
+          booking.clientId,
+          booking.clientName ?? undefined,
+          booking.startTime,
+          booking.id,
+        )
+        .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
+    } else if (newStatus === 'CANCELLED') {
       void this.notifications
         .notifyBookingCancelled(booking)
         .catch((e) => this.logger.error('notifyBookingCancelled failed', e));

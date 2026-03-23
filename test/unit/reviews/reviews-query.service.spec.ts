@@ -3,12 +3,14 @@ import type { PrismaService } from '../../../src/modules/shared/database/prisma.
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
 type PrismaReviewsQueryMock = {
+  user: { findUnique: jest.Mock };
   review: { findMany: jest.Mock; count: jest.Mock; groupBy: jest.Mock };
   lead: { count: jest.Mock; findFirst: jest.Mock };
 };
 
 describe('ReviewsQueryService', () => {
   const prisma: PrismaReviewsQueryMock = {
+    user: { findUnique: jest.fn() },
     review: { findMany: jest.fn(), count: jest.fn(), groupBy: jest.fn() },
     lead: { count: jest.fn(), findFirst: jest.fn() },
   };
@@ -76,6 +78,7 @@ describe('ReviewsQueryService', () => {
 
   describe('canCreateReview', () => {
     it('returns canCreate: false when already reviewed', async () => {
+      prisma.user.findUnique.mockResolvedValue({ phone: '+373111' });
       prisma.review.count.mockResolvedValue(1);
       prisma.lead.findFirst.mockResolvedValue({ id: 'l1' });
 
@@ -86,6 +89,7 @@ describe('ReviewsQueryService', () => {
     });
 
     it('returns canCreate: false when no closed lead', async () => {
+      prisma.user.findUnique.mockResolvedValue({ phone: '+373111' });
       prisma.review.count.mockResolvedValue(0);
       prisma.lead.findFirst.mockResolvedValue(null);
 
@@ -96,12 +100,23 @@ describe('ReviewsQueryService', () => {
     });
 
     it('returns canCreate: true when eligible', async () => {
+      prisma.user.findUnique.mockResolvedValue({ phone: '+373111' });
       prisma.review.count.mockResolvedValue(0);
       prisma.lead.findFirst.mockResolvedValue({ id: 'l1' });
 
       const result = await service.canCreateReview('m1', 'c1');
 
       expect(result.canCreate).toBe(true);
+    });
+
+    it('returns noClosedLead when user has no phone', async () => {
+      prisma.user.findUnique.mockResolvedValue({ phone: null });
+
+      const result = await service.canCreateReview('m1', 'c1');
+
+      expect(result.canCreate).toBe(false);
+      expect(result.noClosedLead).toBe(true);
+      expect(prisma.lead.findFirst).not.toHaveBeenCalled();
     });
   });
 });

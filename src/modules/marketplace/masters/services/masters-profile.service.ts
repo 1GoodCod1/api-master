@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { sanitizePublicMaster } from '../../../../common/helpers/plans';
+import { resolvePublicMasterAvatarPath } from '../../../../common/helpers/master-public-avatar';
 
 interface CachedMaster {
   id: string;
@@ -104,6 +105,7 @@ export class MastersProfileService {
             email: true,
             phone: true,
             isVerified: true,
+            avatarFile: { select: { path: true } },
           },
         },
         _count: {
@@ -152,6 +154,7 @@ export class MastersProfileService {
             email: true,
             phone: true,
             isVerified: true,
+            avatarFile: { select: { path: true } },
           },
         },
         _count: {
@@ -188,14 +191,10 @@ export class MastersProfileService {
 
     const sanitized = sanitizePublicMaster(master);
     const photos = (master.photos ?? []) as Array<{ file: { id: string } }>;
-    const avatarFile = master.avatarFile as
-      | { path?: string }
-      | null
-      | undefined;
     const isVerified = (master.user as { isVerified?: boolean })?.isVerified;
     const result = {
       ...sanitized,
-      avatarUrl: avatarFile?.path ?? null,
+      avatarUrl: resolvePublicMasterAvatarPath(master),
       photos: photos.map((p) => p.file),
       responseRate,
       leadsCount: closedLeadsCount,

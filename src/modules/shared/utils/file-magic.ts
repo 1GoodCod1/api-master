@@ -56,6 +56,62 @@ export async function validateFileMagic(
   throw new Error('File content could not be recognised as an allowed type');
 }
 
+const LEAD_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
+ * Только изображения для вложений к заявке (JPEG/PNG/GIF/WebP).
+ * Вызывать при file.path (локальный disk). Для S3 — дублировать проверку MIME на уровне сервиса.
+ */
+export async function validateLeadImageMagic(
+  filePath: string,
+  originalname: string,
+): Promise<void> {
+  const ext = getExt(originalname);
+  if (!LEAD_IMAGE_EXTS.has(ext)) {
+    throw new Error('Invalid file extension');
+  }
+
+  const head = await readFile(filePath, { encoding: null });
+  const head12 = head.subarray(0, 12);
+
+  if (head12[0] === 0xff && head12[1] === 0xd8 && head12[2] === 0xff) {
+    if (ext === 'jpg' || ext === 'jpeg') return;
+    throw new Error('File content does not match extension');
+  }
+
+  if (head.length >= 8 && head.subarray(0, 8).equals(PNG_SIG)) {
+    if (ext === 'png') return;
+    throw new Error('File content does not match extension');
+  }
+
+  const gifHdr = Buffer.from([0x47, 0x49, 0x46, 0x38]);
+  if (head12.length >= 4 && head12.subarray(0, 4).equals(gifHdr)) {
+    if (ext === 'gif') return;
+    throw new Error('File content does not match extension');
+  }
+
+  if (
+    head.length >= 12 &&
+    head[0] === 0x52 &&
+    head[1] === 0x49 &&
+    head[2] === 0x46 &&
+    head[3] === 0x46 &&
+    head[8] === 0x57 &&
+    head[9] === 0x45 &&
+    head[10] === 0x42 &&
+    head[11] === 0x50
+  ) {
+    if (ext === 'webp') return;
+    throw new Error('File content does not match extension');
+  }
+
+  throw new Error(
+    'File content could not be recognised as an allowed image type',
+  );
+}
+
 export async function unlinkIfExists(path: string): Promise<void> {
   await unlink(path).catch(() => {});
 }

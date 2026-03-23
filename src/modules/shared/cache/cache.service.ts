@@ -496,7 +496,7 @@ export class CacheService {
    */
   ttl = {
     search: 300, // 5 minutes
-    masterProfile: 600, // 10 minutes
+    masterProfile: 180, // 3 minutes
     masterStats: 300, // 5 minutes
     reviews: 900, // 15 minutes
     categories: 3600, // 1 hour
@@ -509,7 +509,7 @@ export class CacheService {
     analyticsMonth: 3600, // 1 hour
     topMasters: 600, // 10 minutes
     popularMasters: 600, // 10 minutes
-    newMasters: 300, // 5 minutes
+    newMasters: 180, // 3 minutes
     searchFilters: 3600, // 1 hour
     landingStats: 600, // 10 minutes
     notifications: 60, // 1 minute (frequently changing)

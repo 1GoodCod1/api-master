@@ -126,15 +126,7 @@ export class SearchMastersDto {
 
   @ApiProperty({
     required: false,
-    enum: [
-      'rating',
-      'createdAt',
-      'views',
-      'leadsCount',
-      'price',
-      'totalReviews',
-      'updatedAt',
-    ],
+    enum: ['rating', 'createdAt', 'price'],
   })
   @IsString()
   @IsOptional()

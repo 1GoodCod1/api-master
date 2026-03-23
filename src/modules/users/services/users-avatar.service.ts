@@ -4,10 +4,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { CacheService } from '../../shared/cache/cache.service';
 
 @Injectable()
 export class UsersAvatarService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async setAvatar(userId: string, fileId?: string) {
     const user = await this.prisma.user.findUnique({
@@ -21,6 +25,22 @@ export class UsersAvatarService {
         where: { id: userId },
         data: { avatarFileId: null },
       });
+      if (user.role === 'MASTER') {
+        const master = await this.prisma.master.findUnique({
+          where: { userId },
+          select: { id: true, slug: true },
+        });
+        if (master) {
+          await this.prisma.master.update({
+            where: { id: master.id },
+            data: { avatarFileId: null },
+          });
+          await this.cache.invalidateMasterRelated(master.id, {
+            old: master.slug,
+            new: master.slug,
+          });
+        }
+      }
       return this.getUpdatedUser(userId);
     }
 
@@ -45,6 +65,23 @@ export class UsersAvatarService {
       where: { id: userId },
       data: { avatarFileId: fileId },
     });
+
+    if (user.role === 'MASTER') {
+      const master = await this.prisma.master.findUnique({
+        where: { userId },
+        select: { id: true, slug: true },
+      });
+      if (master) {
+        await this.prisma.master.update({
+          where: { id: master.id },
+          data: { avatarFileId: fileId },
+        });
+        await this.cache.invalidateMasterRelated(master.id, {
+          old: master.slug,
+          new: master.slug,
+        });
+      }
+    }
 
     return this.getUpdatedUser(userId);
   }

@@ -180,6 +180,7 @@ describe('ReviewsActionService', () => {
         id: 'l1',
         masterId: 'm1',
         clientId: 'c1',
+        clientPhone: '+37312345678',
         status: 'IN_PROGRESS',
         clientName: 'Test',
       });

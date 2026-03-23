@@ -286,18 +286,11 @@ export class MastersSearchSqlService {
   private buildSortSql(sortBy: string, sortOrder: string) {
     const sortMap: Record<string, Prisma.Sql> = {
       rating: Prisma.sql`m."rating"`,
-      reviews: Prisma.sql`m."totalReviews"`,
-      totalReviews: Prisma.sql`m."totalReviews"`,
-      experience: Prisma.sql`m."experienceYears"`,
-      leads: Prisma.sql`m."leadsCount"`,
-      leadsCount: Prisma.sql`m."leadsCount"`,
-      views: Prisma.sql`m."views"`,
       createdAt: Prisma.sql`m."createdAt"`,
-      updatedAt: Prisma.sql`m."updatedAt"`,
       price: Prisma.sql`COALESCE((
         SELECT MIN((s->>'price')::numeric)
         FROM jsonb_array_elements(m."services") AS s
-        WHERE s->>'price' IS NOT NULL
+        WHERE s->>'price' IS NOT NULL AND (s->>'price') ~ '^[0-9.]+$'
       ), 0)`,
     };
 

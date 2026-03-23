@@ -73,6 +73,8 @@ export class VerificationQueryService {
               user: {
                 select: {
                   id: true,
+                  firstName: true,
+                  lastName: true,
                   email: true,
                   phone: true,
                   phoneVerified: true,
@@ -122,6 +124,8 @@ export class VerificationQueryService {
             user: {
               select: {
                 id: true,
+                firstName: true,
+                lastName: true,
                 email: true,
                 phone: true,
                 phoneVerified: true,
