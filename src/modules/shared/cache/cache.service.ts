@@ -35,6 +35,13 @@ export interface CacheKeyBuilders {
     limit: number,
     status?: string,
   ) => string;
+  /** Reviews written by a client (user id), for client dashboard / my-reviews */
+  clientWrittenReviews: (
+    userId: string,
+    page: number,
+    limit: number,
+    status?: string,
+  ) => string;
   categoriesAll: () => string;
   categoryWithStats: (id: string) => string;
   citiesAll: () => string;
@@ -304,6 +311,8 @@ export class CacheService {
     master: (masterId: string) => `cache:master:${masterId}:*`,
     masterLeads: (masterId: string) => `cache:master:${masterId}:leads:*`,
     masterReviews: (masterId: string) => `cache:master:${masterId}:reviews:*`,
+    clientWrittenReviews: (userId: string) =>
+      `cache:user:${userId}:written-reviews:*`,
     searchMasters: () => 'cache:search:masters:*',
     mastersTop: () => 'cache:masters:top:*',
     mastersPopular: () => 'cache:masters:popular:*',
@@ -467,6 +476,24 @@ export class CacheService {
         'master',
         id,
         'reviews',
+        status || 'all',
+        'page',
+        page,
+        'limit',
+        limit,
+      ]),
+
+    clientWrittenReviews: (
+      userId: string,
+      page: number,
+      limit: number,
+      status?: string,
+    ) =>
+      this.buildKey([
+        'cache',
+        'user',
+        userId,
+        'written-reviews',
         status || 'all',
         'page',
         page,

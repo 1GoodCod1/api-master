@@ -68,6 +68,8 @@ export class AdminReviewsService {
           },
           master: {
             select: {
+              id: true,
+              slug: true,
               avatarFile: { select: { path: true } },
               user: {
                 select: {
@@ -164,6 +166,8 @@ export class AdminReviewsService {
         },
         master: {
           select: {
+            id: true,
+            slug: true,
             avatarFile: { select: { path: true } },
             user: {
               select: {

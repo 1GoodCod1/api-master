@@ -162,6 +162,7 @@ export class ReviewsActionService {
 
     await this.updateMasterRating(masterId);
     await this.invalidateMasterCache(masterId);
+    await this.invalidateClientWrittenReviewsCache(clientId);
 
     // In-app уведомление мастеру о новом отзыве
     await this.inAppNotifications
@@ -234,6 +235,7 @@ export class ReviewsActionService {
     }
 
     await this.invalidateMasterCache(review.masterId);
+    await this.invalidateClientWrittenReviewsCache(review.clientId);
 
     // Уведомить мастера об изменении статуса — фронт инвалидирует Reviews
     const master = await this.prisma.master.findUnique({
@@ -329,6 +331,7 @@ export class ReviewsActionService {
   async replyToReview(reviewId: string, masterId: string, content: string) {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
+      select: { id: true, masterId: true, clientId: true },
     });
     if (!review) throw new NotFoundException('Отзыв не найден');
     if (review.masterId !== masterId) {
@@ -353,6 +356,7 @@ export class ReviewsActionService {
         });
 
     await this.invalidateMasterCache(review.masterId);
+    await this.invalidateClientWrittenReviewsCache(review.clientId);
     return result;
   }
 
@@ -362,6 +366,7 @@ export class ReviewsActionService {
   async deleteReply(reviewId: string, masterId: string) {
     const reply = await this.prisma.reviewReply.findUnique({
       where: { reviewId },
+      include: { review: { select: { clientId: true } } },
     });
     if (!reply) throw new NotFoundException('Ответ не найден');
     if (reply.masterId !== masterId) {
@@ -370,6 +375,7 @@ export class ReviewsActionService {
 
     await this.prisma.reviewReply.delete({ where: { reviewId } });
     await this.invalidateMasterCache(masterId);
+    await this.invalidateClientWrittenReviewsCache(reply.review.clientId);
     return { deleted: true };
   }
 
@@ -424,5 +430,14 @@ export class ReviewsActionService {
 
   private async invalidateMasterCache(masterId: string) {
     await this.cache.invalidateMasterRelated(masterId);
+  }
+
+  private async invalidateClientWrittenReviewsCache(
+    clientId: string | null | undefined,
+  ) {
+    if (!clientId) return;
+    await this.cache.invalidate(
+      this.cache.patterns.clientWrittenReviews(clientId),
+    );
   }
 }

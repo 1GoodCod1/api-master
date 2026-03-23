@@ -112,10 +112,11 @@ export class ReviewsController {
 
   @Get('my-reviews')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles('MASTER', 'CLIENT')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get reviews for authenticated master (cursor-paginated)',
+    summary:
+      'List reviews for the current user (master: received; client: written by them)',
   })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })

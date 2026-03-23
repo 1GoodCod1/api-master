@@ -123,6 +123,107 @@ export class ReviewsQueryService {
   }
 
   /**
+   * Отзывы, оставленные авторизованным клиентом (по clientId), с пагинацией.
+   */
+  async findAllForClient(
+    clientUserId: string,
+    options: {
+      status?: string;
+      statusIn?: ReviewStatus[];
+      limit?: number;
+      cursor?: string;
+      page?: number;
+      sortOrder?: 'asc' | 'desc';
+    } = {},
+  ): Promise<PaginatedResult<unknown>> {
+    const {
+      status,
+      statusIn,
+      limit: rawLimit = 20,
+      cursor,
+      page,
+      sortOrder = 'desc',
+    } = options;
+
+    const limit = Math.min(100, Math.max(1, Number(rawLimit) || 20));
+
+    const statusKey = statusIn ? statusIn.join(',') : status;
+    const cacheKey = this.cache.keys.clientWrittenReviews(
+      clientUserId,
+      page || 1,
+      limit,
+      statusKey,
+    );
+
+    return this.cache.getOrSet(
+      cacheKey,
+      async () => {
+        const baseWhere: Prisma.ReviewWhereInput = { clientId: clientUserId };
+        if (statusIn) {
+          baseWhere.status = { in: statusIn };
+        } else if (status) {
+          baseWhere.status = status as ReviewStatus;
+        }
+
+        const queryParams = buildCursorQuery(
+          baseWhere as Record<string, unknown>,
+          cursor,
+          page,
+          limit,
+          sortOrder,
+        );
+
+        const [rawReviews, total] = await Promise.all([
+          this.prisma.review.findMany({
+            where: queryParams.where as Prisma.ReviewWhereInput,
+            orderBy:
+              queryParams.orderBy as Prisma.ReviewOrderByWithRelationInput[],
+            take: queryParams.take,
+            skip: queryParams.skip,
+            include: {
+              master: {
+                select: {
+                  id: true,
+                  user: { select: { firstName: true, lastName: true } },
+                },
+              },
+              client: { select: { firstName: true, lastName: true } },
+              reviewCriteria: true,
+              reviewFiles: {
+                include: {
+                  file: {
+                    select: {
+                      id: true,
+                      path: true,
+                      mimetype: true,
+                      filename: true,
+                    },
+                  },
+                },
+              },
+              replies: true,
+              _count: {
+                select: { votes: true },
+              },
+            },
+          }),
+          this.prisma.review.count({
+            where: baseWhere,
+          }),
+        ]);
+
+        return buildPaginatedResponse(
+          rawReviews as Array<{ id: string; createdAt: Date }>,
+          total,
+          limit,
+          queryParams.usedCursor,
+        );
+      },
+      this.cache.ttl.reviews,
+    );
+  }
+
+  /**
    * Получить расширенную статистику по отзывам и оценкам мастера.
    * Оптимизировано: единый groupBy вместо 5 отдельных count-запросов.
    */

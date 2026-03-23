@@ -152,4 +152,45 @@ export class BookingsNotificationService {
       );
     }
   }
+
+  /**
+   * Запись переведена в COMPLETED — лид мог закрыться в БД без отдельного PATCH /leads.
+   * In-app + WebSocket (LEAD_STATUS_UPDATED) обновляют кэш клиента (Leads/Bookings).
+   */
+  async notifyBookingCompletedForClient(booking: {
+    id: string;
+    leadId: string | null;
+    masterId: string;
+    clientId: string | null;
+    master: {
+      user: { id: string; firstName: string | null; lastName: string | null };
+    };
+  }): Promise<void> {
+    if (!booking.clientId) return;
+    try {
+      const masterName = formatUserName(
+        booking.master.user.firstName,
+        booking.master.user.lastName,
+      );
+      await this.inAppNotifications.notify({
+        userId: booking.clientId,
+        category: 'LEAD_STATUS_UPDATED',
+        title: 'Запись выполнена',
+        message: masterName
+          ? `Услуга у ${masterName} завершена. Можно оставить отзыв.`
+          : 'Запись завершена. Можно оставить отзыв.',
+        metadata: {
+          bookingId: booking.id,
+          leadId: booking.leadId ?? undefined,
+          masterId: booking.masterId,
+          status: 'COMPLETED',
+        },
+        priority: 'normal',
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Failed to notify client booking completed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 }

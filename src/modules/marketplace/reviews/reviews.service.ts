@@ -7,7 +7,7 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ReviewsActionService } from './services/reviews-action.service';
 import { ReviewsQueryService } from './services/reviews-query.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { ReviewStatus } from '@prisma/client';
+import { ReviewStatus, UserRole } from '@prisma/client';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -86,14 +86,23 @@ export class ReviewsService {
   }
 
   /**
-   * Получить отзывы для авторизованного мастера (его собственные).
+   * Мастер: отзывы о нём (ожидающие и опубликованные).
+   * Клиент: отзывы, которые он сам оставил мастерам.
    */
   async getMyReviews(user: JwtUser, options: FindReviewsOptions = {}) {
+    const { limit, page, ...rest } = options;
+    if (user.role === UserRole.CLIENT) {
+      return this.queryService.findAllForClient(user.id, {
+        ...rest,
+        limit: this.parseLimit(limit),
+        page: this.parsePage(page),
+      });
+    }
+
     const masterId = user.masterProfile?.id;
     if (!masterId) {
       throw new BadRequestException('Master profile not found');
     }
-    const { limit, page, ...rest } = options;
     return this.queryService.findAllForMaster(masterId, {
       ...rest,
       statusIn: [ReviewStatus.PENDING, ReviewStatus.VISIBLE],

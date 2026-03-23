@@ -69,7 +69,7 @@
     "update:deps": "npx npm-check-updates -u",
     "update:deps:check": "npx npm-check-updates",
     "local:recreate:db": "npm run prisma:reset && npm run prisma:migrate && npm run prisma:generate && npm run seed",
-    "docker:dev:create": "npm run docker:dev:build && npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed:dev"
+    "docker:dev:create": "npm run docker:dev:build && npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1014.0",

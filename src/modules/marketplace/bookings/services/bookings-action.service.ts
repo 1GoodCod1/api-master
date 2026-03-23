@@ -332,6 +332,18 @@ export class BookingsActionService {
       void this.notifications
         .notifyBookingCancelled(booking)
         .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
+    } else if (newStatus === 'COMPLETED') {
+      void this.notifications
+        .notifyBookingCompletedForClient({
+          id: updated.id,
+          leadId: booking.leadId,
+          masterId: booking.masterId,
+          clientId: booking.clientId,
+          master: booking.master,
+        })
+        .catch((e) =>
+          this.logger.error('notifyBookingCompletedForClient failed', e),
+        );
     }
 
     return updated;
