@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -28,7 +21,7 @@ export class ConsentController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Grant consent (GDPR compliant)' })
-  @ApiResponse({ status: 200, description: 'Consent recorded' })
+  @ApiResponse({ status: 201, description: 'Consent recorded' })
   async grantConsent(
     @GetUser() user: JwtUser,
     @Body() dto: GrantConsentDto,
@@ -50,11 +43,8 @@ export class ConsentController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Revoke consent (GDPR right to withdraw)' })
-  @ApiResponse({ status: 200, description: 'Consent revoked' })
-  async revokeConsent(
-    @GetUser() user: JwtUser,
-    @Body() dto: GrantConsentDto,
-  ) {
+  @ApiResponse({ status: 201, description: 'Consent revoked' })
+  async revokeConsent(@GetUser() user: JwtUser, @Body() dto: GrantConsentDto) {
     await this.consentService.revokeConsent(user.id, dto.consentType);
     return { message: 'Consent revoked' };
   }

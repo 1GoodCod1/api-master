@@ -1,8 +1,20 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HttpExceptionFilter } from '../../../src/common/filters/http-exception.filter';
 
 describe('HttpExceptionFilter (Prisma errors)', () => {
+  let logErrorSpy: jest.SpyInstance;
+
+  beforeAll(() => {
+    logErrorSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    logErrorSpy.mockRestore();
+  });
+
   const filter = new HttpExceptionFilter();
 
   const createMockHost = () => {

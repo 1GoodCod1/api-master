@@ -52,7 +52,7 @@ describe('Consent & Compliance API (e2e)', () => {
         .post(api('/consent/grant'))
         .set('Authorization', `Bearer ${clientToken}`)
         .send({ consentType: 'MARKETING', version: '1.0' })
-        .expect(200);
+        .expect(201);
 
       const my = await request(app.getHttpServer())
         .get(api('/consent/my'))
@@ -65,7 +65,7 @@ describe('Consent & Compliance API (e2e)', () => {
         .post(api('/consent/revoke'))
         .set('Authorization', `Bearer ${clientToken}`)
         .send({ consentType: 'MARKETING' })
-        .expect(200);
+        .expect(201);
     });
   });
 

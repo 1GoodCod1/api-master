@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { EncryptionService } from '../../../src/modules/shared/utils/encryption.service';
 import type { ConfigService } from '@nestjs/config';
 
@@ -32,14 +33,18 @@ describe('EncryptionService', () => {
     });
 
     it('throws for invalid encrypted format', async () => {
-      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const logError = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
 
-      await expect(service.decrypt('invalid')).rejects.toThrow(
-        'Failed to decrypt data',
-      );
-      await expect(service.decrypt('a:b')).rejects.toThrow();
-
-      spy.mockRestore();
+      try {
+        await expect(service.decrypt('invalid')).rejects.toThrow(
+          'Failed to decrypt data',
+        );
+        await expect(service.decrypt('a:b')).rejects.toThrow();
+      } finally {
+        logError.mockRestore();
+      }
     });
   });
 

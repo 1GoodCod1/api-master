@@ -25,7 +25,10 @@ jobs:
       - run: npm ci
       - run: npm run prisma:generate
       - run: npm run lint
+      # Clear inherited NODE_OPTIONS (Node 25+ may pass --localstorage-file without path → noisy Jest workers)
       - run: npm run test:cov
+        env:
+          NODE_OPTIONS: ''
 
   build-docker:
     name: Build Docker Image
