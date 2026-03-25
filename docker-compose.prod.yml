@@ -24,9 +24,9 @@ services:
     image: postgres:18
     container_name: masterhub-postgres-prod
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-project3}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: Europe/Chisinau
     ports:
       - "${PORT_POSTGRES:-127.0.0.1:5433:5432}"
@@ -45,7 +45,7 @@ services:
     image: edoburu/pgbouncer:1.22.1
     container_name: masterhub-pgbouncer-prod
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=5000
       - DEFAULT_POOL_SIZE=100
@@ -58,7 +58,7 @@ services:
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-postgres} || exit 1" ]
+      test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER} || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,13 +69,13 @@ services:
     container_name: masterhub-redis-master
     environment:
       - REDIS_REPLICATION_MODE=master
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - redis_master_data:/bitnami/redis/data
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -87,15 +87,15 @@ services:
     environment:
       - REDIS_REPLICATION_MODE=slave
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       redis-master:
         condition: service_healthy
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -107,15 +107,15 @@ services:
     environment:
       - REDIS_REPLICATION_MODE=slave
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       redis-master:
         condition: service_healthy
     networks:
       - masterhub-prod-network
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-masterhub_redis_secure}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -126,7 +126,7 @@ services:
     container_name: masterhub-redis-sentinel-1
     environment:
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
       - REDIS_MASTER_SET=mymaster
       - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
       - REDIS_SENTINEL_QUORUM=2
@@ -147,7 +147,7 @@ services:
     container_name: masterhub-redis-sentinel-2
     environment:
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
       - REDIS_MASTER_SET=mymaster
       - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
       - REDIS_SENTINEL_QUORUM=2
@@ -168,7 +168,7 @@ services:
     container_name: masterhub-redis-sentinel-3
     environment:
       - REDIS_MASTER_HOST=redis-master
-      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
       - REDIS_MASTER_SET=mymaster
       - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
       - REDIS_SENTINEL_QUORUM=2
@@ -210,11 +210,11 @@ services:
       - .env
     environment:
       - TZ=Europe/Chisinau
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
-      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?pgbouncer=true
+      - DIRECT_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
       - REDIS_SENTINEL_NAME=mymaster
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
@@ -258,11 +258,11 @@ services:
       - .env
     environment:
       - TZ=Europe/Chisinau
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@pgbouncer:6432/${POSTGRES_DB:-project3}?pgbouncer=true
-      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-CHANGE_THIS_PASSWORD}@postgres:5432/${POSTGRES_DB:-project3}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?pgbouncer=true
+      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
       - REDIS_SENTINEL_NAME=mymaster
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-masterhub_redis_secure}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
@@ -303,7 +303,7 @@ services:
     ports:
       - "${PORT_GRAFANA:-127.0.0.1:3002:3000}"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-CHANGE_THIS_PASSWORD}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_SERVER_ROOT_URL: https://monitoring.your-domain.com
     volumes:
       - grafana_prod_data:/var/lib/grafana
