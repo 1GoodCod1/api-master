@@ -51,6 +51,18 @@ function sanitizeContext(ctx: TemplateContext): TemplateContext {
   return sanitizeValue(ctx, new WeakSet()) as TemplateContext;
 }
 
+/** Temporarily disabled — must not be sent (drip, broadcast, overrides). */
+const DISABLED_OUTBOUND_TEMPLATE_IDS = new Set<string>([
+  'booking-reminder-24h',
+  'lead-created',
+  'lead-followup',
+  'master-welcome-1',
+  'master-welcome-2',
+  'review-request',
+  'welcome-1',
+  'welcome-2',
+]);
+
 /** Substitute {{placeholder}} in HTML with context values. Used for overrides. */
 function substitutePlaceholders(
   html: string,
@@ -97,6 +109,11 @@ export class EmailTemplateService {
     templateName: string,
     context: TemplateContext = {},
   ): Promise<{ subject: string; html: string; text: string }> {
+    if (DISABLED_OUTBOUND_TEMPLATE_IDS.has(templateName)) {
+      throw new Error(
+        `Email template "${templateName}" is temporarily disabled and cannot be sent`,
+      );
+    }
     const lang = (
       ['en', 'ru', 'ro'].includes(context.lang as string) ? context.lang : 'ro'
     ) as 'en' | 'ru' | 'ro';

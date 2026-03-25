@@ -41,4 +41,14 @@ export class LeadsAvailabilitySubscriptionService {
       message: 'Unsubscribed from notifications',
     };
   }
+
+  async checkSubscription(clientId: string, masterId: string) {
+    const sub = await this.prisma.masterAvailabilitySubscription.findUnique({
+      where: {
+        clientId_masterId: { clientId, masterId },
+      },
+      select: { id: true },
+    });
+    return { subscribed: !!sub };
+  }
 }

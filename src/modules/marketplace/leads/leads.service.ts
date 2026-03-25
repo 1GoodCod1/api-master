@@ -151,4 +151,8 @@ export class LeadsService {
   async getActiveLeadToMaster(clientId: string, masterId: string) {
     return this.queryService.getActiveLeadToMaster(clientId, masterId);
   }
+
+  async checkAvailabilitySubscription(clientId: string, masterId: string) {
+    return this.subscriptionService.checkSubscription(clientId, masterId);
+  }
 }

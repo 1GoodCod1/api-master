@@ -193,10 +193,6 @@ export class EmailBroadcastService {
       'new-feature-masters',
       'digest-client',
       'digest-master',
-      'master-welcome-1',
-      'master-welcome-2',
-      'welcome-1',
-      'welcome-2',
       'reengagement',
     ];
   }

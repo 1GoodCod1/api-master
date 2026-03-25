@@ -5,7 +5,24 @@ import { Pool, PoolClient } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 
-const STATEMENT_TIMEOUT_MS = 60_000; // 60s max per query to prevent pool exhaustion
+const STATEMENT_TIMEOUT_MS = 60_000;
+
+// function withStatementTimeoutInConnectionString(
+//   connectionString: string,
+// ): string {
+//   try {
+//     const url = new URL(connectionString);
+//     const existing = url.searchParams.get('options')?.trim();
+//     const flag = `-c statement_timeout=${STATEMENT_TIMEOUT_MS}`;
+//     if (existing?.includes('statement_timeout')) {
+//       return connectionString;
+//     }
+//     url.searchParams.set('options', existing ? `${existing} ${flag}` : flag);
+//     return url.toString();
+//   } catch {
+//     return connectionString;
+//   }
+// }
 
 /** pg's PoolClient has internal `connection.stream` at runtime; @types/pg omits it */
 type PoolClientWithStream = PoolClient & {

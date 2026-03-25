@@ -40,24 +40,17 @@ interface ChainStep {
 }
 
 const CHAINS: Record<string, ChainStep[]> = {
-  welcome: [
-    { template: 'welcome-1', delayMs: 0 }, // immediately
-    { template: 'welcome-2', delayMs: 2 * 24 * 60 * 60 * 1000 }, // day 2
-  ],
-  lead_created: [
-    { template: 'lead-created', delayMs: 0 }, // immediately
-    { template: 'lead-followup', delayMs: 24 * 60 * 60 * 1000 }, // day 1
-  ],
-  lead_closed: [
-    { template: 'review-request', delayMs: 2 * 60 * 60 * 1000 }, // 2 hours
-  ],
+  // Temporarily disabled — no welcome drip emails
+  welcome: [],
+  // Temporarily disabled — no lead drip emails
+  lead_created: [],
+  // Temporarily disabled — no post-close review request email
+  lead_closed: [],
   reengagement: [
     { template: 'reengagement', delayMs: 0 }, // immediately (triggered after 14d inactivity)
   ],
-  master_welcome: [
-    { template: 'master-welcome-1', delayMs: 0 }, // immediately
-    { template: 'master-welcome-2', delayMs: 3 * 24 * 60 * 60 * 1000 }, // day 3
-  ],
+  // Temporarily disabled — no master onboarding drip emails
+  master_welcome: [],
 };
 
 @Injectable()
@@ -79,8 +72,12 @@ export class EmailDripService {
     context: TemplateContext = {},
   ) {
     const chain = CHAINS[chainType];
-    if (!chain || chain.length === 0) {
+    if (!chain) {
       this.logger.warn(`Unknown chain type: ${chainType}`);
+      return;
+    }
+    if (chain.length === 0) {
+      this.logger.debug(`Drip chain '${chainType}' is disabled (empty)`);
       return;
     }
 

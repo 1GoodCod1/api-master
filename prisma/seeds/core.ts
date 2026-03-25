@@ -547,6 +547,7 @@ export async function seedTariffs(client: PrismaClient): Promise<void> {
       features: [
         'VIP badge',
         'Higher in search results',
+        'Portfolio (before/after)',
         'Up to 10 photos',
         'Basic analytics',
         'Telegram / WhatsApp notifications',
@@ -563,7 +564,7 @@ export async function seedTariffs(client: PrismaClient): Promise<void> {
       description: 'Maximum exposure & leads',
       features: [
         'Top positions in catalog',
-        'Featured on homepage',
+        'Portfolio (before/after)',
         'Up to 15 photos',
         'Auto-boost profile',
         'Advanced analytics',

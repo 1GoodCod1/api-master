@@ -131,6 +131,19 @@ export class LeadsController {
     return this.leadsService.getActiveLeadToMaster(user.id, masterId);
   }
 
+  @Get('availability-subscription/:masterId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CLIENT')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check if subscribed to master availability' })
+  @ApiResponse({ status: 200, description: 'Returns subscription status' })
+  async checkAvailabilitySubscription(
+    @Param('masterId') masterId: string,
+    @GetUser() user: JwtUser,
+  ) {
+    return this.leadsService.checkAvailabilitySubscription(user.id, masterId);
+  }
+
   @Post('subscribe-availability')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('CLIENT')

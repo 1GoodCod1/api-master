@@ -24,8 +24,11 @@ import {
 } from './dto/portfolio.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { PlansGuard } from '../../../common/guards/plans.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
+import { Plans } from '../../../common/decorators/plans.decorator';
 import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { TariffType } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
 @ApiTags('Portfolio')
@@ -60,10 +63,11 @@ export class PortfolioController {
   // ─── Master-only endpoints ──────────────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles('MASTER')
+  @Plans(TariffType.VIP)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create portfolio item (master only)' })
+  @ApiOperation({ summary: 'Create portfolio item (VIP+ only)' })
   async create(@GetUser() user: JwtUser, @Body() dto: CreatePortfolioItemDto) {
     const masterId = user.masterProfile?.id;
     if (!masterId) throw new Error('Master profile not found');
@@ -71,10 +75,11 @@ export class PortfolioController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles('MASTER')
+  @Plans(TariffType.VIP)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update portfolio item' })
+  @ApiOperation({ summary: 'Update portfolio item (VIP+ only)' })
   async update(
     @Param('id') id: string,
     @GetUser() user: JwtUser,
@@ -86,10 +91,11 @@ export class PortfolioController {
   }
 
   @Patch('reorder')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles('MASTER')
+  @Plans(TariffType.VIP)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Reorder portfolio items' })
+  @ApiOperation({ summary: 'Reorder portfolio items (VIP+ only)' })
   async reorder(@GetUser() user: JwtUser, @Body() dto: ReorderPortfolioDto) {
     const masterId = user.masterProfile?.id;
     if (!masterId) throw new Error('Master profile not found');
@@ -97,10 +103,11 @@ export class PortfolioController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles('MASTER')
+  @Plans(TariffType.VIP)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete portfolio item' })
+  @ApiOperation({ summary: 'Delete portfolio item (VIP+ only)' })
   async remove(@Param('id') id: string, @GetUser() user: JwtUser) {
     const masterId = user.masterProfile?.id;
     if (!masterId) throw new Error('Master profile not found');

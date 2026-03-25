@@ -3,9 +3,11 @@
  * Значения соответствуют использованию на разных страницах/секциях.
  */
 export const CACHE_WARMING_LIMITS = {
-  popularMasters: [3, 5, 10, 20, 50] as const,
+  /** Only warm limits actually used: Landing (10), catalog (20) */
+  popularMasters: [10, 20] as const,
   newMasters: [10, 20] as const,
-  promotions: [6, 50, 100] as const,
+  /** Landing sidebar (6), admin catalog (50) */
+  promotions: [6, 50] as const,
   topMastersPerCategory: 5,
   topMastersPerCity: 5,
   topMastersCategoryCityCombinations: 3,

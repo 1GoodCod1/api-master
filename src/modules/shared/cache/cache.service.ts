@@ -95,9 +95,10 @@ export class CacheService {
    */
   async set(key: string, value: any, ttl?: number): Promise<void> {
     try {
-      await this.redis.set(key, value, ttl || this.defaultTTL);
+      const effectiveTtl = ttl || this.defaultTTL;
+      await this.redis.set(key, value, effectiveTtl);
       // Register key in pattern set for O(members) invalidation (no SCAN needed)
-      void this.registerKeyInSet(key).catch(() => {});
+      void this.registerKeyInSet(key, effectiveTtl).catch(() => {});
     } catch (error) {
       this.logger.error(`Cache set error for key ${key}:`, error);
       // Fail silently, don't break the application
@@ -125,7 +126,7 @@ export class CacheService {
    *
    * This replaces SCAN (which blocks at 1M+ keys in production) with O(members) DEL.
    */
-  private async registerKeyInSet(key: string): Promise<void> {
+  private async registerKeyInSet(key: string, dataTtl?: number): Promise<void> {
     try {
       const client = this.redis.getClient();
       // Build tracking set name from key prefix (strip last ':segment')
@@ -133,9 +134,13 @@ export class CacheService {
       if (lastColon < 0) return;
       const prefix = key.slice(0, lastColon);
       const setName = `keyset:${prefix}:*`;
-      // SADD + expire the set to avoid unbounded growth (24h TTL on the registry)
+      // SADD + expire the set proportionally to data TTL (min 1h, max 24h)
+      const keysetTtl = Math.min(
+        Math.max((dataTtl ?? this.defaultTTL) * 2, 3600),
+        86400,
+      );
       await client.sadd(setName, key);
-      await client.expire(setName, 86400); // 24 hours
+      await client.expire(setName, keysetTtl);
     } catch {
       // Non-critical: if this fails, invalidation falls back to SCAN
     }
@@ -240,7 +245,7 @@ export class CacheService {
         try {
           const value = await fetchFn();
           await this.redis.set(key, value, ttl || this.defaultTTL);
-          void this.registerKeyInSet(key).catch(() => {}); // track for set-based invalidation
+          void this.registerKeyInSet(key, ttl).catch(() => {}); // track for set-based invalidation
           return value;
         } catch (error) {
           lastError = error;

@@ -78,10 +78,6 @@ export class CacheWarmingTasksService {
       Promise.all([
         this.tariffsService.findAll({ isActive: true }),
         this.tariffsService.findAll(),
-        this.tariffsService.getActiveTariffs().catch(() => null),
-        this.tariffsService.findByType('BASIC').catch(() => null),
-        this.tariffsService.findByType('VIP').catch(() => null),
-        this.tariffsService.findByType('PREMIUM').catch(() => null),
       ]),
     );
   }
