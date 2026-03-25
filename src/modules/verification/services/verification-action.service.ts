@@ -9,11 +9,14 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { EncryptionService } from '../../shared/utils/encryption.service';
+import { ConsentService } from '../../consent/services/consent.service';
+import { ConsentType } from '../../consent/dto/grant-consent.dto';
 import { SubmitVerificationDto } from '../dto/submit-verification.dto';
 import {
   ReviewVerificationDto,
   VerificationDecision,
 } from '../dto/review-verification.dto';
+import { VerificationDocumentsPurgeService } from './verification-documents-purge.service';
 
 @Injectable()
 export class VerificationActionService {
@@ -24,6 +27,8 @@ export class VerificationActionService {
     private readonly cache: CacheService,
     private readonly inAppNotifications: InAppNotificationService,
     private readonly encryption: EncryptionService,
+    private readonly consentService: ConsentService,
+    private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
   ) {}
 
   /**
@@ -57,6 +62,17 @@ export class VerificationActionService {
       if (existingVerification?.status === VerificationStatus.PENDING) {
         throw new BadRequestException(
           'Заявка на верификацию уже подана и ожидает рассмотрения',
+        );
+      }
+
+      // GDPR: verify user has granted consent for document data processing
+      const hasConsent = await this.consentService.hasConsent(
+        userId,
+        ConsentType.VERIFICATION_DATA_PROCESSING,
+      );
+      if (!hasConsent) {
+        throw new BadRequestException(
+          'Необходимо дать согласие на обработку персональных данных перед подачей заявки',
         );
       }
 
@@ -196,6 +212,15 @@ export class VerificationActionService {
             const msg = e instanceof Error ? e.message : String(e);
             this.logger.warn(
               `Failed to send in-app verification approved: ${msg}`,
+            );
+          });
+
+        await this.verificationDocumentsPurge
+          .purgeVerificationFilesById(verificationId)
+          .catch((e: unknown) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.logger.warn(
+              `Failed to purge verification document files after approval: ${msg}`,
             );
           });
       } else {

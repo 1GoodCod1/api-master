@@ -39,6 +39,7 @@ export class TasksService {
       this.analyticsTasks.aggregateAnalytics(),
       this.analyticsTasks.sendDailyReports(),
       this.maintenanceTasks.cleanupExpiredTokens(),
+      this.maintenanceTasks.cleanupVerificationDocuments(),
       this.activityTasks.checkInactiveMasters(),
       this.digestTasks.sendDigest(),
     ]);

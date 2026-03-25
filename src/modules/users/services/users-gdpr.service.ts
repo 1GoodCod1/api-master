@@ -15,6 +15,7 @@ import type {
   PersonalDataPdfBooking,
   PersonalDataPdfLoginEntry,
   PersonalDataPdfNotification,
+  PersonalDataPdfConsent,
 } from './personal-data-pdf.builder';
 
 const GDPR_PAGE_SIZE = 500;
@@ -107,7 +108,7 @@ export class UsersGdprService {
     const reviewWhere = isMaster ? { masterId } : { clientId: userId };
     const bookingWhere = isMaster ? { masterId } : { clientId: userId };
 
-    const [leads, reviews, bookings, loginHistory, notifications] =
+    const [leads, reviews, bookings, loginHistory, notifications, consents] =
       await Promise.all([
         this.fetchLeadsPaginated(leadWhere),
         this.fetchReviewsPaginated(reviewWhere),
@@ -133,6 +134,17 @@ export class UsersGdprService {
           },
           orderBy: { createdAt: 'desc' },
           take: 200,
+        }),
+        this.prisma.userConsent.findMany({
+          where: { userId },
+          select: {
+            consentType: true,
+            granted: true,
+            version: true,
+            revokedAt: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
         }),
       ]);
 
@@ -205,6 +217,14 @@ export class UsersGdprService {
       }),
     );
 
+    const pdfConsents: PersonalDataPdfConsent[] = consents.map((c) => ({
+      consentType: c.consentType,
+      granted: c.granted,
+      version: c.version,
+      revokedAt: c.revokedAt?.toISOString() ?? null,
+      createdAt: c.createdAt.toISOString(),
+    }));
+
     return {
       exportDate,
       user: pdfUser,
@@ -214,6 +234,7 @@ export class UsersGdprService {
       bookings: pdfBookings,
       loginHistory: pdfLoginHistory,
       notifications: pdfNotifications,
+      consents: pdfConsents,
     };
   }
 

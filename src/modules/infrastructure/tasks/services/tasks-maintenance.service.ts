@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type Redis from 'ioredis';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { VerificationDocumentsPurgeService } from '../../../verification/services/verification-documents-purge.service';
 
 interface QueueStats {
   waiting: number;
@@ -20,6 +22,8 @@ export class TasksMaintenanceService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly notifications: NotificationsService,
+    private readonly configService: ConfigService,
+    private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
   ) {}
 
   /**
@@ -172,6 +176,13 @@ export class TasksMaintenanceService {
           `${deletedPhoneVerifications.count} phone verifications`,
       );
     }
+  }
+
+  /**
+   * GDPR: повторная очистка файлов верификации (основное удаление — сразу после approve).
+   */
+  async cleanupVerificationDocuments() {
+    await this.verificationDocumentsPurge.purgeRemainingApprovedVerificationFiles();
   }
 
   private async getQueueStats(

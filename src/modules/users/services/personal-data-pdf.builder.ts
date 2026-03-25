@@ -76,6 +76,14 @@ export interface PersonalDataPdfNotification {
   createdAt: string;
 }
 
+export interface PersonalDataPdfConsent {
+  consentType: string;
+  granted: boolean;
+  version: string;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
 export interface PersonalDataPdfData {
   exportDate: string;
   user: PersonalDataPdfUser;
@@ -85,6 +93,7 @@ export interface PersonalDataPdfData {
   bookings: PersonalDataPdfBooking[];
   loginHistory: PersonalDataPdfLoginEntry[];
   notifications: PersonalDataPdfNotification[];
+  consents: PersonalDataPdfConsent[];
 }
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -114,6 +123,11 @@ const LABELS: Record<string, Record<string, string>> = {
     bookings: 'Bookings',
     loginHistory: 'Login History',
     notifications: 'Notifications',
+    consents: 'Data Processing Consents',
+    consentType: 'Type',
+    consentGranted: 'Granted',
+    consentVersion: 'Version',
+    consentRevoked: 'Revoked',
     noData: 'No data',
     status: 'Status',
     message: 'Message',
@@ -165,6 +179,11 @@ const LABELS: Record<string, Record<string, string>> = {
     bookings: 'Записи',
     loginHistory: 'История входов',
     notifications: 'Уведомления',
+    consents: 'Согласия на обработку данных',
+    consentType: 'Тип',
+    consentGranted: 'Дано',
+    consentVersion: 'Версия',
+    consentRevoked: 'Отозвано',
     noData: 'Нет данных',
     status: 'Статус',
     message: 'Сообщение',
@@ -216,6 +235,11 @@ const LABELS: Record<string, Record<string, string>> = {
     bookings: 'Rezervări',
     loginHistory: 'Istoric autentificări',
     notifications: 'Notificări',
+    consents: 'Consimțăminte pentru prelucrarea datelor',
+    consentType: 'Tip',
+    consentGranted: 'Acordat',
+    consentVersion: 'Versiune',
+    consentRevoked: 'Revocat',
     noData: 'Fără date',
     status: 'Status',
     message: 'Mesaj',
@@ -514,6 +538,32 @@ export function buildPersonalDataPdf(
           margin,
           y,
         );
+    }
+  } else {
+    doc.fontSize(10).fillColor(COLORS.textMuted).text(t.noData, margin, y);
+    y += 20;
+  }
+
+  // Consents
+  y = drawSectionHeader(doc, t.consents ?? 'Consents', y);
+  if (data.consents && data.consents.length > 0) {
+    for (const c of data.consents) {
+      if (y > 750) {
+        doc.addPage();
+        y = margin;
+      }
+      const grantedLabel = c.granted ? (t.yes ?? 'Yes') : (t.no ?? 'No');
+      const revokedLabel = c.revokedAt
+        ? `${t.consentRevoked ?? 'Revoked'}: ${formatDate(c.revokedAt, locale)}`
+        : '';
+      doc.fontSize(9).fillColor(COLORS.text);
+      doc.text(
+        `${formatDate(c.createdAt, locale)} — ${c.consentType} (v${c.version}) — ${t.consentGranted ?? 'Granted'}: ${grantedLabel}${revokedLabel ? ` | ${revokedLabel}` : ''}`,
+        margin,
+        y,
+        { width: contentWidth },
+      );
+      y += 12;
     }
   } else {
     doc.fontSize(10).fillColor(COLORS.textMuted).text(t.noData, margin, y);

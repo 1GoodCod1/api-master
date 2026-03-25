@@ -304,7 +304,7 @@ services:
       - "${PORT_GRAFANA:-127.0.0.1:3002:3000}"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_SERVER_ROOT_URL: https://monitoring.your-domain.com
+      GF_SERVER_ROOT_URL: http://195.178.106.27:3002
     volumes:
       - grafana_prod_data:/var/lib/grafana
       - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards

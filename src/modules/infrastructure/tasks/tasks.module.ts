@@ -13,6 +13,7 @@ import { TasksActivityService } from './services/tasks-activity.service';
 import { TasksBookingReminderService } from './services/tasks-booking-reminder.service';
 import { TasksDigestService } from './services/tasks-digest.service';
 import { TasksDripService } from './services/tasks-drip.service';
+import { VerificationModule } from '../../verification/verification.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TasksDripService } from './services/tasks-drip.service';
     NotificationsModule,
     DigestModule,
     EmailModule,
+    VerificationModule,
   ],
   providers: [
     TasksService,

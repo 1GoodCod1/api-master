@@ -40,10 +40,12 @@ import { FilesModule } from './modules/infrastructure/files/files.module';
 import { WebSocketModule } from './modules/infrastructure/websocket/websocket.module';
 import { RecommendationsModule } from './modules/engagement/recommendations/recommendations.module';
 import { VerificationModule } from './modules/verification/verification.module';
+import { ConsentModule } from './modules/consent/consent.module';
 import { CacheWarmingModule } from './modules/infrastructure/cache-warming/cache-warming.module';
 import { WebVitalsModule } from './modules/infrastructure/web-vitals/web-vitals.module';
 import { EmailModule } from './modules/email/email.module';
 import { ReferralsModule } from './modules/engagement/referrals/referrals.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
 
 @Module({
   providers: [
@@ -147,9 +149,11 @@ import { ReferralsModule } from './modules/engagement/referrals/referrals.module
     WebSocketModule,
     RecommendationsModule,
     VerificationModule,
+    ConsentModule,
     CacheWarmingModule,
     WebVitalsModule,
     ReferralsModule,
+    ComplianceModule,
   ],
 })
 export class AppModule {}
