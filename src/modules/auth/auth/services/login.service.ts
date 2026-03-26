@@ -27,7 +27,7 @@ export class LoginService {
    */
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
     try {
-      const { email, password } = loginDto;
+      const { email, password, rememberMe } = loginDto;
 
       // 0. Проверка блокировки (account lockout после 5 неудачных попыток)
       await this.lockout.checkLocked(email, ipAddress);
@@ -81,6 +81,7 @@ export class LoginService {
       const accessToken = this.tokenService.generateAccessToken(user);
       const refreshToken = await this.tokenService.generateRefreshToken(
         user.id,
+        rememberMe,
       );
 
       // 6. Обновление данных последнего входа и сохранение истории (в транзакции)
@@ -93,6 +94,7 @@ export class LoginService {
       return {
         accessToken,
         refreshToken,
+        rememberMe: !!rememberMe,
         user: {
           id: user.id,
           email: user.email,

@@ -1,7 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsString,
+  IsBoolean,
+  IsOptional,
   MinLength,
   MaxLength,
   IsNotEmpty,
@@ -19,4 +21,12 @@ export class LoginDto {
   @MaxLength(50)
   @IsNotEmpty()
   password: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Keep session alive for 30 days',
+  })
+  @IsBoolean()
+  @IsOptional()
+  rememberMe?: boolean;
 }

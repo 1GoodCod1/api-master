@@ -1,10 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { buildDpiaPdf, type DpiaContext } from './dpia-pdf.builder';
 import { buildRopaPdf, type RopaContext } from './ropa-pdf.builder';
+
+type PdfBuilder<T> = (
+  doc: InstanceType<typeof PDFDocument>,
+  data: T,
+  locale: string,
+) => void;
 
 @Injectable()
 export class ComplianceService {
@@ -88,32 +98,66 @@ export class ComplianceService {
     };
   }
 
-  async streamDpiaPdf(res: Response, locale: string): Promise<void> {
-    this.logger.log(`Generating DPIA PDF (locale=${locale})`);
-    const data = await this.getDpiaContext();
-    const filename = `DPIA_${new Date().toISOString().slice(0, 10)}.pdf`;
+  private async streamPdf<T>(
+    res: Response,
+    locale: string,
+    prefix: string,
+    getData: () => Promise<T>,
+    builder: PdfBuilder<T>,
+  ): Promise<void> {
+    this.logger.log(`Generating ${prefix} PDF (locale=${locale})`);
+
+    const data = await getData();
+    const filename = `${prefix}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const doc = new PDFDocument({
+      margin: 50,
+      size: 'A4',
+      bufferPages: true,
+    });
+
+    doc.on('error', (err) => {
+      this.logger.error(`PDF generation error (${prefix})`, err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'PDF generation failed' });
+      }
+    });
+
     doc.pipe(res);
-    buildDpiaPdf(doc, data, locale);
-    doc.end();
+
+    try {
+      builder(doc, data, locale);
+      doc.end();
+    } catch (err) {
+      this.logger.error(`Failed to build ${prefix} PDF`, err);
+      doc.end();
+      if (!res.headersSent) {
+        throw new InternalServerErrorException('PDF generation failed');
+      }
+    }
+  }
+
+  async streamDpiaPdf(res: Response, locale: string): Promise<void> {
+    return this.streamPdf(
+      res,
+      locale,
+      'DPIA',
+      () => this.getDpiaContext(),
+      buildDpiaPdf,
+    );
   }
 
   async streamRopaPdf(res: Response, locale: string): Promise<void> {
-    this.logger.log(`Generating ROPA PDF (locale=${locale})`);
-    const data = await this.getRopaContext();
-    const filename = `ROPA_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
-    doc.pipe(res);
-    buildRopaPdf(doc, data, locale);
-    doc.end();
+    return this.streamPdf(
+      res,
+      locale,
+      'ROPA',
+      () => this.getRopaContext(),
+      buildRopaPdf,
+    );
   }
 
   async getComplianceOverview() {
@@ -139,7 +183,6 @@ export class ComplianceService {
       pendingVerifications,
       dpiaAvailable: true,
       ropaAvailable: true,
-      lastGenerated: new Date().toISOString(),
     };
   }
 }

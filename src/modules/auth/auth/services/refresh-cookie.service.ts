@@ -14,12 +14,6 @@ export class RefreshCookieService {
     return this.configService.get<string>('auth.refreshCookieName') || 'rt';
   }
 
-  private get maxAgeSec(): number {
-    const days =
-      this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
-    return Math.max(86400, days * 24 * 60 * 60);
-  }
-
   /**
    * Возвращает refresh-токен или выбрасывает, если токена нет.
    */
@@ -46,24 +40,39 @@ export class RefreshCookieService {
     return undefined;
   }
 
+  private static readonly REMEMBER_ME_DAYS = 30;
+
   /**
    * Устанавливает refresh-куку в ответ, если режим httpOnly включён.
+   * Если rememberMe=false — ставится сессионная кука (без maxAge/expires),
+   * которая умирает при закрытии браузера.
    */
-  attachIfEnabled(res: Response, token: string): void {
+  attachIfEnabled(res: Response, token: string, rememberMe?: boolean): void {
     if (!this.isEnabled || !token) return;
     const isProd = this.configService.get<string>('nodeEnv') === 'production';
     const domain =
       this.configService.get<string>('auth.cookieDomain') || undefined;
-    const maxAgeMs = this.maxAgeSec * 1000;
-    res.cookie(this.cookieName, token, {
+
+    const baseOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       path: '/',
       ...(domain ? { domain } : {}),
-      maxAge: maxAgeMs,
-      expires: new Date(Date.now() + maxAgeMs),
-    });
+    };
+
+    if (rememberMe) {
+      const maxAgeMs =
+        RefreshCookieService.REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000;
+      res.cookie(this.cookieName, token, {
+        ...baseOptions,
+        maxAge: maxAgeMs,
+        expires: new Date(Date.now() + maxAgeMs),
+      });
+    } else {
+      // Сессионная кука — без maxAge и expires, умирает при закрытии браузера
+      res.cookie(this.cookieName, token, baseOptions);
+    }
   }
 
   /**
@@ -96,14 +105,19 @@ export class RefreshCookieService {
   }
 
   /**
-   * Устанавливает refresh-куку (если включено) и возвращает payload без refreshToken.
+   * Устанавливает refresh-куку (если включено) и возвращает payload без внутренних полей.
    */
-  handleAuthSuccess<T extends { refreshToken?: string }>(
+  handleAuthSuccess<T extends { refreshToken?: string; rememberMe?: boolean }>(
     result: T,
     res: Response,
-  ): Omit<T, 'refreshToken'> {
-    this.attachIfEnabled(res, result.refreshToken ?? '');
-    return this.stripRefreshFromPayload(result);
+  ): Omit<T, 'refreshToken' | 'rememberMe'> {
+    this.attachIfEnabled(res, result.refreshToken ?? '', result.rememberMe);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { rememberMe: _rm, ...withoutRememberMe } = result;
+    return this.stripRefreshFromPayload(withoutRememberMe) as Omit<
+      T,
+      'refreshToken' | 'rememberMe'
+    >;
   }
 
   /**

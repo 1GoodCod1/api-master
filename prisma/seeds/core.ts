@@ -2,20 +2,52 @@ import type { PrismaClient } from '@prisma/client';
 import { TariffType, UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 
+const DEV_ADMIN_EMAIL = 'admin@master-hub.md';
+const DEV_ADMIN_PASSWORD = 'admin123';
+const DEV_ADMIN_PHONE = '+37360000000';
+
 export async function seedAdmin(client: PrismaClient): Promise<void> {
-  const adminPassword = await argon2.hash('admin123');
+  const isProd = process.env.NODE_ENV === 'production';
+
+  const email = process.env.ADMIN_EMAIL || DEV_ADMIN_EMAIL;
+  const rawPassword = process.env.ADMIN_PASSWORD || DEV_ADMIN_PASSWORD;
+  const phone = process.env.ADMIN_PHONE || DEV_ADMIN_PHONE;
+
+  if (isProd && !process.env.ADMIN_EMAIL) {
+    console.warn(
+      '⚠️  WARNING: ADMIN_EMAIL is not set! Using default dev email. Set ADMIN_EMAIL in production .env!',
+    );
+  }
+  if (isProd && !process.env.ADMIN_PASSWORD) {
+    console.warn(
+      '⚠️  WARNING: ADMIN_PASSWORD is not set! Using default dev password. Set ADMIN_PASSWORD in production .env!',
+    );
+  }
+
+  const hashedPassword = await argon2.hash(rawPassword);
+
   await client.user.upsert({
-    where: { email: 'admin@master-hub.md' },
-    update: {},
+    where: { email },
+    update: {
+      password: hashedPassword,
+      phone,
+      role: UserRole.ADMIN,
+      isVerified: true,
+    },
     create: {
-      email: 'admin@master-hub.md',
-      phone: '+37360000000',
-      password: adminPassword,
+      email,
+      phone,
+      password: hashedPassword,
       role: UserRole.ADMIN,
       isVerified: true,
     },
   });
-  console.log('👑 Admin: admin@master-hub.md / admin123');
+
+  if (isProd) {
+    console.log(`👑 Admin seeded: ${email}`);
+  } else {
+    console.log(`👑 Admin: ${email} / ${rawPassword}`);
+  }
 }
 
 export async function seedCategories(client: PrismaClient): Promise<void> {

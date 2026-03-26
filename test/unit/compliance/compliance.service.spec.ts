@@ -81,7 +81,7 @@ describe('ComplianceService', () => {
       expect(overview.pendingVerifications).toBe(4);
       expect(overview.dpiaAvailable).toBe(true);
       expect(overview.ropaAvailable).toBe(true);
-      expect(overview.lastGenerated).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(overview).not.toHaveProperty('lastGenerated');
 
       expect(prisma.masterVerification.count).toHaveBeenCalledWith({
         where: { status: 'PENDING' },

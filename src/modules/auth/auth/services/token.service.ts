@@ -31,11 +31,18 @@ export class TokenService {
     });
   }
 
-  async generateRefreshToken(userId: string): Promise<string> {
+  private static readonly REMEMBER_ME_DAYS = 30;
+  private static readonly SESSION_DAYS = 1;
+
+  async generateRefreshToken(
+    userId: string,
+    rememberMe?: boolean,
+  ): Promise<string> {
     try {
       const token = randomBytes(40).toString('hex');
-      const days =
-        this.configService.get<number>('auth.refreshCookieMaxAgeDays') ?? 7;
+      const days = rememberMe
+        ? TokenService.REMEMBER_ME_DAYS
+        : TokenService.SESSION_DAYS;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + days);
 
@@ -44,6 +51,7 @@ export class TokenService {
           token,
           userId,
           expiresAt,
+          rememberMe: !!rememberMe,
         },
       });
 
@@ -90,16 +98,19 @@ export class TokenService {
       }
 
       const newAccessToken = this.generateAccessToken(tokenRecord.user);
+      const wasRememberMe = tokenRecord.rememberMe;
       await this.prisma.refreshToken.delete({
         where: { id: tokenRecord.id },
       });
       const newRefreshToken = await this.generateRefreshToken(
         tokenRecord.user.id,
+        wasRememberMe,
       );
 
       return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
+        rememberMe: wasRememberMe,
       };
     } catch (err) {
       if (err instanceof UnauthorizedException) {
