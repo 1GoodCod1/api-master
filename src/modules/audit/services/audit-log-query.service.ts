@@ -3,6 +3,20 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
 
+/** Normalize Prisma groupBy `_count` to a number for API consumers / charts. */
+function countFromGroupBy(row: {
+  _count: number | Record<string, number>;
+}): number {
+  const c = row._count;
+  if (typeof c === 'number') return c;
+  if (c && typeof c === 'object') {
+    if (typeof c._all === 'number') return c._all;
+    const n = Object.values(c).find((v) => typeof v === 'number');
+    if (typeof n === 'number') return n;
+  }
+  return 0;
+}
+
 export interface GetLogsFilters {
   userId?: string;
   action?: string;
@@ -45,7 +59,7 @@ export class AuditLogQueryService {
       if (endDate) where.createdAt.lte = endDate;
     }
 
-    const [logs, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
         include: {
@@ -54,6 +68,8 @@ export class AuditLogQueryService {
               email: true,
               phone: true,
               role: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -63,6 +79,18 @@ export class AuditLogQueryService {
       }),
       this.prisma.auditLog.count({ where }),
     ]);
+
+    const logs = rows.map((log) => ({
+      id: log.id,
+      action: log.action,
+      entity: log.entityType,
+      entityId: log.entityId,
+      actorId: log.userId,
+      ip: log.ipAddress,
+      ua: log.userAgent,
+      createdAt: log.createdAt.toISOString(),
+      user: log.user,
+    }));
 
     return {
       logs,
@@ -86,19 +114,94 @@ export class AuditLogQueryService {
         limit,
       );
 
+      const items = stream.map(([id, fields]: [string, string[]]) => {
+        const entry: Record<string, string> = { id };
+        for (let i = 0; i < fields.length; i += 2) {
+          entry[fields[i]] = fields[i + 1];
+        }
+        return {
+          id: entry.id,
+          action: entry.action,
+          entity: entry.entityType || entry.entity || '',
+          entityId: entry.entityId,
+          actorId: entry.userId,
+          ip: entry.ip || entry.ipAddress,
+          createdAt: entry.timestamp || entry.createdAt || '',
+        };
+      });
+
       return {
-        items: stream.map(([id, fields]: [string, string[]]) => {
-          const entry: Record<string, string> = { id };
-          for (let i = 0; i < fields.length; i += 2) {
-            entry[fields[i]] = fields[i + 1];
-          }
-          return entry;
-        }),
+        items: await this.enrichStreamItemsWithUsers(items),
       };
     } catch {
       this.logger.warn('Redis Streams недоступны, используем базу данных');
       return this.getRecentStreamFromDb(limit);
     }
+  }
+
+  /**
+   * Redis stream stores only userId — resolve names/emails in one query for admin UI.
+   */
+  private async enrichStreamItemsWithUsers(
+    items: Array<{
+      id?: string;
+      action?: string;
+      entity?: string;
+      entityId?: string;
+      actorId?: string | null;
+      ip?: string | null;
+      createdAt?: string;
+    }>,
+  ) {
+    const uuidRe =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ids = [
+      ...new Set(
+        items
+          .map((i) => i.actorId)
+          .filter(
+            (id): id is string =>
+              typeof id === 'string' &&
+              id.length > 0 &&
+              id.toLowerCase() !== 'system' &&
+              uuidRe.test(id),
+          ),
+      ),
+    ];
+    if (ids.length === 0) {
+      return items;
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+    const byId = new Map(users.map((u) => [u.id, u]));
+
+    return items.map((item) => {
+      const aid = item.actorId;
+      if (typeof aid !== 'string' || !byId.has(aid)) {
+        return item;
+      }
+      const u = byId.get(aid)!;
+      return {
+        ...item,
+        user: {
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+          firstName: u.firstName,
+          lastName: u.lastName,
+        },
+      };
+    });
   }
 
   private async getRecentStreamFromDb(limit: number) {
@@ -109,7 +212,10 @@ export class AuditLogQueryService {
         user: {
           select: {
             email: true,
+            phone: true,
             role: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -171,9 +277,12 @@ export class AuditLogQueryService {
       totalLogs,
       byAction: byAction.map((item) => ({
         action: item.action,
-        count: item._count,
+        count: countFromGroupBy(item),
       })),
-      byUser,
+      byUser: byUser.map((item) => ({
+        userId: item.userId ?? 'unknown',
+        count: countFromGroupBy(item),
+      })),
     };
   }
 }

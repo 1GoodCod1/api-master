@@ -22,59 +22,14 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 
+/**
+ * Static paths (`me`, `stats/...`) MUST be declared before `:id` routes.
+ * Otherwise `DELETE /users/me` matches `DELETE :id` with id=me and requires ADMIN.
+ */
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Получить данные пользователя по ID (Admin only)' })
-  async findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
-  @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Обновить данные пользователя (Admin only)' })
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Удалить пользователя (Admin only)' })
-  async remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
-  }
-
-  @Put(':id/ban')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Заблокировать/разблокировать пользователя (Admin only)',
-  })
-  async toggleBan(@Param('id') id: string) {
-    return this.usersService.toggleBan(id);
-  }
-
-  @Put(':id/verify')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Верифицировать/снять верификацию пользователя (Admin only)',
-  })
-  async toggleVerify(@Param('id') id: string) {
-    return this.usersService.toggleVerify(id);
-  }
 
   @Get('stats/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -164,5 +119,54 @@ export class UsersController {
     @Param('fileId') fileId: string,
   ) {
     return this.usersService.removeMyPhoto(req.user.id, fileId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Получить данные пользователя по ID (Admin only)' })
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Обновить данные пользователя (Admin only)' })
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Удалить пользователя (Admin only)' })
+  async remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
+
+  @Put(':id/ban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Заблокировать/разблокировать пользователя (Admin only)',
+  })
+  async toggleBan(@Param('id') id: string) {
+    return this.usersService.toggleBan(id);
+  }
+
+  @Put(':id/verify')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Верифицировать/снять верификацию пользователя (Admin only)',
+  })
+  async toggleVerify(@Param('id') id: string) {
+    return this.usersService.toggleVerify(id);
   }
 }
