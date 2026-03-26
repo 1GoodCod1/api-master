@@ -157,6 +157,7 @@ describe('LoginService', () => {
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
+      rememberMe: false,
       user: expect.objectContaining({
         id: 'u1',
         email: 'user@example.com',
