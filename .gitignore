@@ -1,6 +1,6 @@
 # --- Root Level ---
 node_modules/
-package-lock.json
+# package-lock.json must be committed: npm ci + setup-node cache need it in CI
 .env
 .env.docker
 .env.*
