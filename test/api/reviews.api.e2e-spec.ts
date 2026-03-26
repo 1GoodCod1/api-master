@@ -7,6 +7,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { uniqueMoldovanPhone } from '../api-helpers';
 import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
 import { api } from './e2e-prefix';
 
@@ -46,8 +47,8 @@ describe('Reviews API (e2e)', () => {
       .post(api('/auth/register'))
       .send({
         email: `reviews-api-${Date.now()}@test.local`,
-        phone: `+37360${String(Date.now()).slice(-7)}`,
-        password: 'TestPass1!',
+        phone: uniqueMoldovanPhone(),
+        password: 'TestPass1!@#',
         firstName: 'R',
         lastName: 'T',
         role: 'CLIENT',

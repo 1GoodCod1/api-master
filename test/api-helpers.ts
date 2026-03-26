@@ -1,10 +1,16 @@
 /**
  * Shared helpers for API E2E tests
  */
+import { randomInt } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { api } from './api/e2e-prefix';
+
+/** +373 + exactly 8 digits — matches RegisterDto Moldovan phone regex. */
+export function uniqueMoldovanPhone(): string {
+  return `+373${String(randomInt(10_000_000, 99_999_999))}`;
+}
 
 export async function getMasterId(app: INestApplication<App>): Promise<string> {
   const res = await request(app.getHttpServer())
@@ -31,7 +37,7 @@ export async function getClientToken(
 ): Promise<string> {
   const ts = Date.now();
   const email = `${prefix}-${ts}@test.local`;
-  const phone = `+37360${String(ts).slice(-7)}`;
+  const phone = uniqueMoldovanPhone();
   await request(app.getHttpServer()).post(api('/auth/register')).send({
     email,
     phone,
@@ -52,7 +58,7 @@ export async function getAdminToken(
 ): Promise<string> {
   const ts = Date.now();
   const email = `admin-${ts}@test.local`;
-  const phone = `+37360${String(ts).slice(-7)}`;
+  const phone = uniqueMoldovanPhone();
   await request(app.getHttpServer()).post(api('/auth/register')).send({
     email,
     phone,

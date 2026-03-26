@@ -6,6 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { uniqueMoldovanPhone } from '../api-helpers';
 import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
 import { api } from './e2e-prefix';
 
@@ -17,7 +18,7 @@ describe('Leads API (e2e)', () => {
   const unique = `${timestamp}-${Math.random().toString(36).slice(2, 8)}`;
   const testEmail = `leads-api-${unique}@test.local`;
   const testPassword = 'TestPass1!@#';
-  const testPhone = `+37360${String(timestamp).slice(-7)}`;
+  const testPhone = uniqueMoldovanPhone();
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
