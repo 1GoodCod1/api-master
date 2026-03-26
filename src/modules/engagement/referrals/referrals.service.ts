@@ -217,7 +217,7 @@ export class ReferralsService {
       },
     });
 
-    if (!referral || referral.status !== ReferralStatus.PENDING) return;
+    if (referral?.status !== ReferralStatus.PENDING) return;
 
     const referrer = referral.referralCode.user;
 

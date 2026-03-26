@@ -170,10 +170,7 @@ export class EmailDripService {
         }
 
         const metadata = isPlainObject(drip.metadata) ? drip.metadata : {};
-        const user = drip.user as {
-          firstName: string | null;
-          preferredLanguage: string | null;
-        } & Prisma.UserGetPayload<{ select: { email: true } }>;
+        const user = drip.user;
         await this.sendStep(drip.userId, drip.chainType, drip.step, {
           ...toTemplateContext(metadata),
           userName: user.firstName ?? undefined,

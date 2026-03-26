@@ -45,7 +45,7 @@ export class VerificationQueryService {
       },
     });
 
-    if (!user || !user.masterProfile) {
+    if (!user?.masterProfile) {
       throw new NotFoundException('Профиль мастера не найден');
     }
 
