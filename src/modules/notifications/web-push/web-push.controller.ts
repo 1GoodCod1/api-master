@@ -6,6 +6,7 @@ import {
   Body,
   UseGuards,
   Req,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -22,7 +23,13 @@ export class WebPushController {
   @Get('vapid-public-key')
   @ApiOperation({ summary: 'Get VAPID public key for frontend subscription' })
   getVapidPublicKey() {
-    return { publicKey: this.webPushService.getPublicKey() };
+    const publicKey = this.webPushService.getPublicKey()?.trim() ?? '';
+    if (!publicKey) {
+      throw new ServiceUnavailableException(
+        'VAPID is not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (e.g. in .env.docker) and restart the API.',
+      );
+    }
+    return { publicKey };
   }
 
   @Post('subscribe')

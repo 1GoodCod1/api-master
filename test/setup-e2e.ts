@@ -19,7 +19,7 @@ if (!process.env.JWT_REFRESH_SECRET) {
 }
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL =
-    'postgresql://postgres:password@localhost:5432/project3';
+    'postgresql://postgres:bacardi@localhost:5432/project3';
 }
 if (!process.env.REDIS_HOST) {
   process.env.REDIS_HOST = 'localhost';
