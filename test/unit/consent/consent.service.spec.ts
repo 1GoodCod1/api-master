@@ -14,11 +14,16 @@ describe('ConsentService', () => {
     userConsent,
   } as unknown as PrismaService;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: ConsentService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ConsentService(prisma);
+    auditService.log.mockResolvedValue(undefined);
+    service = new ConsentService(prisma, auditService as never);
   });
 
   describe('grantConsent', () => {

@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
 import { TariffsService } from './tariffs.service';
 import { CreateTariffDto } from './dto/create-tariff.dto';
 import { UpdateTariffDto } from './dto/update-tariff.dto';
@@ -55,8 +57,11 @@ export class TariffsController {
   @Roles('ADMIN')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Создать новый тариф (Admin only)' })
-  async create(@Body() createTariffDto: CreateTariffDto) {
-    return this.tariffsService.create(createTariffDto);
+  async create(
+    @Req() req: RequestWithUser,
+    @Body() createTariffDto: CreateTariffDto,
+  ) {
+    return this.tariffsService.create(createTariffDto, req.user.id);
   }
 
   @Put(':id')
@@ -65,10 +70,11 @@ export class TariffsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Обновить тариф (Admin only)' })
   async update(
+    @Req() req: RequestWithUser,
     @Param('id') id: string,
     @Body() updateTariffDto: UpdateTariffDto,
   ) {
-    return this.tariffsService.update(id, updateTariffDto);
+    return this.tariffsService.update(id, updateTariffDto, req.user.id);
   }
 
   @Delete(':id')
@@ -76,7 +82,7 @@ export class TariffsController {
   @Roles('ADMIN')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Удалить тариф (Admin only)' })
-  async remove(@Param('id') id: string) {
-    return this.tariffsService.remove(id);
+  async remove(@Req() req: RequestWithUser, @Param('id') id: string) {
+    return this.tariffsService.remove(id, req.user.id);
   }
 }

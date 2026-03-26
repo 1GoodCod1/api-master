@@ -42,15 +42,21 @@ describe('PaymentsWebhookService', () => {
     },
   } as unknown as jest.Mocked<CacheService>;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: PaymentsWebhookService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    auditService.log.mockResolvedValue(undefined);
     service = new PaymentsWebhookService(
       prisma as unknown as PrismaService,
       inAppNotifications,
       notifications,
       cache,
+      auditService as never,
     );
   });
 

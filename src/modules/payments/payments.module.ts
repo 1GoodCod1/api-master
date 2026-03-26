@@ -10,6 +10,7 @@ import { PaymentsWebhookService } from './services/payments-webhook.service';
 import { PaymentsQueryService } from './services/payments-query.service';
 import { PaymentsUpgradeService } from './services/payments-upgrade.service';
 import { NotificationsModule } from '../notifications/notifications/notifications.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotificationsModule } from '../notifications/notifications/notification
     MastersModule,
     TariffsModule,
     NotificationsModule,
+    AuditModule,
   ],
   controllers: [PaymentsController],
   providers: [

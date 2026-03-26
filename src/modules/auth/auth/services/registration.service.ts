@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import type { User, Master } from '@prisma/client';
+import { Prisma, type User, type Master } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { RegisterDto } from '../dto/register.dto';
@@ -13,6 +13,7 @@ import { TokenService } from './token.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
+import { AuditService } from '../../../audit/audit.service';
 
 type PrismaTransactionClient = Parameters<
   Parameters<PrismaService['$transaction']>[0]
@@ -29,6 +30,7 @@ export class RegistrationService {
     private readonly inAppNotifications: InAppNotificationService,
     private readonly emailDripService: EmailDripService,
     private readonly referralsService: ReferralsService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -157,6 +159,22 @@ export class RegistrationService {
       });
     } catch (err) {
       this.logger.error('Ошибка отправки уведомления о новой регистрации', err);
+    }
+
+    // 7.6. Audit log — регистрация
+    try {
+      await this.auditService.log({
+        userId: user.id,
+        action: 'USER_REGISTERED',
+        entityType: 'User',
+        entityId: user.id,
+        newData: {
+          role: user.role,
+          email: user.email,
+        } satisfies Prisma.InputJsonValue,
+      });
+    } catch (err) {
+      this.logger.error('Ошибка audit log при регистрации', err);
     }
 
     // 8. Генерация токенов и финальный ответ

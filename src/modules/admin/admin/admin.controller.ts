@@ -10,6 +10,7 @@ import {
   UseGuards,
   Header,
   Res,
+  Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
@@ -27,6 +28,8 @@ import { SystemStats } from './services/admin-system.service';
 import { AdminUpdateUserDto } from './dto/update-user.dto';
 import { AdminUpdateMasterDto } from './dto/update-master.dto';
 import { BroadcastEmailDto } from './dto/broadcast-email.dto';
+import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { AuditService } from '../../audit/audit.service';
 
 /** Query string booleans: only "true"/"false" apply a filter; missing or "" → no filter */
 function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
@@ -41,7 +44,10 @@ function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
 @Roles('ADMIN')
 @ApiBearerAuth()
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Get admin dashboard data' })
@@ -96,8 +102,20 @@ export class AdminController {
 
   @Put('users/:id')
   @ApiOperation({ summary: 'Update user' })
-  async updateUser(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
-    return this.adminService.updateUser(id, dto);
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateUserDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const result = await this.adminService.updateUser(id, dto);
+    await this.auditService.log({
+      userId: req.user.id,
+      action: 'ADMIN_USER_UPDATED',
+      entityType: 'User',
+      entityId: id,
+      newData: dto as any,
+    });
+    return result;
   }
 
   @Get('masters/stats')
@@ -150,8 +168,17 @@ export class AdminController {
   async updateMaster(
     @Param('id') id: string,
     @Body() dto: AdminUpdateMasterDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.adminService.updateMaster(id, dto);
+    const result = await this.adminService.updateMaster(id, dto);
+    await this.auditService.log({
+      userId: req.user.id,
+      action: 'ADMIN_MASTER_UPDATED',
+      entityType: 'Master',
+      entityId: id,
+      newData: dto as any,
+    });
+    return result;
   }
 
   @Get('leads/stats')

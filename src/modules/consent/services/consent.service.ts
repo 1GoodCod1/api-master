@@ -1,12 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { ConsentType } from '../dto/grant-consent.dto';
+import { AuditService } from '../../audit/audit.service';
 
 @Injectable()
 export class ConsentService {
   private readonly logger = new Logger(ConsentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   /**
    * Record user consent with IP and user-agent for GDPR audit trail.
@@ -40,6 +45,21 @@ export class ConsentService {
     this.logger.log(
       `Consent granted: user=${userId}, type=${consentType}, version=${meta.version ?? '1.0'}`,
     );
+
+    // Audit log
+    await this.auditService.log({
+      userId: userId,
+      action: 'CONSENT_GRANTED',
+      entityType: 'Consent',
+      entityId: consentType,
+      newData: {
+        type: consentType,
+        version: meta.version ?? '1.0',
+      } satisfies Prisma.InputJsonValue,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    });
+
     return consent;
   }
 
@@ -58,6 +78,16 @@ export class ConsentService {
     });
 
     this.logger.log(`Consent revoked: user=${userId}, type=${consentType}`);
+
+    // Audit log
+    await this.auditService.log({
+      userId: userId,
+      action: 'CONSENT_REVOKED',
+      entityType: 'Consent',
+      entityId: consentType,
+      newData: { type: consentType } satisfies Prisma.InputJsonValue,
+    });
+
     return consent;
   }
 

@@ -7,6 +7,7 @@ import { RedisModule } from '../../shared/redis/redis.module';
 import { CacheModule } from '../../shared/cache/cache.module';
 import { NotificationsModule } from '../../notifications/notifications/notifications.module';
 import { SearchController } from './search.controller';
+import { AuditModule } from '../../audit/audit.module';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersSearchSqlService } from './services/masters-search-sql.service';
 import { MastersProfileService } from './services/masters-profile.service';
@@ -22,7 +23,13 @@ import { MastersQuickRepliesService } from './services/masters-quick-replies.ser
 import { MastersLandingStatsService } from './services/masters-landing-stats.service';
 
 @Module({
-  imports: [PrismaModule, RedisModule, CacheModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    RedisModule,
+    CacheModule,
+    NotificationsModule,
+    AuditModule,
+  ],
   controllers: [MastersController, SearchController, PortfolioController],
   providers: [
     MastersService,

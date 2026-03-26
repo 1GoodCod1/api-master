@@ -10,6 +10,7 @@ import { LoginDto } from '../dto/login.dto';
 import { TokenService } from './token.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { AuthLockoutService } from './auth-lockout.service';
+import { AuditService } from '../../../audit/audit.service';
 
 @Injectable()
 export class LoginService {
@@ -20,6 +21,7 @@ export class LoginService {
     private readonly tokenService: TokenService,
     private readonly cache: CacheService,
     private readonly lockout: AuthLockoutService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -90,6 +92,16 @@ export class LoginService {
       // 7. Очистка кеша профиля пользователя
       await this.invalidateUserCache(user.id);
 
+      // 7.5. Audit log — успешный вход
+      await this.auditService.log({
+        userId: user.id,
+        action: 'LOGIN_SUCCESS',
+        entityType: 'User',
+        entityId: user.id,
+        ipAddress: ipAddress,
+        userAgent: userAgent,
+      });
+
       // 8. Сборка ответа
       return {
         accessToken,
@@ -120,11 +132,21 @@ export class LoginService {
   /**
    * Выход из системы (удаление refresh токена)
    */
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, userId?: string) {
     try {
       await this.prisma.refreshToken.deleteMany({
         where: { token: refreshToken },
       });
+
+      if (userId) {
+        await this.auditService.log({
+          userId,
+          action: 'USER_LOGOUT',
+          entityType: 'User',
+          entityId: userId,
+        });
+      }
+
       return { message: 'Logged out successfully' };
     } catch (err) {
       this.logger.error('Ошибка выхода', err);
@@ -139,6 +161,14 @@ export class LoginService {
     try {
       await this.prisma.refreshToken.deleteMany({ where: { userId } });
       await this.invalidateUserCache(userId);
+
+      await this.auditService.log({
+        userId,
+        action: 'USER_LOGOUT_ALL',
+        entityType: 'User',
+        entityId: userId,
+      });
+
       return { message: 'All sessions logged out successfully' };
     } catch (err) {
       this.logger.error('logoutAll failed', err);

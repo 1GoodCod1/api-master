@@ -40,22 +40,22 @@ export class TariffsService {
   /**
    * Создать новый тариф
    */
-  async create(createTariffDto: CreateTariffDto) {
-    return this.actionService.create(createTariffDto);
+  async create(createTariffDto: CreateTariffDto, adminId?: string) {
+    return this.actionService.create(createTariffDto, adminId);
   }
 
   /**
    * Обновить существующий тариф
    */
-  async update(id: string, updateTariffDto: UpdateTariffDto) {
-    return this.actionService.update(id, updateTariffDto);
+  async update(id: string, updateTariffDto: UpdateTariffDto, adminId?: string) {
+    return this.actionService.update(id, updateTariffDto, adminId);
   }
 
   /**
    * Удалить тариф
    */
-  async remove(id: string) {
-    return this.actionService.remove(id);
+  async remove(id: string, adminId?: string) {
+    return this.actionService.remove(id, adminId);
   }
 
   /**

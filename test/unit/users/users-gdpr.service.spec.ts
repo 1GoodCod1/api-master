@@ -40,6 +40,10 @@ describe('UsersGdprService', () => {
     },
   } as unknown as CacheService;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: UsersGdprService;
 
   const baseUserRow = {
@@ -63,7 +67,12 @@ describe('UsersGdprService', () => {
     prisma.loginHistory.findMany.mockResolvedValue([]);
     prisma.notification.findMany.mockResolvedValue([]);
     prisma.userConsent.findMany.mockResolvedValue([]);
-    service = new UsersGdprService(prisma as unknown as PrismaService, cache);
+    auditService.log.mockResolvedValue(undefined);
+    service = new UsersGdprService(
+      prisma as unknown as PrismaService,
+      cache,
+      auditService as never,
+    );
   });
 
   describe('removeSelf', () => {

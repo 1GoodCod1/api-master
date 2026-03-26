@@ -4,9 +4,11 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { PaymentsMiaService } from './payments-mia.service';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
+import { AuditService } from '../../audit/audit.service';
 
 @Injectable()
 export class PaymentsUpgradeService {
@@ -15,6 +17,7 @@ export class PaymentsUpgradeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly miaService: PaymentsMiaService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -59,6 +62,17 @@ export class PaymentsUpgradeService {
       // Сбрасываем флаг, так как сессия создана
       await this.resetPendingUpgrade(master.id);
 
+      // Audit log upgrade confirmed
+      await this.auditService.log({
+        userId: userId,
+        action: 'TARIFF_UPGRADE_CONFIRMED',
+        entityType: 'User',
+        entityId: userId,
+        newData: {
+          tariffType: master.pendingUpgradeTo,
+        } satisfies Prisma.InputJsonValue,
+      });
+
       return result;
     } catch (err) {
       if (
@@ -84,6 +98,15 @@ export class PaymentsUpgradeService {
         throw new BadRequestException('No pending upgrade found');
 
       await this.resetPendingUpgrade(master.id);
+
+      // Audit log upgrade cancelled
+      await this.auditService.log({
+        userId: userId,
+        action: 'TARIFF_UPGRADE_CANCELLED',
+        entityType: 'User',
+        entityId: userId,
+      });
+
       return { message: 'Pending upgrade cancelled' };
     } catch (err) {
       if (
@@ -122,6 +145,18 @@ export class PaymentsUpgradeService {
         where: { id: master.id },
         data: { tariffCancelAtPeriodEnd: true },
       });
+
+      // Audit log subscription cancelled
+      await this.auditService.log({
+        userId: userId,
+        action: 'SUBSCRIPTION_CANCELLED',
+        entityType: 'Master',
+        entityId: master.id,
+        newData: {
+          tariffExpiresAt: master.tariffExpiresAt.toISOString(),
+        } satisfies Prisma.InputJsonValue,
+      });
+
       return {
         message: 'Subscription will cancel at period end.',
         tariffExpiresAt: master.tariffExpiresAt,

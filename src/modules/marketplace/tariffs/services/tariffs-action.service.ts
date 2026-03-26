@@ -7,20 +7,23 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { CreateTariffDto } from '../dto/create-tariff.dto';
 import { UpdateTariffDto } from '../dto/update-tariff.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Tariff } from '@prisma/client';
+import { AuditService } from '../../../audit/audit.service';
 
 @Injectable()
 export class TariffsActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
    * Создать новый тариф
    * @param dto Данные тарифа
+   * @param adminId ID администратора
    */
-  async create(dto: CreateTariffDto) {
+  async create(dto: CreateTariffDto, adminId?: string) {
     const existing = await this.prisma.tariff.findUnique({
       where: { type: dto.type },
     });
@@ -43,6 +46,17 @@ export class TariffsActionService {
     });
 
     await this.invalidateCache(tariff.id, tariff.type);
+
+    if (adminId) {
+      await this.auditService.log({
+        userId: adminId,
+        action: 'TARIFF_CREATED',
+        entityType: 'Tariff',
+        entityId: tariff.id,
+        newData: TariffsActionService.tariffToAuditJson(tariff),
+      });
+    }
+
     return tariff;
   }
 
@@ -50,8 +64,9 @@ export class TariffsActionService {
    * Обновить существующий тариф
    * @param id ID тарифа
    * @param dto Данные для обновления
+   * @param adminId ID администратора
    */
-  async update(id: string, dto: UpdateTariffDto) {
+  async update(id: string, dto: UpdateTariffDto, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
     if (!tariff) throw new NotFoundException('Тариф не найден');
 
@@ -81,21 +96,61 @@ export class TariffsActionService {
     });
 
     await this.invalidateCache(id, tariff.type, dto.type);
+
+    if (adminId) {
+      await this.auditService.log({
+        userId: adminId,
+        action: 'TARIFF_UPDATED',
+        entityType: 'Tariff',
+        entityId: updated.id,
+        newData: TariffsActionService.tariffToAuditJson(updated),
+      });
+    }
+
     return updated;
   }
 
   /**
    * Удалить тариф
    * @param id ID тарифа
+   * @param adminId ID администратора
    */
-  async remove(id: string) {
+  async remove(id: string, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
     if (!tariff) throw new NotFoundException('Тариф не найден');
 
     const deleted = await this.prisma.tariff.delete({ where: { id } });
 
     await this.invalidateCache(id, tariff.type);
+
+    if (adminId) {
+      await this.auditService.log({
+        userId: adminId,
+        action: 'TARIFF_DELETED',
+        entityType: 'Tariff',
+        entityId: id,
+      });
+    }
+
     return deleted;
+  }
+
+  /** Snapshot for audit log — JSON-safe (no Decimal/Date raw). */
+  private static tariffToAuditJson(tariff: Tariff): Prisma.InputJsonValue {
+    return {
+      id: tariff.id,
+      name: tariff.name,
+      type: tariff.type,
+      price: tariff.price,
+      amount: tariff.amount.toString(),
+      days: tariff.days,
+      description: tariff.description,
+      features: tariff.features as Prisma.InputJsonValue,
+      isActive: tariff.isActive,
+      sortOrder: tariff.sortOrder,
+      createdAt: tariff.createdAt.toISOString(),
+      updatedAt: tariff.updatedAt.toISOString(),
+    } satisfies Prisma.InputJsonValue;
   }
 
   private async invalidateCache(id: string, oldType: string, newType?: string) {

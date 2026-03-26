@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { AuditService } from '../../audit/audit.service';
 import type {
   PersonalDataPdfData,
   PersonalDataPdfUser,
@@ -27,6 +28,7 @@ export class UsersGdprService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -51,6 +53,13 @@ export class UsersGdprService {
 
       await this.prisma.user.delete({ where: { id: userId } });
       await this.invalidateCache(userId);
+
+      await this.auditService.log({
+        userId: userId,
+        action: 'USER_SELF_DELETED',
+        entityType: 'User',
+        entityId: userId,
+      });
 
       this.logger.log(
         `User ${userId} self-deleted their account (GDPR erasure)`,
@@ -224,6 +233,13 @@ export class UsersGdprService {
       revokedAt: c.revokedAt?.toISOString() ?? null,
       createdAt: c.createdAt.toISOString(),
     }));
+
+    await this.auditService.log({
+      userId: userId,
+      action: 'USER_DATA_EXPORTED',
+      entityType: 'User',
+      entityId: userId,
+    });
 
     return {
       exportDate,

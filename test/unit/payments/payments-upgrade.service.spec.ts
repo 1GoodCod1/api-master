@@ -19,13 +19,19 @@ describe('PaymentsUpgradeService', () => {
     createTariffQrPayment: jest.fn(),
   } as unknown as jest.Mocked<PaymentsMiaService>;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: PaymentsUpgradeService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    auditService.log.mockResolvedValue(undefined);
     service = new PaymentsUpgradeService(
       prisma as unknown as PrismaService,
       miaService,
+      auditService as never,
     );
   });
 

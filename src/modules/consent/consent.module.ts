@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { ConsentController } from './consent.controller';
 import { ConsentService } from './services/consent.service';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuditModule],
   controllers: [ConsentController],
   providers: [ConsentService],
   exports: [ConsentService],

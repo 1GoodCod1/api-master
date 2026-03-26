@@ -4,10 +4,11 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Payment, TariffType } from '@prisma/client';
+import { Payment, Prisma, TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
+import { AuditService } from '../../../audit/audit.service';
 
 export type InvalidateMasterCacheFn = (
   masterId: string,
@@ -37,6 +38,7 @@ export class MastersTariffService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly auditService: AuditService,
   ) {}
 
   async getTariff(userId: string): Promise<GetTariffResult> {
@@ -250,6 +252,19 @@ export class MastersTariffService {
       this.cache.del(this.cache.keys.userProfile(userId)),
       this.cache.del(this.cache.keys.userMasterProfile(userId)),
     ]);
+
+    // Audit log
+    await this.auditService.log({
+      userId: userId,
+      action: 'FREE_PLAN_CLAIMED',
+      entityType: 'User',
+      entityId: userId,
+      newData: {
+        tariffType,
+        days: MastersTariffService.DAYS_FREE_PLAN,
+      } satisfies Prisma.InputJsonValue,
+    });
+
     return result;
   }
 }

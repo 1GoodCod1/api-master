@@ -54,6 +54,10 @@ describe('LoginService', () => {
     clearLockout: jest.fn().mockResolvedValue(undefined),
   };
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: LoginService;
 
   beforeEach(() => {
@@ -61,11 +65,13 @@ describe('LoginService', () => {
     lockout.checkLocked.mockResolvedValue(undefined);
     lockout.recordFailed.mockResolvedValue(undefined);
     lockout.clearLockout.mockResolvedValue(undefined);
+    auditService.log.mockResolvedValue(undefined);
     service = new LoginService(
       prisma as unknown as PrismaService,
       tokenService,
       cache,
       lockout as never,
+      auditService as never,
     );
   });
 

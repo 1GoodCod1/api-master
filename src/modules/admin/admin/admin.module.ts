@@ -16,6 +16,7 @@ import { AdminSystemService } from './services/admin-system.service';
 import { EmailTemplateOverrideRepository } from './services/email-template-override.repository';
 import { AppSettingsModule } from '../../app-settings/app-settings.module';
 import { DigestModule } from '../../notifications/digest/digest.module';
+import { AuditModule } from '../../audit/audit.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { DigestModule } from '../../notifications/digest/digest.module';
     TasksModule,
     AppSettingsModule,
     DigestModule,
+    AuditModule,
   ],
   controllers: [AdminController],
   providers: [

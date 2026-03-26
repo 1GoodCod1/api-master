@@ -8,10 +8,11 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { TariffsService } from '../../marketplace/tariffs/tariffs.service';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
-import { TariffType } from '@prisma/client';
+import { Prisma, TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import { PaymentsWebhookService } from './payments-webhook.service';
+import { AuditService } from '../../audit/audit.service';
 
 interface MiaAuthResponse {
   ok: boolean;
@@ -84,6 +85,7 @@ export class PaymentsMiaService {
     private readonly configService: ConfigService,
     private readonly tariffsService: TariffsService,
     private readonly webhookService: PaymentsWebhookService,
+    private readonly auditService: AuditService,
   ) {}
 
   /** MIA API доступен (для реальных платежей и test-pay). В sandbox terminalId необязателен. */
@@ -205,6 +207,20 @@ export class PaymentsMiaService {
           } as object,
         },
       });
+
+      // Audit log sandbox payment creation
+      await this.auditService.log({
+        userId: userId,
+        action: 'PAYMENT_CREATED',
+        entityType: 'Payment',
+        entityId: payment.id,
+        newData: {
+          amount,
+          tariffType,
+          sandbox: true,
+        } satisfies Prisma.InputJsonValue,
+      });
+
       return {
         qrUrl: `${frontendUrl}/plans/checkout/success?orderId=${payment.id}`,
         qrId: payment.id,
@@ -299,6 +315,19 @@ export class PaymentsMiaService {
           days,
         } as object,
       },
+    });
+
+    // Audit log payment creation
+    await this.auditService.log({
+      userId: userId,
+      action: 'PAYMENT_CREATED',
+      entityType: 'Payment',
+      entityId: payment.id,
+      newData: {
+        amount,
+        tariffType,
+        qrId: qrData.result.qrId,
+      } satisfies Prisma.InputJsonValue,
     });
 
     return {

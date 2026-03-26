@@ -3,8 +3,9 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { NotificationsService } from '../../notifications/notifications/notifications.service';
 import { CacheService } from '../../shared/cache/cache.service';
-import { TariffType } from '@prisma/client';
+import { Prisma, TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
+import { AuditService } from '../../audit/audit.service';
 
 @Injectable()
 export class PaymentsWebhookService {
@@ -15,6 +16,7 @@ export class PaymentsWebhookService {
     private readonly inAppNotifications: InAppNotificationService,
     private readonly notifications: NotificationsService,
     private readonly cache: CacheService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -89,6 +91,19 @@ export class PaymentsWebhookService {
         const msg = e instanceof Error ? e.message : String(e);
         this.logger.warn(`Не удалось отправить уведомление о платеже: ${msg}`);
       }
+
+      // Audit log webhook success
+      await this.auditService.log({
+        userId: payment.userId,
+        action: 'PAYMENT_CONFIRMED',
+        entityType: 'Payment',
+        entityId: payment.id,
+        newData: {
+          status: PaymentStatus.SUCCESS,
+          amount: payment.amount.toString(),
+          tariffType: payment.tariffType,
+        } satisfies Prisma.InputJsonValue,
+      });
     }
   }
 

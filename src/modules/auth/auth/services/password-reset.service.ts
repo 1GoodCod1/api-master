@@ -11,6 +11,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { EmailService } from '../../../email/email.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AuditService } from '../../../audit/audit.service';
 
 @Injectable()
 export class PasswordResetService {
@@ -20,6 +21,7 @@ export class PasswordResetService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
+    private readonly auditService: AuditService,
   ) {}
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
@@ -89,6 +91,14 @@ export class PasswordResetService {
         lang,
       );
 
+      // Audit log — запрос сброса пароля
+      await this.auditService.log({
+        userId: user.id,
+        action: 'PASSWORD_RESET_REQUESTED',
+        entityType: 'User',
+        entityId: user.id,
+      });
+
       return {
         message:
           'If an account with that email exists, a password reset link has been sent.',
@@ -156,6 +166,14 @@ export class PasswordResetService {
           userId: resetToken.userId,
           used: false,
         },
+      });
+
+      // Audit log — успешный сброс пароля
+      await this.auditService.log({
+        userId: resetToken.userId,
+        action: 'PASSWORD_RESET_COMPLETED',
+        entityType: 'User',
+        entityId: resetToken.userId,
       });
 
       return {
