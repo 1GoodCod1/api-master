@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { unlink } from 'fs/promises';
+import { AuditService } from '../../audit/audit.service';
 
 /**
  * GDPR: удаление файлов (фото документов, селфи) после одобрения верификации.
@@ -16,6 +18,7 @@ export class VerificationDocumentsPurgeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -37,7 +40,7 @@ export class VerificationDocumentsPurgeService {
     const hasFiles = v.documentFrontId || v.documentBackId || v.selfieId;
     if (!hasFiles) return;
 
-    await this.purgeLoadedVerificationFiles(v);
+    await this.purgeLoadedVerificationFiles(v, 'after_approve');
   }
 
   /**
@@ -65,7 +68,7 @@ export class VerificationDocumentsPurgeService {
 
     let deletedCount = 0;
     for (const v of verifications) {
-      const n = await this.purgeLoadedVerificationFiles(v);
+      const n = await this.purgeLoadedVerificationFiles(v, 'batch_retry');
       deletedCount += n;
     }
 
@@ -76,12 +79,16 @@ export class VerificationDocumentsPurgeService {
     }
   }
 
-  private async purgeLoadedVerificationFiles(v: {
-    id: string;
-    documentFront: { id: string; path: string } | null;
-    documentBack: { id: string; path: string } | null;
-    selfie: { id: string; path: string } | null;
-  }): Promise<number> {
+  private async purgeLoadedVerificationFiles(
+    v: {
+      id: string;
+      masterId: string;
+      documentFront: { id: string; path: string } | null;
+      documentBack: { id: string; path: string } | null;
+      selfie: { id: string; path: string } | null;
+    },
+    source: 'after_approve' | 'batch_retry',
+  ): Promise<number> {
     const fileIds: string[] = [];
     const filePaths: string[] = [];
 
@@ -111,6 +118,22 @@ export class VerificationDocumentsPurgeService {
     await this.prisma.file.deleteMany({
       where: { id: { in: fileIds } },
     });
+
+    try {
+      await this.auditService.log({
+        userId: null,
+        action: 'VERIFICATION_DOCUMENTS_PURGED',
+        entityType: 'MasterVerification',
+        entityId: v.id,
+        newData: {
+          masterId: v.masterId,
+          fileCount: fileIds.length,
+          source,
+        } satisfies Prisma.InputJsonValue,
+      });
+    } catch (err) {
+      this.logger.error('Audit log при удалении файлов верификации', err);
+    }
 
     return fileIds.length;
   }

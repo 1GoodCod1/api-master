@@ -17,6 +17,8 @@ import {
   VerificationDecision,
 } from '../dto/review-verification.dto';
 import { VerificationDocumentsPurgeService } from './verification-documents-purge.service';
+import { AuditService } from '../../audit/audit.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class VerificationActionService {
@@ -29,6 +31,7 @@ export class VerificationActionService {
     private readonly encryption: EncryptionService,
     private readonly consentService: ConsentService,
     private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -134,6 +137,21 @@ export class VerificationActionService {
             `Failed to send in-app new verification notification: ${msg}`,
           );
         });
+
+      try {
+        await this.auditService.log({
+          userId,
+          action: 'VERIFICATION_SUBMITTED',
+          entityType: 'MasterVerification',
+          entityId: verification.id,
+          newData: {
+            masterId: user.masterProfile.id,
+            documentType: dto.documentType,
+          } satisfies Prisma.InputJsonValue,
+        });
+      } catch (err) {
+        this.logger.error('Audit log при подаче заявки на верификацию', err);
+      }
 
       return {
         message: 'Заявка на верификацию успешно отправлена',
@@ -244,6 +262,23 @@ export class VerificationActionService {
               `Failed to send in-app verification rejected: ${msg}`,
             );
           });
+      }
+
+      try {
+        await this.auditService.log({
+          userId: adminId,
+          action: 'VERIFICATION_REVIEWED',
+          entityType: 'MasterVerification',
+          entityId: verificationId,
+          newData: {
+            decision: dto.decision,
+            masterId: verification.masterId,
+            status,
+            hasNotes: Boolean(dto.notes?.trim()),
+          } satisfies Prisma.InputJsonValue,
+        });
+      } catch (err) {
+        this.logger.error('Audit log при рассмотрении верификации', err);
       }
 
       return {

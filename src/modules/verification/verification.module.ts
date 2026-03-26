@@ -7,7 +7,7 @@ import { PhoneVerificationModule } from '../auth/phone-verification/phone-verifi
 import { NotificationsModule } from '../notifications/notifications/notifications.module';
 import { EncryptionModule } from '../shared/encryption/encryption.module';
 import { ConsentModule } from '../consent/consent.module';
-
+import { AuditModule } from '../audit/audit.module';
 import { VerificationQueryService } from './services/verification-query.service';
 import { VerificationActionService } from './services/verification-action.service';
 import { VerificationDocumentsPurgeService } from './services/verification-documents-purge.service';
@@ -20,6 +20,7 @@ import { VerificationDocumentsPurgeService } from './services/verification-docum
     NotificationsModule,
     EncryptionModule,
     ConsentModule,
+    AuditModule,
   ],
   controllers: [VerificationController],
   providers: [

@@ -26,11 +26,20 @@ describe('VerificationDocumentsPurgeService', () => {
     get: jest.fn(),
   } as unknown as ConfigService;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: VerificationDocumentsPurgeService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new VerificationDocumentsPurgeService(prisma, configService);
+    auditService.log.mockResolvedValue(undefined);
+    service = new VerificationDocumentsPurgeService(
+      prisma,
+      configService,
+      auditService as never,
+    );
   });
 
   describe('purgeVerificationFilesById', () => {
@@ -96,6 +105,7 @@ describe('VerificationDocumentsPurgeService', () => {
     it('deletes local files, clears FKs, and removes file rows', async () => {
       masterVerification.findUnique.mockResolvedValue({
         id: 'v1',
+        masterId: 'm1',
         status: 'APPROVED',
         documentsDeletedAt: null,
         documentFrontId: 'f1',
@@ -121,6 +131,17 @@ describe('VerificationDocumentsPurgeService', () => {
       expect(file.deleteMany).toHaveBeenCalledWith({
         where: { id: { in: ['f1'] } },
       });
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'VERIFICATION_DOCUMENTS_PURGED',
+          entityId: 'v1',
+          newData: expect.objectContaining({
+            masterId: 'm1',
+            fileCount: 1,
+            source: 'after_approve',
+          }),
+        }),
+      );
     });
   });
 
@@ -137,6 +158,7 @@ describe('VerificationDocumentsPurgeService', () => {
       masterVerification.findMany.mockResolvedValue([
         {
           id: 'v1',
+          masterId: 'm1',
           status: 'APPROVED',
           documentsDeletedAt: null,
           documentFrontId: 'f1',
@@ -152,6 +174,15 @@ describe('VerificationDocumentsPurgeService', () => {
 
       expect(unlink).toHaveBeenCalledWith('a.jpg');
       expect(masterVerification.update).toHaveBeenCalled();
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'VERIFICATION_DOCUMENTS_PURGED',
+          newData: expect.objectContaining({
+            source: 'batch_retry',
+            masterId: 'm1',
+          }),
+        }),
+      );
     });
   });
 });

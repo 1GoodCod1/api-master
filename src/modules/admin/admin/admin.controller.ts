@@ -30,12 +30,32 @@ import { AdminUpdateMasterDto } from './dto/update-master.dto';
 import { BroadcastEmailDto } from './dto/broadcast-email.dto';
 import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
 import { AuditService } from '../../audit/audit.service';
+import { Prisma } from '@prisma/client';
 
 /** Query string booleans: only "true"/"false" apply a filter; missing or "" → no filter */
 function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
   if (v === 'true') return true;
   if (v === 'false') return false;
   return undefined;
+}
+
+function adminUpdateUserDtoToAuditJson(
+  dto: AdminUpdateUserDto,
+): Prisma.InputJsonValue {
+  return {
+    ...(dto.isVerified !== undefined ? { isVerified: dto.isVerified } : {}),
+    ...(dto.isBanned !== undefined ? { isBanned: dto.isBanned } : {}),
+    ...(dto.role !== undefined ? { role: dto.role } : {}),
+  } satisfies Prisma.InputJsonValue;
+}
+
+function adminUpdateMasterDtoToAuditJson(
+  dto: AdminUpdateMasterDto,
+): Prisma.InputJsonValue {
+  return {
+    ...(dto.isFeatured !== undefined ? { isFeatured: dto.isFeatured } : {}),
+    ...(dto.tariffType !== undefined ? { tariffType: dto.tariffType } : {}),
+  } satisfies Prisma.InputJsonValue;
 }
 
 @ApiTags('Admin')
@@ -113,7 +133,7 @@ export class AdminController {
       action: 'ADMIN_USER_UPDATED',
       entityType: 'User',
       entityId: id,
-      newData: dto as any,
+      newData: adminUpdateUserDtoToAuditJson(dto),
     });
     return result;
   }
@@ -176,7 +196,7 @@ export class AdminController {
       action: 'ADMIN_MASTER_UPDATED',
       entityType: 'Master',
       entityId: id,
-      newData: dto as any,
+      newData: adminUpdateMasterDtoToAuditJson(dto),
     });
     return result;
   }
