@@ -1,4 +1,5 @@
-import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../common/errors';
 import { UserRole } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentsMiaService } from './services/payments-mia.service';
@@ -129,7 +130,7 @@ export class PaymentsService {
 
     const ownMasterId = authUser.masterProfile?.id;
     if (!ownMasterId || ownMasterId !== masterId) {
-      throw new ForbiddenException('Access to payment data denied');
+      throw AppErrors.forbidden(AppErrorMessages.PAYMENT_ACCESS_DENIED);
     }
   }
 }

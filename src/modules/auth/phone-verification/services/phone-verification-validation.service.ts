@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { User, PhoneVerification } from '@prisma/client';
 
@@ -26,11 +23,11 @@ export class PhoneVerificationValidationService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     if (user.phoneVerified) {
-      throw new BadRequestException('Phone already verified');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_ALREADY_VERIFIED);
     }
 
     const recentVerification = await this.prisma.phoneVerification.findFirst({
@@ -43,7 +40,7 @@ export class PhoneVerificationValidationService {
     });
 
     if (recentVerification) {
-      throw new BadRequestException('Please wait before requesting a new code');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_WAIT_NEW_CODE);
     }
 
     return user;
@@ -58,7 +55,7 @@ export class PhoneVerificationValidationService {
     code: string,
   ): Promise<{ user: User; verification: PhoneVerification }> {
     if (!code || typeof code !== 'string') {
-      throw new BadRequestException('Code is required');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_CODE_REQUIRED);
     }
 
     const user = await this.prisma.user.findUnique({
@@ -66,11 +63,11 @@ export class PhoneVerificationValidationService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     if (user.phoneVerified) {
-      throw new BadRequestException('Phone already verified');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_ALREADY_VERIFIED);
     }
 
     const verification = await this.prisma.phoneVerification.findFirst({
@@ -83,13 +80,11 @@ export class PhoneVerificationValidationService {
     });
 
     if (!verification) {
-      throw new BadRequestException('Verification code expired or not found');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_CODE_EXPIRED);
     }
 
     if (verification.attempts >= MAX_ATTEMPTS) {
-      throw new BadRequestException(
-        'Too many attempts. Please request a new code',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_TOO_MANY_ATTEMPTS);
     }
 
     return { user, verification };

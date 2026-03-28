@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { Response } from 'express';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -53,7 +54,7 @@ export class ExportLeadsService {
     const { leads, master } = await this.fetchLeadsData(masterId);
 
     if (!master) {
-      throw new BadRequestException('Master not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const workbook = this.buildExcelWorkbook(leads, master);
@@ -77,7 +78,7 @@ export class ExportLeadsService {
     const { leads, master } = await this.fetchLeadsData(masterId);
 
     if (!master) {
-      throw new BadRequestException('Master not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     if (format === 'csv') {

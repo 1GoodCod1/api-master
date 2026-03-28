@@ -1,4 +1,5 @@
-import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { PipeTransform, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 
 @Injectable()
 export class ParseBoolPipe implements PipeTransform<string, boolean> {
@@ -6,8 +7,6 @@ export class ParseBoolPipe implements PipeTransform<string, boolean> {
     if (value === 'true' || value === '1') return true;
     if (value === 'false' || value === '0') return false;
 
-    throw new BadRequestException(
-      'Validation failed (boolean string is expected)',
-    );
+    throw AppErrors.badRequest(AppErrorMessages.PARSE_BOOL_EXPECTED);
   }
 }

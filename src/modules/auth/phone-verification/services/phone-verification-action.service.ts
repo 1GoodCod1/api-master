@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -74,7 +75,7 @@ export class PhoneVerificationActionService {
         where: { id: verification.id },
         data: { attempts: { increment: 1 } },
       });
-      throw new BadRequestException('Invalid verification code');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_CODE_INVALID);
     }
 
     const updateData: Prisma.UserUpdateInput = {
@@ -130,7 +131,7 @@ export class PhoneVerificationActionService {
       });
     } catch (error) {
       console.error('Failed to send SMS:', error);
-      throw new BadRequestException('Failed to send SMS');
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_SMS_FAILED);
     }
   }
 }

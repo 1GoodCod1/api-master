@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 /**
@@ -18,7 +19,7 @@ export class PhoneVerificationQueryService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     return user;

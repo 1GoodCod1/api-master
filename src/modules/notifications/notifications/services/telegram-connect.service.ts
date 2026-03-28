@@ -1,4 +1,5 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
@@ -42,18 +43,17 @@ export class TelegramConnectService {
       where: { userId },
       select: { id: true, tariffType: true },
     });
-    if (!master) throw new ForbiddenException('Master profile not found');
+    if (!master)
+      throw AppErrors.forbidden(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const isPremium = isVipOrPremiumTariff(master.tariffType);
     if (!isPremium) {
-      throw new ForbiddenException(
-        'Telegram connect is available for VIP and PREMIUM plans only',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.TELEGRAM_PREMIUM_ONLY);
     }
 
     const botUsername = this.configService.get<string>('telegram.botUsername');
     if (!botUsername) {
-      throw new ForbiddenException('Telegram bot is not configured');
+      throw AppErrors.forbidden(AppErrorMessages.TELEGRAM_BOT_NOT_CONFIGURED);
     }
 
     const token = randomBytes(16).toString('hex');

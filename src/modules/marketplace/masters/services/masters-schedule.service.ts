@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateScheduleSettingsDto } from '../dto/update-schedule-settings.dto';
 
@@ -24,7 +21,8 @@ export class MastersScheduleService {
         slotDurationMinutes: true,
       },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return master;
   }
 
@@ -37,15 +35,14 @@ export class MastersScheduleService {
       where: { userId },
       select: { id: true, workStartHour: true, workEndHour: true, slug: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const startHour = dto.workStartHour ?? master.workStartHour;
     const endHour = dto.workEndHour ?? master.workEndHour;
 
     if (startHour >= endHour) {
-      throw new ForbiddenException(
-        'Work start hour must be less than work end hour',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.WORK_HOURS_ORDER);
     }
 
     const data: {

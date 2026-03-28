@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
 import {
   ACTIVE_BOOKING_STATUSES,
@@ -238,11 +235,11 @@ export class BookingsQueryService {
     });
 
     if (!booking) {
-      throw new NotFoundException('Booking not found');
+      throw AppErrors.notFound(AppErrorMessages.BOOKING_NOT_FOUND);
     }
 
     if (booking.clientId !== userId) {
-      throw new ForbiddenException('You can only rebook your own appointments');
+      throw AppErrors.forbidden(AppErrorMessages.BOOKING_REBOOK_OWN_ONLY);
     }
 
     const originalStart = new Date(booking.startTime);

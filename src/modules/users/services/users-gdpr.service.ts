@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -45,13 +46,11 @@ export class UsersGdprService {
       });
 
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
       }
 
       if (user.role === UserRole.ADMIN) {
-        throw new BadRequestException(
-          'Admin accounts cannot be self-deleted. Contact another admin.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.GDPR_ADMIN_NO_SELF_DELETE);
       }
 
       await this.prisma.user.delete({ where: { id: userId } });
@@ -102,7 +101,7 @@ export class UsersGdprService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     const masterProfile = await this.prisma.master.findUnique({

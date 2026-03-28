@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';
 import { RedisService } from '../../../shared/redis/redis.service';
@@ -355,7 +351,7 @@ export class AdminSystemService {
     filename: string,
   ): Promise<{ backupPath: string; backupDir: string }> {
     if (!/^backup-[\d\-TZ]+\.json$/.test(filename)) {
-      throw new BadRequestException('Invalid backup filename');
+      throw AppErrors.badRequest(AppErrorMessages.BACKUP_INVALID_FILENAME);
     }
 
     const backupDir = path.join(process.cwd(), 'backups');
@@ -365,13 +361,13 @@ export class AdminSystemService {
     const normalizedBackupDir = path.normalize(backupDir);
 
     if (!normalizedBackupPath.startsWith(normalizedBackupDir)) {
-      throw new BadRequestException('Invalid backup path');
+      throw AppErrors.badRequest(AppErrorMessages.BACKUP_INVALID_PATH);
     }
 
     try {
       await fs.promises.access(normalizedBackupPath, fs.constants.F_OK);
     } catch {
-      throw new NotFoundException('Backup file not found');
+      throw AppErrors.notFound(AppErrorMessages.BACKUP_FILE_NOT_FOUND);
     }
 
     return {

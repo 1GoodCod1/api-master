@@ -1,10 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { type Prisma, UserRole } from '@prisma/client';
 import { ACTIVE_LEAD_STATUSES, LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -52,7 +47,7 @@ export class LeadsQueryService {
 
       const masterId = authUser.masterProfile?.id;
       if (!masterId) {
-        throw new BadRequestException('Master profile not found');
+        throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
       }
 
       return await this.findAllForMaster(masterId, options);
@@ -258,27 +253,27 @@ export class LeadsQueryService {
       },
     });
 
-    if (!lead) throw new NotFoundException('Lead not found');
+    if (!lead) throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
 
     const withEncoded = this.mapLeadsWithMasterEncodedId([lead])[0];
     if (authUser.role === UserRole.ADMIN) return withEncoded;
     if (authUser.role === UserRole.CLIENT) {
       if (lead.clientId !== authUser.id) {
-        throw new ForbiddenException('Access denied');
+        throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
       }
       return withEncoded;
     }
     if (authUser.role === UserRole.MASTER) {
       if (!masterId) {
-        throw new BadRequestException('Master profile not found');
+        throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
       }
       if (lead.masterId !== masterId) {
-        throw new ForbiddenException('Access denied');
+        throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
       }
       return withEncoded;
     }
 
-    throw new ForbiddenException('Access denied');
+    throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
   }
 
   /**
@@ -287,7 +282,7 @@ export class LeadsQueryService {
   async getStats(authUser: JwtUser) {
     const masterId = authUser.masterProfile?.id;
     if (!masterId) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     const [total, statusGroups] = await Promise.all([

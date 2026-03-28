@@ -6,8 +6,8 @@ import {
   Body,
   UseGuards,
   Req,
-  ServiceUnavailableException,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
@@ -25,8 +25,8 @@ export class WebPushController {
   getVapidPublicKey() {
     const publicKey = this.webPushService.getPublicKey()?.trim() ?? '';
     if (!publicKey) {
-      throw new ServiceUnavailableException(
-        'VAPID is not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (e.g. in .env.docker) and restart the API.',
+      throw AppErrors.serviceUnavailable(
+        AppErrorMessages.WEB_PUSH_VAPID_NOT_CONFIGURED,
       );
     }
     return { publicKey };

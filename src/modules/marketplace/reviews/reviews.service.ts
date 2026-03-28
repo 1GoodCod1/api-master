@@ -1,8 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import {
-  Injectable,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../common/errors';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ReviewsActionService } from './services/reviews-action.service';
 import { ReviewsQueryService } from './services/reviews-query.service';
@@ -80,7 +81,7 @@ export class ReviewsService {
     const resolvedMasterId =
       user.role === UserRole.ADMIN ? masterId : user.masterProfile?.id;
     if (!resolvedMasterId) {
-      throw new ForbiddenException('Master profile not found');
+      throw AppErrors.forbidden(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return this.queryService.getStats(resolvedMasterId);
   }
@@ -101,7 +102,7 @@ export class ReviewsService {
 
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return this.queryService.findAllForMaster(masterId, {
       ...rest,
@@ -128,7 +129,7 @@ export class ReviewsService {
   async replyToReview(reviewId: string, user: JwtUser, content: string) {
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return this.actionService.replyToReview(reviewId, masterId, content);
   }
@@ -139,7 +140,7 @@ export class ReviewsService {
   async deleteReply(reviewId: string, user: JwtUser) {
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return this.actionService.deleteReply(reviewId, masterId);
   }
@@ -181,7 +182,9 @@ export class ReviewsService {
   private parseAndValidateStatus(statusRaw: string): ReviewStatus {
     const status = statusRaw.toUpperCase() as ReviewStatus;
     if (!Object.values(ReviewStatus).includes(status)) {
-      throw new BadRequestException(`Invalid status: ${statusRaw}`);
+      throw AppErrors.badRequest(
+        AppErrorTemplates.invalidReviewStatus(statusRaw),
+      );
     }
     return status;
   }

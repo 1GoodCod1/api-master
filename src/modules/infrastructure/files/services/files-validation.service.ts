@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import {
   validateFileMagic,
   validateLeadImageMagic,
@@ -31,8 +36,10 @@ export class FilesValidationService {
       }
     } catch (e) {
       await unlinkIfExists(file.path);
-      throw new BadRequestException(
-        e instanceof Error ? e.message : 'Invalid file content',
+      throw AppErrors.badRequest(
+        AppErrorTemplates.invalidFileContent(
+          e instanceof Error ? e.message : 'Invalid file content',
+        ),
       );
     }
   }
@@ -42,7 +49,7 @@ export class FilesValidationService {
    */
   assertMaxFiles(files: Express.Multer.File[]): void {
     if (files.length > MAX_FILES_PER_BATCH) {
-      throw new BadRequestException('Maximum 10 files allowed');
+      throw AppErrors.badRequest(AppErrorMessages.FILES_MAX_10);
     }
   }
 
@@ -51,7 +58,7 @@ export class FilesValidationService {
    */
   assertFilePresent(file: Express.Multer.File | undefined): void {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw AppErrors.badRequest(AppErrorMessages.FILES_NONE_UPLOADED);
     }
   }
 }

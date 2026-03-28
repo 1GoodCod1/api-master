@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../common/errors';
 import type { Prisma } from '@prisma/client';
 import { AuditAction } from './audit-action.enum';
 import type { AuditCleanupDto } from './dto/audit-cleanup.dto';
@@ -55,7 +59,7 @@ const ALL_KNOWN_ACTIONS = new Set<string>(Object.values(AuditAction));
 export function validateCleanupActions(actions: string[]): void {
   for (const a of actions) {
     if (!ALL_KNOWN_ACTIONS.has(a)) {
-      throw new BadRequestException(`Unknown audit action: ${a}`);
+      throw AppErrors.badRequest(AppErrorTemplates.unknownAuditAction(a));
     }
   }
 }
@@ -77,7 +81,9 @@ export function buildAuditCleanupWhere(
   if (dto.mode === 'groups') {
     const groups = dto.groups ?? [];
     if (groups.length === 0) {
-      throw new BadRequestException('mode=groups requires at least one group');
+      throw AppErrors.badRequest(
+        AppErrorMessages.AUDIT_CLEANUP_MODE_GROUPS_EMPTY,
+      );
     }
     const actions = new Set<string>();
     for (const g of groups) {
@@ -86,13 +92,15 @@ export function buildAuditCleanupWhere(
           g as (typeof AUDIT_CLEANUP_GROUP_KEYS)[number],
         )
       ) {
-        throw new BadRequestException(`Unknown group: ${g}`);
+        throw AppErrors.badRequest(AppErrorTemplates.unknownAuditGroup(g));
       }
       const list = AUDIT_CLEANUP_GROUP_ACTIONS[g];
       if (list) list.forEach((a) => actions.add(a));
     }
     if (actions.size === 0) {
-      throw new BadRequestException('No actions resolved for selected groups');
+      throw AppErrors.badRequest(
+        AppErrorMessages.AUDIT_CLEANUP_NO_ACTIONS_RESOLVED,
+      );
     }
     where.action = { in: [...actions] };
     return where;
@@ -101,8 +109,8 @@ export function buildAuditCleanupWhere(
   if (dto.mode === 'actions') {
     const actions = dto.actions ?? [];
     if (actions.length === 0) {
-      throw new BadRequestException(
-        'mode=actions requires a non-empty actions array',
+      throw AppErrors.badRequest(
+        AppErrorMessages.AUDIT_CLEANUP_MODE_ACTIONS_EMPTY,
       );
     }
     validateCleanupActions(actions);
@@ -110,14 +118,12 @@ export function buildAuditCleanupWhere(
     return where;
   }
 
-  throw new BadRequestException('Invalid cleanup mode');
+  throw AppErrors.badRequest(AppErrorMessages.AUDIT_CLEANUP_INVALID_MODE);
 }
 
 export function assertCleanupSafety(dto: AuditCleanupDto): void {
   if (dto.dryRun) return;
   if (dto.olderThan) return;
   if (dto.confirmDeleteWithoutDate === true) return;
-  throw new BadRequestException(
-    'Either pass olderThan (recommended), set dryRun=true, or confirmDeleteWithoutDate=true to delete without a date cutoff.',
-  );
+  throw AppErrors.badRequest(AppErrorMessages.AUDIT_CLEANUP_SAFETY_CONFIRM);
 }

@@ -1,10 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import {
   FINAL_LEAD_STATUSES,
   LeadStatus,
@@ -63,7 +62,7 @@ export class LeadsActionsService {
   ) {
     const masterId = authUser.masterProfile?.id;
     if (!masterId && authUser.role !== UserRole.ADMIN) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     const leadId = decodeId(idOrEncoded) ?? idOrEncoded;
@@ -73,11 +72,11 @@ export class LeadsActionsService {
     });
 
     if (!lead) {
-      throw new NotFoundException('Lead not found');
+      throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
     }
 
     if (authUser.role !== UserRole.ADMIN && lead.masterId !== masterId) {
-      throw new ForbiddenException('You can only update your own leads');
+      throw AppErrors.forbidden(AppErrorMessages.LEAD_UPDATE_OWN_ONLY);
     }
 
     const oldStatus = lead.status;
@@ -88,12 +87,16 @@ export class LeadsActionsService {
       const allowedTransitions = VALID_LEAD_STATUS_TRANSITIONS[oldStatus] ?? [];
       if (!allowedTransitions.includes(newStatus)) {
         if (FINAL_LEAD_STATUSES.includes(oldStatus)) {
-          throw new BadRequestException(
-            `Lead is already in a final state (${oldStatus}) and cannot be changed.`,
+          throw AppErrors.badRequest(
+            AppErrorTemplates.leadFinalState(oldStatus),
           );
         }
-        throw new BadRequestException(
-          `Invalid status transition from ${oldStatus} to ${newStatus}. Allowed: ${allowedTransitions.join(', ')}`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.leadStatusTransition(
+            oldStatus,
+            newStatus,
+            allowedTransitions,
+          ),
         );
       }
     }

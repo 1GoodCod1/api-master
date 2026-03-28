@@ -1,9 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  ConflictException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import * as argon2 from 'argon2';
 import {
   Prisma,
@@ -226,30 +226,22 @@ export class RegistrationService {
     const { role = UserRole.CLIENT, city, category, firstName, lastName } = dto;
 
     if (role !== UserRole.MASTER && role !== UserRole.CLIENT) {
-      throw new BadRequestException(
-        'Only MASTER or CLIENT registration is allowed',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REG_ROLE_MASTER_OR_CLIENT);
     }
 
     if (
       role === UserRole.MASTER &&
       (!city || !category || !firstName || !lastName)
     ) {
-      throw new BadRequestException(
-        'For MASTER registration: city, category, firstName, and lastName are required',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REG_MASTER_FIELDS_REQUIRED);
     }
 
     if (!dto.acceptedAge) {
-      throw new BadRequestException(
-        'You must confirm that you are at least 18 years old',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REG_AGE_CONFIRM);
     }
 
     if (!dto.acceptedLegal) {
-      throw new BadRequestException(
-        'You must accept the Privacy Policy and Terms of Service',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REG_LEGAL_ACCEPT);
     }
   }
 
@@ -259,9 +251,7 @@ export class RegistrationService {
     });
 
     if (existingUser) {
-      throw new ConflictException(
-        'User with this email or phone already exists',
-      );
+      throw AppErrors.conflict(AppErrorMessages.REG_USER_EXISTS);
     }
   }
 
@@ -275,10 +265,12 @@ export class RegistrationService {
     ]);
 
     if (!foundCity)
-      throw new BadRequestException(`City "${citySlugOrName}" not found.`);
+      throw AppErrors.badRequest(
+        AppErrorTemplates.cityNotFound(citySlugOrName),
+      );
     if (!foundCategory)
-      throw new BadRequestException(
-        `Category "${categorySlugOrName}" not found.`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.categoryNotFound(categorySlugOrName),
       );
 
     return { cityId: foundCity.id, categoryId: foundCategory.id };

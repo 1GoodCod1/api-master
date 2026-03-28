@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { TariffType } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
@@ -16,6 +16,7 @@ import {
   isPremiumTariff,
   isVipOrPremiumTariff,
 } from '../shared/constants/tariff.constants';
+import { AppErrors, AppErrorMessages } from '../../common/errors';
 
 @Injectable()
 export class AnalyticsService {
@@ -35,12 +36,12 @@ export class AnalyticsService {
     requestedDays: number = 7,
   ): Promise<MasterAnalyticsResponse> {
     if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
-      throw new ForbiddenException('You can only view your own analytics');
+      throw AppErrors.forbidden(AppErrorMessages.ANALYTICS_OWN_ONLY);
     }
 
     const master = await this.getMasterTariff(masterId);
     if (!master) {
-      throw new Error('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     let days = requestedDays;
@@ -65,12 +66,12 @@ export class AnalyticsService {
   ): Promise<MasterAnalyticsResponse | AdvancedAnalyticsResponse> {
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new Error('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     const master = await this.getMasterTariff(masterId);
     if (!master) {
-      throw new Error('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     const isActive = this.isTariffActive(
@@ -97,7 +98,7 @@ export class AnalyticsService {
   ): Promise<AdvancedAnalyticsResponse> {
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new Error('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     const days = Math.min(requestedDays, 30);

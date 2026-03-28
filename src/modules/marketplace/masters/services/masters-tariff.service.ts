@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Payment, Prisma, UserRole } from '@prisma/client';
 import {
   PaymentStatus,
@@ -68,7 +64,7 @@ export class MastersTariffService {
       });
 
       if (!master) {
-        throw new NotFoundException('Master not found');
+        throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       }
 
       const isExpired =
@@ -184,7 +180,7 @@ export class MastersTariffService {
       });
 
       if (!master) {
-        throw new NotFoundException('Master not found');
+        throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       }
 
       const now = new Date();
@@ -236,15 +232,13 @@ export class MastersTariffService {
       where: { id: userId },
       include: { masterProfile: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     if (user.role !== UserRole.MASTER)
-      throw new BadRequestException('Only masters can claim a free plan');
+      throw AppErrors.badRequest(AppErrorMessages.TARIFF_CLAIM_ONLY_MASTER);
     if (!user.isVerified)
-      throw new BadRequestException(
-        'Verification required. Complete verification to claim a free plan.',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.TARIFF_CLAIM_VERIFICATION);
     if (!user.masterProfile)
-      throw new NotFoundException('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const result = await this.updateTariff(
       user.masterProfile.id,

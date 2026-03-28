@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -80,21 +81,27 @@ export class TokenService {
       });
 
       if (!tokenRecord) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw AppErrors.unauthorized(
+          AppErrorMessages.AUTH_INVALID_REFRESH_TOKEN,
+        );
       }
 
       if (tokenRecord.expiresAt < new Date()) {
         await this.prisma.refreshToken.delete({
           where: { id: tokenRecord.id },
         });
-        throw new UnauthorizedException('Refresh token expired');
+        throw AppErrors.unauthorized(
+          AppErrorMessages.AUTH_REFRESH_TOKEN_EXPIRED,
+        );
       }
 
       if (!tokenRecord.user || tokenRecord.user.isBanned) {
         await this.prisma.refreshToken.delete({
           where: { id: tokenRecord.id },
         });
-        throw new UnauthorizedException('User not found or banned');
+        throw AppErrors.unauthorized(
+          AppErrorMessages.AUTH_USER_NOT_FOUND_OR_BANNED,
+        );
       }
 
       const newAccessToken = this.generateAccessToken(tokenRecord.user);

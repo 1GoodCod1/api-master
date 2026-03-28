@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -125,7 +126,7 @@ export class ExportAnalyticsService {
     });
 
     if (!master) {
-      throw new BadRequestException('Master not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const [leadsStats, reviewsStats, bookingsStats, analytics] =

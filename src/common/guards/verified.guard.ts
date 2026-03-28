@@ -1,9 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  ForbiddenException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { Reflector } from '@nestjs/core';
 import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -25,13 +21,13 @@ export class VerifiedGuard implements CanActivate {
     const user = req.user;
 
     if (!user) {
-      throw new ForbiddenException('User not authenticated');
+      throw AppErrors.forbidden(AppErrorMessages.GUARD_USER_NOT_AUTHENTICATED);
     }
 
     if (user.role === UserRole.ADMIN) return true;
 
     if (!user.isVerified) {
-      throw new ForbiddenException('Account verification required');
+      throw AppErrors.forbidden(AppErrorMessages.GUARD_VERIFICATION_REQUIRED);
     }
 
     return true;

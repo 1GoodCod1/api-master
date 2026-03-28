@@ -5,6 +5,11 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { ACTIVE_LEAD_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -64,31 +69,25 @@ export class LeadsValidationService {
       });
 
       if (!master) {
-        throw new NotFoundException('Master not found');
+        throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       }
 
       if (!(master.user as { isVerified?: boolean })?.isVerified) {
-        throw new ForbiddenException(
-          'This master has not verified their profile yet. Leads are not accepted until verification.',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.LEAD_MASTER_NOT_VERIFIED);
       }
 
       if (authUser?.id && master.userId === authUser.id) {
-        throw new BadRequestException('You cannot send a lead to yourself');
+        throw AppErrors.badRequest(AppErrorMessages.LEAD_CANNOT_SEND_TO_SELF);
       }
 
       // Ролевая проверка — только авторизованные клиенты
       if (authUser?.role !== UserRole.CLIENT) {
-        throw new ForbiddenException(
-          'Only authorized clients can create leads. Please register or log in.',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.LEAD_ONLY_CLIENTS);
       }
 
       // Проверка верификации телефона
       if (authUser?.role === UserRole.CLIENT && !authUser.phoneVerified) {
-        throw new ForbiddenException(
-          'Phone verification required to create leads. Please verify your phone number first.',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.LEAD_PHONE_VERIFY_CREATE);
       }
 
       // Проверка статуса доступности мастера
@@ -96,15 +95,13 @@ export class LeadsValidationService {
         master.availabilityStatus === 'BUSY' ||
         master.availabilityStatus === 'OFFLINE'
       ) {
-        throw new BadRequestException(
-          'Master is currently unavailable and cannot accept new leads. Please try again later or subscribe to notifications.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.LEAD_MASTER_UNAVAILABLE);
       }
 
       // Проверка лимита активных лидов
       if (master.currentActiveLeads >= master.maxActiveLeads) {
-        throw new BadRequestException(
-          `Master has reached the maximum number of active leads (${master.maxActiveLeads}). Please wait or subscribe to get notified when available.`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.leadMaxActive(master.maxActiveLeads),
         );
       }
 
@@ -116,8 +113,8 @@ export class LeadsValidationService {
         master.maxLeadsPerDay !== null &&
         master.leadsReceivedToday >= master.maxLeadsPerDay
       ) {
-        throw new BadRequestException(
-          `Master has reached the daily limit of ${master.maxLeadsPerDay} leads. Please try again tomorrow.`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.leadDailyLimit(master.maxLeadsPerDay),
         );
       }
 
@@ -132,8 +129,8 @@ export class LeadsValidationService {
           },
         });
         if (existingOpenLead) {
-          throw new BadRequestException(
-            'You already have an active lead to this master. Wait until it is completed before sending another.',
+          throw AppErrors.badRequest(
+            AppErrorMessages.LEAD_ACTIVE_DUPLICATE_TO_MASTER,
           );
         }
       }
@@ -141,14 +138,14 @@ export class LeadsValidationService {
       // Валидация файлов
       if (fileIds?.length) {
         if (fileIds.length > 10) {
-          throw new BadRequestException('Maximum 10 files allowed');
+          throw AppErrors.badRequest(AppErrorMessages.FILES_MAX_10);
         }
 
         const files = await this.prisma.file.findMany({
           where: { id: { in: fileIds } },
         });
         if (files.length !== fileIds.length) {
-          throw new BadRequestException('Some files were not found');
+          throw AppErrors.badRequest(AppErrorMessages.FILES_SOME_NOT_FOUND);
         }
 
         // IDOR: проверка принадлежности файлов
@@ -157,9 +154,7 @@ export class LeadsValidationService {
           (f) => f.uploadedById !== allowedUploadedById,
         );
         if (notOwned) {
-          throw new BadRequestException(
-            'Some files do not belong to you and cannot be attached to the lead',
-          );
+          throw AppErrors.badRequest(AppErrorMessages.LEAD_FILES_NOT_OWNED);
         }
       }
 

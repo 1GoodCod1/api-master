@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
@@ -135,7 +132,7 @@ export class ComplianceService {
       this.logger.error(`Failed to build ${prefix} PDF`, err);
       doc.end();
       if (!res.headersSent) {
-        throw new InternalServerErrorException('PDF generation failed');
+        throw AppErrors.internal(AppErrorMessages.PDF_GENERATION_FAILED);
       }
     }
   }

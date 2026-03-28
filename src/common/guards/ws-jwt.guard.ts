@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { WsException } from '@nestjs/websockets';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
@@ -22,7 +22,7 @@ export class WsJwtGuard implements CanActivate {
       const token = this.extractTokenFromSocket(client);
 
       if (!token) {
-        throw new WsException('Unauthorized');
+        throw AppErrors.ws(AppErrorMessages.WS_UNAUTHORIZED);
       }
 
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
@@ -35,7 +35,7 @@ export class WsJwtGuard implements CanActivate {
 
       return true;
     } catch {
-      throw new WsException('Unauthorized');
+      throw AppErrors.ws(AppErrorMessages.WS_UNAUTHORIZED);
     }
   }
 

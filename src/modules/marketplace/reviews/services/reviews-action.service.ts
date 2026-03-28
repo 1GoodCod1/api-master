@@ -1,10 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -45,29 +44,25 @@ export class ReviewsActionService {
 
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
     if (!user?.phone) {
-      throw new BadRequestException(
-        'User or phone not found. Please complete your profile.',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_USER_PHONE_MISSING);
     }
 
     if (authUser?.role === UserRole.CLIENT && !authUser.phoneVerified) {
-      throw new ForbiddenException(
-        'Phone verification is required to write reviews.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.REVIEW_PHONE_REQUIRED);
     }
 
     const master = await this.prisma.master.findUnique({
       where: { id: masterId },
       include: { user: { select: { phone: true } } },
     });
-    if (!master) throw new NotFoundException('Master not found');
+    if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
 
     // Проверка на дубликат (один отзыв на мастера от клиента)
     const existingReview = await this.prisma.review.findFirst({
       where: { masterId, clientId },
     });
     if (existingReview) {
-      throw new BadRequestException('You have already reviewed this master');
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_ALREADY_MASTER);
     }
 
     // Валидация leadId: лид принадлежит клиенту, имеет правильный статус, нет дубликата
@@ -84,7 +79,7 @@ export class ReviewsActionService {
     });
 
     if (!lead) {
-      throw new BadRequestException('Lead not found.');
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_LEAD_NOT_FOUND);
     }
     const phoneMatches =
       Boolean(user.phone?.trim() && lead.clientPhone?.trim()) &&
@@ -92,15 +87,13 @@ export class ReviewsActionService {
     const isLeadOwner =
       lead.clientId === clientId || (lead.clientId == null && phoneMatches);
     if (!isLeadOwner) {
-      throw new ForbiddenException('This lead belongs to another client.');
+      throw AppErrors.forbidden(AppErrorMessages.REVIEW_LEAD_OTHER_CLIENT);
     }
     if (lead.masterId !== masterId) {
-      throw new BadRequestException('Lead belongs to another master.');
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_LEAD_OTHER_MASTER);
     }
     if (lead.status !== LeadStatus.CLOSED) {
-      throw new BadRequestException(
-        'You can leave a review only after the order is completed (status CLOSED).',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_LEAD_CLOSED_ONLY);
     }
 
     // Проверка: отзыв на этот лид уже написан
@@ -108,7 +101,7 @@ export class ReviewsActionService {
       where: { leadId },
     });
     if (reviewForLead) {
-      throw new BadRequestException('A review for this lead already exists.');
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_LEAD_DUPLICATE);
     }
 
     // Валидация критериев
@@ -224,7 +217,7 @@ export class ReviewsActionService {
    */
   async updateStatus(id: string, status: ReviewStatus, moderatedBy?: string) {
     const review = await this.prisma.review.findUnique({ where: { id } });
-    if (!review) throw new NotFoundException('Review not found');
+    if (!review) throw AppErrors.notFound(AppErrorMessages.REVIEW_NOT_FOUND);
 
     const updatedReview = await this.prisma.review.update({
       where: { id },
@@ -314,11 +307,13 @@ export class ReviewsActionService {
     const validCriteria = ['quality', 'speed', 'price', 'politeness'];
     for (const crit of criteria) {
       if (!validCriteria.includes(crit.criteria)) {
-        throw new BadRequestException(`Invalid criterion: ${crit.criteria}`);
+        throw AppErrors.badRequest(
+          AppErrorTemplates.invalidCriterion(crit.criteria),
+        );
       }
       if (crit.rating < 1 || crit.rating > 5) {
-        throw new BadRequestException(
-          `Criterion ${crit.criteria} rating must be between 1 and 5`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.criterionRatingRange(crit.criteria),
         );
       }
     }
@@ -336,9 +331,9 @@ export class ReviewsActionService {
       where: { id: reviewId },
       select: { id: true, masterId: true, clientId: true },
     });
-    if (!review) throw new NotFoundException('Review not found');
+    if (!review) throw AppErrors.notFound(AppErrorMessages.REVIEW_NOT_FOUND);
     if (review.masterId !== masterId) {
-      throw new ForbiddenException('You cannot reply to this review');
+      throw AppErrors.forbidden(AppErrorMessages.REVIEW_CANNOT_REPLY);
     }
 
     // Проверка, существует ли уже ответ
@@ -371,9 +366,9 @@ export class ReviewsActionService {
       where: { reviewId },
       include: { review: { select: { clientId: true } } },
     });
-    if (!reply) throw new NotFoundException('Reply not found');
+    if (!reply) throw AppErrors.notFound(AppErrorMessages.REPLY_NOT_FOUND);
     if (reply.masterId !== masterId) {
-      throw new ForbiddenException('Access denied');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
     }
 
     await this.prisma.reviewReply.delete({ where: { reviewId } });
@@ -393,13 +388,13 @@ export class ReviewsActionService {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
     });
-    if (!review) throw new NotFoundException('Review not found');
+    if (!review) throw AppErrors.notFound(AppErrorMessages.REVIEW_NOT_FOUND);
 
     const existingVote = await this.prisma.reviewVote.findUnique({
       where: { reviewId_userId: { reviewId, userId } },
     });
     if (existingVote) {
-      throw new BadRequestException('You have already voted on this review');
+      throw AppErrors.badRequest(AppErrorMessages.REVIEW_ALREADY_VOTED);
     }
 
     const vote = await this.prisma.reviewVote.create({
@@ -419,7 +414,7 @@ export class ReviewsActionService {
     const vote = await this.prisma.reviewVote.findUnique({
       where: { reviewId_userId: { reviewId, userId } },
     });
-    if (!vote) throw new NotFoundException('Vote not found');
+    if (!vote) throw AppErrors.notFound(AppErrorMessages.VOTE_NOT_FOUND);
 
     await this.prisma.reviewVote.delete({
       where: { reviewId_userId: { reviewId, userId } },

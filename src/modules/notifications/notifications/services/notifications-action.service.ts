@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { NotificationType, NotificationStatus } from '@prisma/client';
 
@@ -32,7 +33,7 @@ export class NotificationsActionService {
     });
 
     if (!notification) {
-      throw new NotFoundException('Notification not found');
+      throw AppErrors.notFound(AppErrorMessages.NOTIFICATION_NOT_FOUND);
     }
 
     if (notification.readAt) {
@@ -107,7 +108,7 @@ export class NotificationsActionService {
     });
 
     if (!notification) {
-      throw new NotFoundException('Notification not found');
+      throw AppErrors.notFound(AppErrorMessages.NOTIFICATION_NOT_FOUND);
     }
 
     await this.prisma.notification.delete({

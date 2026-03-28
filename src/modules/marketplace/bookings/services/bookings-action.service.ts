@@ -1,11 +1,11 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { BookingStatus } from '../../../../common/constants';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingStatusDto } from '../dto/update-booking-status.dto';
@@ -52,7 +52,7 @@ export class BookingsActionService {
     });
 
     if (!master) {
-      throw new NotFoundException('Master not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const resolved = await this.validation.resolveClientData(
@@ -151,13 +151,13 @@ export class BookingsActionService {
       },
     });
 
-    if (!booking) throw new NotFoundException('Booking not found');
+    if (!booking) throw AppErrors.notFound(AppErrorMessages.BOOKING_NOT_FOUND);
     if (booking.clientId !== clientUserId) {
-      throw new BadRequestException('You can only confirm your own bookings');
+      throw AppErrors.badRequest(AppErrorMessages.BOOKING_CONFIRM_OWN_ONLY);
     }
     if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException(
-        `Cannot confirm booking with status ${booking.status}. Only PENDING bookings can be confirmed.`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.confirmBookingWrongStatus(booking.status),
       );
     }
 
@@ -218,13 +218,13 @@ export class BookingsActionService {
       },
     });
 
-    if (!booking) throw new NotFoundException('Booking not found');
+    if (!booking) throw AppErrors.notFound(AppErrorMessages.BOOKING_NOT_FOUND);
     if (booking.clientId !== clientUserId) {
-      throw new BadRequestException('You can only reject your own bookings');
+      throw AppErrors.badRequest(AppErrorMessages.BOOKING_REJECT_OWN_ONLY);
     }
     if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException(
-        `Cannot reject booking with status ${booking.status}. Only PENDING bookings can be rejected.`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.rejectBookingWrongStatus(booking.status),
       );
     }
 
@@ -276,11 +276,11 @@ export class BookingsActionService {
     });
 
     if (!booking) {
-      throw new NotFoundException('Booking not found');
+      throw AppErrors.notFound(AppErrorMessages.BOOKING_NOT_FOUND);
     }
 
     if (booking.masterId !== masterId) {
-      throw new BadRequestException('You can only update your own bookings');
+      throw AppErrors.badRequest(AppErrorMessages.BOOKING_UPDATE_OWN_ONLY);
     }
 
     const currentStatus = booking.status;
@@ -288,8 +288,12 @@ export class BookingsActionService {
     const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus] ?? [];
 
     if (!allowedTransitions.includes(newStatus)) {
-      throw new BadRequestException(
-        `Cannot transition booking from ${currentStatus} to ${newStatus}. Allowed: ${allowedTransitions.join(', ') || 'none (final status)'}`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.bookingStatusTransition(
+          currentStatus,
+          newStatus,
+          allowedTransitions,
+        ),
       );
     }
 

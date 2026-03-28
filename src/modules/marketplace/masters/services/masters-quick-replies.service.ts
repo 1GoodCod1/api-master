@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 import type { UpdateQuickRepliesDto } from '../dto/update-quick-replies.dto';
@@ -18,7 +19,8 @@ export class MastersQuickRepliesService {
       where: { userId },
       select: { id: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const items = await this.prisma.quickReply.findMany({
       where: { masterId: master.id },
@@ -38,7 +40,8 @@ export class MastersQuickRepliesService {
       where: { userId },
       select: { id: true, slug: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const itemsWithOrder = dto.items.map((it, index) => ({
       text: it.text,
@@ -79,7 +82,8 @@ export class MastersQuickRepliesService {
         workEndHour: true,
       },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return master;
   }
 
@@ -92,7 +96,8 @@ export class MastersQuickRepliesService {
       where: { userId },
       select: { id: true, slug: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const data: {
       autoresponderEnabled?: boolean;

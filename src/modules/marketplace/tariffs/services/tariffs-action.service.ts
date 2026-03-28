@@ -1,8 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { CreateTariffDto } from '../dto/create-tariff.dto';
@@ -30,9 +31,7 @@ export class TariffsActionService {
       where: { type: dto.type },
     });
     if (existing) {
-      throw new BadRequestException(
-        `Tariff with type ${dto.type} already exists`,
-      );
+      throw AppErrors.badRequest(AppErrorTemplates.tariffTypeExists(dto.type));
     }
 
     const tariff = await this.prisma.tariff.create({
@@ -72,15 +71,15 @@ export class TariffsActionService {
    */
   async update(id: string, dto: UpdateTariffDto, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Tariff not found');
+    if (!tariff) throw AppErrors.notFound(AppErrorMessages.TARIFF_NOT_FOUND);
 
     if (dto.type && dto.type !== tariff.type) {
       const existing = await this.prisma.tariff.findUnique({
         where: { type: dto.type },
       });
       if (existing)
-        throw new BadRequestException(
-          `Tariff with type ${dto.type} already exists`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.tariffTypeExists(dto.type),
         );
     }
 
@@ -121,7 +120,7 @@ export class TariffsActionService {
    */
   async remove(id: string, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Tariff not found');
+    if (!tariff) throw AppErrors.notFound(AppErrorMessages.TARIFF_NOT_FOUND);
 
     const deleted = await this.prisma.tariff.delete({ where: { id } });
 

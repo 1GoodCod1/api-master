@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import * as argon2 from 'argon2';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -15,11 +16,8 @@ import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 import {
-  AUTH_LOGIN_ACCOUNT_BANNED,
   AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
   AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
-  AUTH_LOGIN_INVALID_CREDENTIALS,
-  AUTH_LOGIN_IP_ACCESS_DENIED,
 } from '../auth-login.messages';
 
 @Injectable()
@@ -82,7 +80,9 @@ export class LoginService {
         } else if (ipAddress) {
           await this.lockout.recordFailed(undefined, ipAddress);
         }
-        throw new UnauthorizedException(AUTH_LOGIN_INVALID_CREDENTIALS);
+        throw AppErrors.unauthorized(
+          AppErrorMessages.AUTH_LOGIN_INVALID_CREDENTIALS,
+        );
       }
 
       // 4. Проверка на блокировку аккаунта
@@ -105,7 +105,9 @@ export class LoginService {
           ipAddress,
           userAgent,
         });
-        throw new UnauthorizedException(AUTH_LOGIN_ACCOUNT_BANNED);
+        throw AppErrors.unauthorized(
+          AppErrorMessages.AUTH_LOGIN_ACCOUNT_BANNED,
+        );
       }
 
       // 4a. Сброс блокировки при успешном входе
@@ -239,7 +241,7 @@ export class LoginService {
     });
 
     if (blacklisted) {
-      throw new ForbiddenException(AUTH_LOGIN_IP_ACCESS_DENIED);
+      throw AppErrors.forbidden(AppErrorMessages.AUTH_LOGIN_IP_ACCESS_DENIED);
     }
   }
 

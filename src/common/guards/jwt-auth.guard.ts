@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 
@@ -32,7 +33,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       // Если JWT токен истек или невалиден, выбрасываем UnauthorizedException
       // Frontend должен обработать 401 и попытаться обновить токен через /auth/refres
-      throw new UnauthorizedException('Invalid or expired token');
+      throw AppErrors.unauthorized(
+        AppErrorMessages.AUTH_INVALID_OR_EXPIRED_TOKEN,
+      );
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- base AuthGuard returns user as any
     return user;

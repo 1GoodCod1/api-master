@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -207,7 +208,7 @@ export class AdminUsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     const updateData: Prisma.UserUpdateInput = {};

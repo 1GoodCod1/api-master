@@ -1,9 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { TariffsService } from '../../marketplace/tariffs/tariffs.service';
@@ -120,7 +120,7 @@ export class PaymentsMiaService {
     const authPath = this.configService.get<string>('mia.authPath');
 
     if (!clientId || !clientSecret || !baseUrl || !authPath) {
-      throw new BadRequestException('MIA payment is not configured');
+      throw AppErrors.badRequest(AppErrorMessages.MIA_NOT_CONFIGURED);
     }
 
     const url = `${baseUrl}${authPath.startsWith('/') ? authPath : `/${authPath}`}`;
@@ -132,7 +132,7 @@ export class PaymentsMiaService {
 
     const data = (await res.json()) as MiaAuthResponse;
     if (!data.ok || !data.result?.accessToken) {
-      throw new BadRequestException('MIA auth failed');
+      throw AppErrors.badRequest(AppErrorMessages.MIA_AUTH_FAILED);
     }
 
     const expiresIn = (data.result.expiresIn ?? 300) * 1000;
@@ -154,11 +154,9 @@ export class PaymentsMiaService {
       include: { user: { select: { isVerified: true } } },
     });
 
-    if (!master) throw new NotFoundException('Master not found');
+    if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     if (!master.user.isVerified) {
-      throw new ForbiddenException(
-        'Account verification required to purchase tariffs.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.MIA_VERIFICATION_REQUIRED);
     }
 
     const currentEffectiveTariff = getEffectiveTariff(master);
@@ -172,12 +170,10 @@ export class PaymentsMiaService {
         new Date(master.tariffExpiresAt).getTime() - Date.now() <=
           2 * 24 * 60 * 60 * 1000;
       if (!canUpgrade)
-        throw new BadRequestException(
-          'Upgrade to PREMIUM available only when VIP expires soon.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_VIP_PREMIUM_WINDOW);
     }
     if (master.pendingUpgradeTo)
-      throw new BadRequestException('Already have a pending upgrade.');
+      throw AppErrors.badRequest(AppErrorMessages.MIA_PENDING_UPGRADE);
 
     const amount = await this.getAmount(tariffType);
     const days = await this.getDays(tariffType);
@@ -244,8 +240,8 @@ export class PaymentsMiaService {
     if (!apiUrl) missing.push('API_URL');
     if (!frontendUrl) missing.push('FRONTEND_URL');
     if (missing.length > 0) {
-      throw new BadRequestException(
-        `MIA or app URL not configured. Set in .env: ${missing.join(', ')}`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.miaUrlMissing(missing.join(', ')),
       );
     }
 
@@ -303,10 +299,8 @@ export class PaymentsMiaService {
         where: { id: payment.id },
         data: { status: PaymentStatus.FAILED },
       });
-      throw new BadRequestException(
-        qrData?.result
-          ? 'MIA QR creation failed'
-          : 'MIA payment is not configured',
+      throw AppErrors.badRequest(
+        AppErrorTemplates.miaQrCreationFailed(!!qrData?.result),
       );
     }
 
@@ -369,27 +363,25 @@ export class PaymentsMiaService {
   async simulateSandboxPayment(paymentId: string, userId: string) {
     const sandbox = this.configService.get<boolean>('mia.sandbox');
     if (!sandbox) {
-      throw new BadRequestException('MIA sandbox simulation is disabled');
+      throw AppErrors.badRequest(AppErrorMessages.MIA_SANDBOX_DISABLED);
     }
 
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
     });
-    if (!payment) throw new NotFoundException('Payment not found');
+    if (!payment) throw AppErrors.notFound(AppErrorMessages.PAYMENT_NOT_FOUND);
     if (payment.userId !== userId) {
-      throw new ForbiddenException('This payment does not belong to you');
+      throw AppErrors.forbidden(AppErrorMessages.PAYMENT_NOT_BELONG_TO_USER);
     }
     if (payment.status !== 'PENDING') {
-      throw new BadRequestException('Payment is not pending');
+      throw AppErrors.badRequest(AppErrorMessages.PAYMENT_NOT_PENDING);
     }
 
     const meta = (payment.metadata as Record<string, unknown> | null) ?? {};
     const provider = meta.provider as string | undefined;
     const qrId = meta.qrId as string | undefined;
     if (provider !== 'MIA') {
-      throw new BadRequestException(
-        'Not a MIA payment. Call create-mia-checkout first.',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.MIA_NOT_MIA_PAYMENT);
     }
 
     // Sandbox без конфига MIA: завершаем платёж локально, без вызова MIA test-pay
@@ -399,7 +391,7 @@ export class PaymentsMiaService {
     }
 
     if (!qrId) {
-      throw new BadRequestException('qrId missing in payment metadata.');
+      throw AppErrors.badRequest(AppErrorMessages.MIA_QR_ID_MISSING);
     }
 
     const baseUrl = this.configService
@@ -433,7 +425,7 @@ export class PaymentsMiaService {
         data.errors?.[0]?.errorMessage ||
         data.result?.qrStatus ||
         'MIA test-pay failed';
-      throw new BadRequestException(msg);
+      throw AppErrors.badRequest(msg);
     }
 
     await this.webhookService.completeMiaTariffPayment(paymentId);

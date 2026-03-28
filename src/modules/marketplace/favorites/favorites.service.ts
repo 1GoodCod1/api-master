@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -57,7 +54,7 @@ export class FavoritesService {
     });
 
     if (!master) {
-      throw new NotFoundException('Master not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     // Проверяем, не добавлен ли уже
@@ -71,7 +68,7 @@ export class FavoritesService {
     });
 
     if (existing) {
-      throw new BadRequestException('Master is already in favorites');
+      throw AppErrors.badRequest(AppErrorMessages.FAVORITE_ALREADY);
     }
 
     // Создаем избранное
@@ -128,7 +125,7 @@ export class FavoritesService {
     });
 
     if (!favorite) {
-      throw new NotFoundException('Favorite entry not found');
+      throw AppErrors.notFound(AppErrorMessages.FAVORITE_NOT_FOUND);
     }
 
     await this.prisma.favorite.delete({

@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorTemplates } from '../../../common/errors';
 import { CacheService } from '../cache/cache.service';
 
 /**
@@ -97,12 +93,14 @@ export abstract class CrudCacheableEntityActionService<
       const name =
         this.config.entityNameSingular.charAt(0).toUpperCase() +
         this.config.entityNameSingular.slice(1);
-      throw new NotFoundException(`${name} with ID "${id}" not found`);
+      throw AppErrors.notFound(
+        AppErrorTemplates.entityWithIdNotFound(name, id),
+      );
     }
 
     if (entity._count.masters > 0) {
-      throw new BadRequestException(
-        `Cannot delete ${this.config.entityNameSingular}: active masters are linked`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.entityDeleteBlocked(this.config.entityNameSingular),
       );
     }
 

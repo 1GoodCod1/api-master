@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
 import type { ChatUser } from '../chat.types';
 
@@ -23,13 +23,13 @@ export function checkConversationAccess(
 
   if (user.role === UserRole.MASTER) {
     if (masterUserId !== user.id) {
-      throw new ForbiddenException('Access denied to this conversation');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_CONVERSATION);
     }
   } else if (user.role === UserRole.CLIENT) {
     if (conversation.clientId !== user.id) {
-      throw new ForbiddenException('Access denied to this conversation');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_CONVERSATION);
     }
   } else {
-    throw new ForbiddenException('Invalid role');
+    throw AppErrors.forbidden(AppErrorMessages.INVALID_ROLE);
   }
 }

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
@@ -50,7 +51,7 @@ export class MastersPhotosService {
         },
       });
 
-      if (!m) throw new NotFoundException('Master not found');
+      if (!m) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
 
       return {
         avatarFileId: m.avatarFileId ?? null,
@@ -66,7 +67,8 @@ export class MastersPhotosService {
   async getMyPhotos(userId: string) {
     try {
       const master = await this.prisma.master.findUnique({ where: { userId } });
-      if (!master) throw new NotFoundException('Master profile not found');
+      if (!master)
+        throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
       const rows = await this.prisma.masterPhoto.findMany({
         where: { masterId: master.id },
@@ -96,7 +98,8 @@ export class MastersPhotosService {
   ) {
     try {
       const master = await this.prisma.master.findUnique({ where: { userId } });
-      if (!master) throw new NotFoundException('Master profile not found');
+      if (!master)
+        throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
       await this.prisma.masterPhoto.deleteMany({
         where: { masterId: master.id, fileId },
@@ -140,18 +143,17 @@ export class MastersPhotosService {
   ) {
     try {
       const master = await this.prisma.master.findUnique({ where: { userId } });
-      if (!master) throw new NotFoundException('Master profile not found');
+      if (!master)
+        throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
       const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-      if (!file) throw new NotFoundException('File not found');
+      if (!file) throw AppErrors.notFound(AppErrorMessages.FILE_NOT_FOUND);
 
       if (file.uploadedById !== userId)
-        throw new BadRequestException(
-          'You can only use your own file as avatar',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.FILE_OWN_AVATAR_ONLY);
 
       if (!String(file.mimetype).startsWith('image/'))
-        throw new BadRequestException('Avatar must be an image');
+        throw AppErrors.badRequest(AppErrorMessages.AVATAR_MUST_BE_IMAGE);
 
       const count = await this.prisma.masterPhoto.count({
         where: { masterId: master.id },
@@ -162,7 +164,7 @@ export class MastersPhotosService {
 
       if (!exists) {
         if (count >= 15)
-          throw new BadRequestException('Gallery limit reached (15)');
+          throw AppErrors.badRequest(AppErrorMessages.GALLERY_LIMIT_15);
         await this.prisma.masterPhoto.create({
           data: { masterId: master.id, fileId, order: 0 },
         });

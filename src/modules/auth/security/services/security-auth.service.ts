@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -84,19 +80,17 @@ export class SecurityAuthService {
     newPassword: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new BadRequestException('User not found');
+    if (!user) throw AppErrors.badRequest(AppErrorMessages.USER_NOT_FOUND);
     if (!user.password)
-      throw new BadRequestException('No password set for this account');
+      throw AppErrors.badRequest(AppErrorMessages.PASSWORD_NO_SET);
 
     const isPasswordValid = await argon2.verify(user.password, currentPassword);
     if (!isPasswordValid)
-      throw new UnauthorizedException('Current password is incorrect');
+      throw AppErrors.unauthorized(AppErrorMessages.PASSWORD_CURRENT_WRONG);
 
     const isSamePassword = await argon2.verify(user.password, newPassword);
     if (isSamePassword)
-      throw new BadRequestException(
-        'New password must differ from the current password',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.PASSWORD_SAME_AS_OLD);
 
     const hashedPassword = await argon2.hash(newPassword);
 

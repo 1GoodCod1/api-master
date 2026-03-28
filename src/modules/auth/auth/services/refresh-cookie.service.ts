@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 
@@ -20,8 +21,8 @@ export class RefreshCookieService {
   getTokenOrThrow(req: Request, bodyToken?: string): string {
     const token = this.getToken(req, bodyToken);
     if (!token) {
-      throw new UnauthorizedException(
-        'Refresh token required (cookie or body)',
+      throw AppErrors.unauthorized(
+        AppErrorMessages.AUTH_REFRESH_TOKEN_REQUIRED,
       );
     }
     return token;

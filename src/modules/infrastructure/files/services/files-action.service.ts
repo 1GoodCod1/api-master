@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { TariffType } from '../../../../common/constants';
 import { extname } from 'path';
@@ -136,16 +141,12 @@ export class FilesActionService {
       'image/webp',
     ]);
     if (!allowedMime.has(m)) {
-      throw new BadRequestException(
-        'Lead attachments must be images only (JPG, PNG, GIF, WebP)',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.LEAD_ATTACHMENTS_IMAGES_ONLY);
     }
     const ext = extname(file.originalname).slice(1).toLowerCase();
     const allowedExt = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
     if (!allowedExt.has(ext)) {
-      throw new BadRequestException(
-        'Use file extensions .jpg, .png, .gif, or .webp for lead photos',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.LEAD_PHOTO_EXTENSIONS);
     }
   }
 
@@ -195,8 +196,8 @@ export class FilesActionService {
       where: { masterId: master.id },
     });
     if (count >= totalLimit) {
-      throw new BadRequestException(
-        `Photo limit reached for your plan (${count}/${totalLimit}). Upgrade your plan or buy extra photos to add more.`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.photoLimitForPlan(count, totalLimit),
       );
     }
 

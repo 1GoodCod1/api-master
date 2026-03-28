@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { RecaptchaService } from '../../../shared/utils/recaptcha.service';
 import { CreateLeadDto } from '../dto/create-lead.dto';
@@ -30,9 +31,7 @@ export class LeadsSpamService {
       const recentLeadKey = `lead:${clientPhone}:${masterId}`;
       const recentLead = await redis.get(recentLeadKey);
       if (recentLead) {
-        throw new BadRequestException(
-          'You have already sent a lead to this master recently. Please wait 5 minutes.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.SPAM_LEAD_RECENT);
       }
 
       // Лимит по номеру телефона: 5 лидов в час
@@ -40,9 +39,7 @@ export class LeadsSpamService {
       const leadCount = await redis.incr(rateLimitKey);
       if (leadCount === 1) await redis.expire(rateLimitKey, 3600);
       if (leadCount > 5) {
-        throw new BadRequestException(
-          'Too many leads from this phone number. Maximum 5 leads per hour.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.SPAM_LEAD_PHONE_HOURLY);
       }
 
       // Лимит по IP: 10 лидов в час
@@ -51,9 +48,7 @@ export class LeadsSpamService {
         const ipLeadCount = await redis.incr(ipRateLimitKey);
         if (ipLeadCount === 1) await redis.expire(ipRateLimitKey, 3600);
         if (ipLeadCount > 10) {
-          throw new BadRequestException(
-            'Too many leads from this IP address. Please try again later.',
-          );
+          throw AppErrors.badRequest(AppErrorMessages.SPAM_LEAD_IP);
         }
       }
 

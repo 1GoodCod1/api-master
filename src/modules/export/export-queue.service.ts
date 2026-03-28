@@ -1,9 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../common/errors';
 import { UserRole } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
@@ -100,8 +100,8 @@ export class ExportQueueService {
 
   validateExportType(type: string): ExportJobType {
     if (!VALID_EXPORT_TYPES.includes(type as ExportJobType)) {
-      throw new BadRequestException(
-        `Invalid export type. Use: ${VALID_EXPORT_TYPES.join(', ')}`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.exportInvalidType(VALID_EXPORT_TYPES.join(', ')),
       );
     }
     return type as ExportJobType;
@@ -110,7 +110,7 @@ export class ExportQueueService {
   async getJobStatus(jobId: string): Promise<ExportJobStatusDto> {
     const job = await this.exportQueue.getJob(jobId);
     if (!job) {
-      throw new NotFoundException('Job not found or expired');
+      throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND_OR_EXPIRED);
     }
 
     const state = await job.getState();
@@ -134,17 +134,17 @@ export class ExportQueueService {
   ): Promise<ExportJobResult> {
     const job = await this.exportQueue.getJob(jobId);
     if (!job) {
-      throw new NotFoundException('Job not found or expired');
+      throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND_OR_EXPIRED);
     }
 
     if (job.data.userId !== userId && userRole !== UserRole.ADMIN) {
-      throw new NotFoundException('Job not found');
+      throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
     }
 
     const state = await job.getState();
     if (state !== 'completed' || !job.returnvalue) {
-      throw new BadRequestException(
-        `Export not ready yet. Status: ${this.mapBullState(state)}`,
+      throw AppErrors.badRequest(
+        AppErrorTemplates.exportNotReady(this.mapBullState(state)),
       );
     }
 

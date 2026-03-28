@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
+import { AppErrors } from '../../../../common/errors';
 
 /**
  * Централизованный обработчик ошибок для WebSocket модуля
@@ -23,7 +24,7 @@ export class WebsocketErrorHandlerService {
     );
 
     // Возвращаем безопасное сообщение для клиента (без внутренних деталей)
-    return new WsException(this.getSafeErrorMessage(error));
+    return AppErrors.ws(this.getSafeErrorMessage(error));
   }
 
   /**

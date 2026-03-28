@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { TariffType } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
@@ -27,18 +28,16 @@ export class ExportAccessService {
       });
 
       if (!master) {
-        throw new BadRequestException('Master not found');
+        throw AppErrors.badRequest(AppErrorMessages.MASTER_NOT_FOUND);
       }
 
       if (user.role !== UserRole.ADMIN && master.userId !== user.id) {
-        throw new ForbiddenException('You can only export your own data');
+        throw AppErrors.forbidden(AppErrorMessages.EXPORT_OWN_DATA_ONLY);
       }
 
       const effectiveTariff = getEffectiveTariff(master);
       if (effectiveTariff !== TariffType.PREMIUM) {
-        throw new ForbiddenException(
-          'Export is only available for PREMIUM tariff',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.EXPORT_PREMIUM_ONLY);
       }
     } catch (err) {
       if (

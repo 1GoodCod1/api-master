@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
 import {
   ReviewStatus,
@@ -202,7 +203,7 @@ export class AdminMastersService {
     });
 
     if (!master) {
-      throw new NotFoundException('Master not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const updateData: Prisma.MasterUpdateInput = {};

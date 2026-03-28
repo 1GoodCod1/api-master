@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { Prisma } from '@prisma/client';
 import { TariffType } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -33,9 +34,9 @@ export class PaymentsUpgradeService {
         where: { userId },
       });
 
-      if (!master) throw new NotFoundException('Master not found');
+      if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       if (!master.pendingUpgradeTo || !master.pendingUpgradeCreatedAt) {
-        throw new BadRequestException('No pending upgrade found');
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NONE_PENDING);
       }
 
       // Лимит - 12 часов на подтверждение
@@ -44,16 +45,12 @@ export class PaymentsUpgradeService {
         (1000 * 60 * 60);
       if (hoursSinceCreation > 12) {
         await this.resetPendingUpgrade(master.id);
-        throw new BadRequestException(
-          'Pending upgrade has expired. Please try again.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_EXPIRED);
       }
 
       if (getEffectiveTariff(master) !== TariffType.VIP) {
         await this.resetPendingUpgrade(master.id);
-        throw new BadRequestException(
-          'Current tariff is not VIP. Cannot upgrade to PREMIUM.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NOT_VIP);
       }
 
       // Создаём сессию оплаты через MIA для PREMIUM
@@ -96,9 +93,9 @@ export class PaymentsUpgradeService {
   async cancelPendingUpgrade(userId: string) {
     try {
       const master = await this.prisma.master.findUnique({ where: { userId } });
-      if (!master) throw new NotFoundException('Master not found');
+      if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       if (!master.pendingUpgradeTo)
-        throw new BadRequestException('No pending upgrade found');
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NONE_PENDING);
 
       await this.resetPendingUpgrade(master.id);
 
@@ -136,12 +133,12 @@ export class PaymentsUpgradeService {
           tariffExpiresAt: true,
         },
       });
-      if (!master) throw new NotFoundException('Master not found');
+      if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
       if (master.tariffType === TariffType.BASIC || !master.tariffExpiresAt) {
-        throw new BadRequestException('No active paid tariff to cancel.');
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NO_PAID_TO_CANCEL);
       }
       if (master.tariffExpiresAt.getTime() <= Date.now()) {
-        throw new BadRequestException('Tariff already expired.');
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_TARIFF_EXPIRED);
       }
 
       await this.prisma.master.update({

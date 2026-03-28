@@ -1,9 +1,9 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import type { UpdateMasterDto } from '../dto/update-master.dto';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { Prisma } from '@prisma/client';
@@ -171,7 +171,7 @@ export class MastersProfileService {
     });
 
     if (!master) {
-      throw new NotFoundException('Master not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     // Доля ответов: % лидов, на которые мастер отреагировал (IN_PROGRESS или CLOSED к NEW)
@@ -255,7 +255,7 @@ export class MastersProfileService {
     });
 
     if (!master) {
-      throw new NotFoundException('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     return master;
@@ -273,8 +273,8 @@ export class MastersProfileService {
       updateDto.services !== undefined &&
       Array.isArray(updateDto.services)
     ) {
-      throw new ForbiddenException(
-        'Account verification required to add or update services. Please complete verification first.',
+      throw AppErrors.forbidden(
+        AppErrorMessages.PROFILE_EDIT_VERIFICATION_REQUIRED,
       );
     }
 
@@ -282,7 +282,7 @@ export class MastersProfileService {
       where: { userId },
       include: { user: { select: { firstName: true, lastName: true } } },
     });
-    if (!master) throw new NotFoundException('Master not found');
+    if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
 
     if (master.profileLastEditedAt) {
       const daysSince = Math.floor(
@@ -291,8 +291,11 @@ export class MastersProfileService {
       );
       if (daysSince < this.PROFILE_EDIT_COOLDOWN_DAYS) {
         const daysLeft = this.PROFILE_EDIT_COOLDOWN_DAYS - daysSince;
-        throw new ForbiddenException(
-          `Profile can be edited once every ${this.PROFILE_EDIT_COOLDOWN_DAYS} days. Try again in ${daysLeft} days.`,
+        throw AppErrors.forbidden(
+          AppErrorTemplates.profileEditCooldown(
+            this.PROFILE_EDIT_COOLDOWN_DAYS,
+            daysLeft,
+          ),
         );
       }
     }
@@ -416,7 +419,8 @@ export class MastersProfileService {
       where: { userId },
       select: { id: true, slug: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const updated = await this.prisma.master.update({
       where: { userId },

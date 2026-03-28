@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { LeadNotifyChannel } from '../../../../common/constants';
 import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -19,7 +20,8 @@ export class MastersNotificationSettingsService {
         notifyTariffInApp: true,
       },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return master;
   }
 
@@ -31,7 +33,8 @@ export class MastersNotificationSettingsService {
       where: { userId },
       select: { id: true, tariffType: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const isPremium = isVipOrPremiumTariff(master.tariffType);
     const data: {

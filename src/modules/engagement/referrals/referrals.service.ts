@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import {
@@ -68,9 +64,7 @@ export class ReferralsService {
       }
     }
 
-    throw new InternalServerErrorException(
-      'Failed to generate unique referral code',
-    );
+    throw AppErrors.internal(AppErrorMessages.REFERRAL_CODE_GENERATION_FAILED);
   }
 
   /**
@@ -151,22 +145,22 @@ export class ReferralsService {
   async applyReferralCode(referredUserId: string, code: string) {
     const enabled = await this.appSettings.isReferralsEnabled();
     if (!enabled) {
-      throw new BadRequestException('Referral program is disabled');
+      throw AppErrors.badRequest(AppErrorMessages.REFERRAL_DISABLED);
     }
     const referralCode = await this.prisma.referralCode.findUnique({
       where: { code },
     });
 
     if (!referralCode) {
-      throw new BadRequestException('Referral code not found');
+      throw AppErrors.badRequest(AppErrorMessages.REFERRAL_CODE_NOT_FOUND);
     }
 
     if (!referralCode.isActive) {
-      throw new BadRequestException('Referral code is inactive');
+      throw AppErrors.badRequest(AppErrorMessages.REFERRAL_CODE_INACTIVE);
     }
 
     if (referralCode.userId === referredUserId) {
-      throw new BadRequestException('Cannot use your own referral code');
+      throw AppErrors.badRequest(AppErrorMessages.REFERRAL_OWN_CODE);
     }
 
     // Проверка, был ли уже реферал

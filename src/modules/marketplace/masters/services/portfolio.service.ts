@@ -1,10 +1,10 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
@@ -66,7 +66,7 @@ export class PortfolioService {
           },
         },
       });
-      if (!item) throw new NotFoundException('Portfolio item not found');
+      if (!item) throw AppErrors.notFound(AppErrorMessages.PORTFOLIO_NOT_FOUND);
       return item;
     } catch (err) {
       if (err instanceof NotFoundException) throw err;
@@ -86,8 +86,10 @@ export class PortfolioService {
         this.prisma.file.findUnique({ where: { id: dto.afterFileId } }),
       ]);
 
-      if (!beforeFile) throw new BadRequestException('Before file not found');
-      if (!afterFile) throw new BadRequestException('After file not found');
+      if (!beforeFile)
+        throw AppErrors.badRequest(AppErrorMessages.BEFORE_FILE_NOT_FOUND);
+      if (!afterFile)
+        throw AppErrors.badRequest(AppErrorMessages.AFTER_FILE_NOT_FOUND);
 
       // Получаем следующий порядок
       const maxOrder = await this.prisma.portfolioItem.findFirst({
@@ -135,9 +137,9 @@ export class PortfolioService {
       where: { id: itemId },
     });
 
-    if (!item) throw new NotFoundException('Portfolio item not found');
+    if (!item) throw AppErrors.notFound(AppErrorMessages.PORTFOLIO_NOT_FOUND);
     if (item.masterId !== masterId) {
-      throw new ForbiddenException('You can only edit your own portfolio');
+      throw AppErrors.forbidden(AppErrorMessages.PORTFOLIO_EDIT_OWN_ONLY);
     }
 
     return this.prisma.portfolioItem.update({
@@ -167,11 +169,9 @@ export class PortfolioService {
       where: { id: itemId },
     });
 
-    if (!item) throw new NotFoundException('Portfolio item not found');
+    if (!item) throw AppErrors.notFound(AppErrorMessages.PORTFOLIO_NOT_FOUND);
     if (item.masterId !== masterId) {
-      throw new ForbiddenException(
-        'You can only delete your own portfolio items',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.PORTFOLIO_DELETE_OWN_ONLY);
     }
 
     await this.prisma.portfolioItem.delete({ where: { id: itemId } });

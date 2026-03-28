@@ -1,9 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { Request } from 'express';
 import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
 
@@ -23,9 +19,7 @@ export class RequireAuthWhenNotForLeadGuard implements CanActivate {
     const isForLead = forLead === 'true' || forLead === '1';
 
     if (!isForLead && !req.user?.id) {
-      throw new UnauthorizedException(
-        'Authentication required to upload files',
-      );
+      throw AppErrors.unauthorized(AppErrorMessages.GUARD_AUTH_UPLOAD_REQUIRED);
     }
 
     return true;

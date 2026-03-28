@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -137,7 +134,7 @@ export class BookingsService {
     if (user.role === UserRole.ADMIN) return;
     const master = user.masterProfile;
     if (master?.id !== masterId) {
-      throw new ForbiddenException('You can only access your own data');
+      throw AppErrors.forbidden(AppErrorMessages.BOOKING_ACCESS_OWN_DATA);
     }
   }
 
@@ -146,7 +143,9 @@ export class BookingsService {
     phone: string;
   } {
     if (user.role !== UserRole.CLIENT) {
-      throw new BadRequestException('This endpoint is only for clients');
+      throw AppErrors.badRequest(
+        AppErrorMessages.BOOKING_ENDPOINT_CLIENTS_ONLY,
+      );
     }
     return { userId: user.id, phone: user.phone ?? '' };
   }
@@ -154,7 +153,7 @@ export class BookingsService {
   private ensureMasterProfile(user: BookingsAuthUser): string {
     const master = user.masterProfile;
     if (!master) {
-      throw new ForbiddenException('Master profile not found');
+      throw AppErrors.forbidden(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return master.id;
   }
@@ -166,7 +165,9 @@ export class BookingsService {
     if (user.role === UserRole.CLIENT) {
       const phone = user.phone ?? '';
       if (!phone) {
-        throw new BadRequestException('Client phone is required');
+        throw AppErrors.badRequest(
+          AppErrorMessages.BOOKING_CLIENT_PHONE_REQUIRED,
+        );
       }
       return { phone, name: user.firstName ?? undefined };
     }

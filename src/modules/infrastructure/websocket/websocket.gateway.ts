@@ -15,6 +15,7 @@ import { WsException } from '@nestjs/websockets';
 import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
 import { WebsocketService } from './websocket.service';
 import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
 import type { SocketData } from './services/websocket-connection.service';
@@ -230,7 +231,7 @@ export class WebsocketGateway
     const userId = (client.data as SocketData).userId;
     const sanitizedMasterId = sanitizeMasterId(data.masterId);
     if (!sanitizedMasterId) {
-      throw new WsException('Invalid masterId');
+      throw AppErrors.ws(AppErrorMessages.WS_INVALID_MASTER_ID);
     }
     this.server.to(`master:${sanitizedMasterId}`).emit('user:typing', {
       userId,

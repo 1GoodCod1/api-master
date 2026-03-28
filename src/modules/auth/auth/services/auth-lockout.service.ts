@@ -1,4 +1,5 @@
 import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorTemplates } from '../../../../common/errors';
 import { RedisService } from '../../../shared/redis/redis.service';
 
 /** Account lockout after 5 failed attempts for 15 minutes */
@@ -34,8 +35,8 @@ export class AuthLockoutService {
       const count = raw !== null ? parseInt(raw, 10) || 0 : 0;
       if (count >= LOCKOUT_THRESHOLD) {
         this.logger.warn(`Login locked for email (${count} failed attempts)`);
-        throw new ForbiddenException(
-          `Too many failed login attempts. Try again in ${Math.ceil(LOCKOUT_TTL_SEC / 60)} minutes.`,
+        throw AppErrors.forbidden(
+          AppErrorTemplates.authLockoutEmail(Math.ceil(LOCKOUT_TTL_SEC / 60)),
         );
       }
 
@@ -45,8 +46,8 @@ export class AuthLockoutService {
         const ipCount = ipRaw !== null ? parseInt(ipRaw, 10) || 0 : 0;
         if (ipCount >= LOCKOUT_THRESHOLD * 2) {
           this.logger.warn(`Login locked for IP (${ipCount} failed attempts)`);
-          throw new ForbiddenException(
-            `Too many failed attempts from this IP. Try again in ${Math.ceil(LOCKOUT_TTL_SEC / 60)} minutes.`,
+          throw AppErrors.forbidden(
+            AppErrorTemplates.authLockoutIp(Math.ceil(LOCKOUT_TTL_SEC / 60)),
           );
         }
       }

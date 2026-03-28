@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
@@ -75,9 +71,10 @@ export class PromotionsActionService {
     await this.assertPremiumTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
-    if (!promotion) throw new NotFoundException('Promotion not found');
+    if (!promotion)
+      throw AppErrors.notFound(AppErrorMessages.PROMOTION_NOT_FOUND);
     if (promotion.masterId !== masterId)
-      throw new ForbiddenException('Access denied');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
 
     const newServiceTitle =
       dto.serviceTitle !== undefined
@@ -119,9 +116,10 @@ export class PromotionsActionService {
     await this.assertPremiumTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
-    if (!promotion) throw new NotFoundException('Promotion not found');
+    if (!promotion)
+      throw AppErrors.notFound(AppErrorMessages.PROMOTION_NOT_FOUND);
     if (promotion.masterId !== masterId)
-      throw new ForbiddenException('Access denied');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED);
 
     await this.prisma.promotion.delete({ where: { id } });
     await this.invalidatePromotionCache();
@@ -134,9 +132,7 @@ export class PromotionsActionService {
       select: { tariffType: true, tariffExpiresAt: true },
     });
     if (getEffectiveTariff(master) !== TariffType.PREMIUM) {
-      throw new ForbiddenException(
-        'Service promotions are available for PREMIUM plan only.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.PROMOTION_PREMIUM_ONLY);
     }
   }
 

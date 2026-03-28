@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -22,7 +23,7 @@ export class UsersManageService {
       const user = await this.prisma.user.findUnique({ where: { id } });
 
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
       }
 
       return await this.prisma.user.update({
@@ -59,7 +60,7 @@ export class UsersManageService {
     const user = await this.prisma.user.findUnique({ where: { id } });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     const updated = await this.prisma.user.update({
@@ -83,7 +84,7 @@ export class UsersManageService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     const newVerified = !user.isVerified;

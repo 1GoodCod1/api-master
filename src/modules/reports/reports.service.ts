@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../common/errors';
 import { ReportStatus } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { InAppNotificationService } from '../notifications/notifications/services/in-app-notification.service';
@@ -108,7 +109,7 @@ export class ReportsService {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });
-    if (!report) throw new NotFoundException('Report not found');
+    if (!report) throw AppErrors.notFound(AppErrorMessages.REPORT_NOT_FOUND);
 
     if (dto.action) {
       await this.actionService.executeAction(report, dto.action, dto.notes);

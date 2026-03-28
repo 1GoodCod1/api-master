@@ -1,9 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { getCorsOrigins } from '../../config/cors.config';
@@ -44,9 +40,7 @@ export class CookieOriginGuard implements CanActivate {
 
     const allowed = this.allowedOrigins();
     if (!origin || !allowed.has(origin)) {
-      throw new ForbiddenException(
-        'Invalid origin for cookie-authenticated request',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.GUARD_INVALID_ORIGIN);
     }
 
     return true;

@@ -1,10 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { RedisService } from '../../../shared/redis/redis.service';
@@ -54,7 +49,7 @@ export class ChatMessageService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw AppErrors.notFound(AppErrorMessages.CONVERSATION_NOT_FOUND);
     }
 
     checkConversationAccess(conversation, user);
@@ -136,11 +131,11 @@ export class ChatMessageService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw AppErrors.notFound(AppErrorMessages.CONVERSATION_NOT_FOUND);
     }
 
     if (conversation.closedAt) {
-      throw new BadRequestException('Conversation is closed');
+      throw AppErrors.badRequest(AppErrorMessages.CONVERSATION_CLOSED);
     }
 
     checkConversationAccess(conversation, user);
@@ -159,9 +154,7 @@ export class ChatMessageService {
       });
 
       if (filesCount !== dto.fileIds.length) {
-        throw new ForbiddenException(
-          'Invalid file IDs provided - some files do not belong to you',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.CHAT_FILES_NOT_OWNED);
       }
     }
 
@@ -243,7 +236,7 @@ export class ChatMessageService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw AppErrors.notFound(AppErrorMessages.CONVERSATION_NOT_FOUND);
     }
 
     checkConversationAccess(conversation, user);

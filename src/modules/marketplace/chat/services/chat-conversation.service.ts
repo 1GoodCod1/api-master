@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { Prisma, SenderType, UserRole } from '@prisma/client';
@@ -31,7 +27,7 @@ export class ChatConversationService {
         select: { id: true },
       });
       if (!master) {
-        throw new NotFoundException('Master profile not found');
+        throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
       }
       where.masterId = master.id;
     } else if (user.role === UserRole.CLIENT) {
@@ -39,7 +35,7 @@ export class ChatConversationService {
     } else if (user.role === UserRole.ADMIN) {
       // ADMIN видит все диалоги; без дополнительного фильтра
     } else {
-      throw new ForbiddenException('Invalid role');
+      throw AppErrors.forbidden(AppErrorMessages.INVALID_ROLE);
     }
 
     const conversations = await this.prisma.conversation.findMany({
@@ -132,7 +128,7 @@ export class ChatConversationService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw AppErrors.notFound(AppErrorMessages.CONVERSATION_NOT_FOUND);
     }
 
     checkConversationAccess(conversation, user);
@@ -193,7 +189,7 @@ export class ChatConversationService {
     });
 
     if (!lead) {
-      throw new NotFoundException('Lead not found');
+      throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
     }
 
     const isClient = user.role === UserRole.CLIENT && lead.clientId === user.id;
@@ -202,7 +198,7 @@ export class ChatConversationService {
     const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isClient && !isMaster && !isAdmin) {
-      throw new ForbiddenException('Access denied to this lead');
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_LEAD);
     }
 
     const conversation = await this.prisma.conversation.create({
@@ -247,7 +243,7 @@ export class ChatConversationService {
     });
 
     if (!conversation) {
-      throw new NotFoundException('Conversation not found');
+      throw AppErrors.notFound(AppErrorMessages.CONVERSATION_NOT_FOUND);
     }
 
     const isMaster =
@@ -255,8 +251,8 @@ export class ChatConversationService {
     const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isMaster && !isAdmin) {
-      throw new ForbiddenException(
-        'Only master or admin can close conversation',
+      throw AppErrors.forbidden(
+        AppErrorMessages.CONVERSATION_CLOSE_MASTER_OR_ADMIN,
       );
     }
 

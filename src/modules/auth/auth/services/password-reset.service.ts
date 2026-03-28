@@ -4,6 +4,7 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
@@ -44,7 +45,7 @@ export class PasswordResetService {
       }
 
       if (user.isBanned) {
-        throw new BadRequestException('Account is banned');
+        throw AppErrors.badRequest(AppErrorMessages.RESET_ACCOUNT_BANNED);
       }
 
       const token = randomBytes(32).toString('hex');
@@ -77,9 +78,7 @@ export class PasswordResetService {
         this.logger.error(
           'FRONTEND_URL is required in production for password reset links',
         );
-        throw new BadRequestException(
-          'Password reset is temporarily unavailable. Please try again later.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.RESET_UNAVAILABLE);
       }
       const resetLink = `${frontendUrl || 'http://localhost:3000'}/reset-password?token=${token}`;
       const lang = parseAppLocale(user.preferredLanguage);
@@ -121,11 +120,11 @@ export class PasswordResetService {
       });
 
       if (!resetToken) {
-        throw new NotFoundException('Invalid or expired reset token');
+        throw AppErrors.notFound(AppErrorMessages.RESET_TOKEN_INVALID);
       }
 
       if (resetToken.used) {
-        throw new BadRequestException('This reset token has already been used');
+        throw AppErrors.badRequest(AppErrorMessages.RESET_TOKEN_USED);
       }
 
       if (resetToken.expiresAt < new Date()) {
@@ -133,13 +132,13 @@ export class PasswordResetService {
         await this.prisma.passwordResetToken.delete({
           where: { id: resetToken.id },
         });
-        throw new BadRequestException(
-          'Reset token has expired. Please request a new one.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.RESET_TOKEN_EXPIRED);
       }
 
       if (!resetToken.user || resetToken.user.isBanned) {
-        throw new BadRequestException('User not found or banned');
+        throw AppErrors.badRequest(
+          AppErrorMessages.AUTH_USER_NOT_FOUND_OR_BANNED,
+        );
       }
 
       // Хешируем новый пароль

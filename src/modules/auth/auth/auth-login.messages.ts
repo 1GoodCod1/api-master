@@ -1,17 +1,24 @@
 /**
  * Login flow messages — single source for API responses, audit, and login history.
- * Client-facing strings should stay stable; internal reasons explain failures in logs.
+ * Значения берутся из {@link AppErrorMessages}.
  */
-export const AUTH_LOGIN_INVALID_CREDENTIALS = 'Invalid credentials';
+import { AppErrorMessages } from '../../../common/errors';
+
+export const AUTH_LOGIN_INVALID_CREDENTIALS =
+  AppErrorMessages.AUTH_LOGIN_INVALID_CREDENTIALS;
 
 /** Stored in login history / audit when the user exists but the password does not match. */
-export const AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD = 'Invalid password';
+export const AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD =
+  AppErrorMessages.AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD;
 
 /** 401 response when the account is banned. */
-export const AUTH_LOGIN_ACCOUNT_BANNED = 'Account is banned';
+export const AUTH_LOGIN_ACCOUNT_BANNED =
+  AppErrorMessages.AUTH_LOGIN_ACCOUNT_BANNED;
 
 /** Login history / audit reason for banned accounts. */
-export const AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED = 'Account banned';
+export const AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED =
+  AppErrorMessages.AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED;
 
 /** 403 when the client IP is blacklisted. */
-export const AUTH_LOGIN_IP_ACCESS_DENIED = 'Access denied from this IP address';
+export const AUTH_LOGIN_IP_ACCESS_DENIED =
+  AppErrorMessages.AUTH_LOGIN_IP_ACCESS_DENIED;

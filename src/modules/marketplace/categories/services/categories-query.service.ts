@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorTemplates } from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -104,7 +105,7 @@ export class CategoriesQueryService {
     });
 
     if (!found) {
-      throw new NotFoundException(`Category with ID "${id}" not found`);
+      throw AppErrors.notFound(AppErrorTemplates.categoryWithId(id));
     }
 
     return found;

@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -19,7 +16,7 @@ export class UsersAvatarService {
       where: { id: userId },
       select: { id: true, role: true, avatarFileId: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
 
     if (!fileId || fileId.trim() === '') {
       await this.prisma.user.update({
@@ -46,16 +43,14 @@ export class UsersAvatarService {
     }
 
     const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-    if (!file) throw new NotFoundException('File not found');
+    if (!file) throw AppErrors.notFound(AppErrorMessages.FILE_NOT_FOUND);
 
     if (file.uploadedById !== userId) {
-      throw new BadRequestException(
-        'You can only use your own files as avatar',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.FILE_OWN_AVATAR_ONLY);
     }
 
     if (!String(file.mimetype).startsWith('image/')) {
-      throw new BadRequestException('Avatar must be an image');
+      throw AppErrors.badRequest(AppErrorMessages.AVATAR_MUST_BE_IMAGE);
     }
 
     if (user.role === UserRole.CLIENT) {
@@ -94,7 +89,7 @@ export class UsersAvatarService {
     });
 
     if (user?.role !== UserRole.CLIENT) {
-      throw new NotFoundException('Client profile not found');
+      throw AppErrors.notFound(AppErrorMessages.CLIENT_PROFILE_NOT_FOUND);
     }
 
     await this.prisma.clientPhoto.deleteMany({

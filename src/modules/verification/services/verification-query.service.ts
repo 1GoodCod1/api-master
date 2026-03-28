@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { SORT_ASC } from '../../shared/constants/sort-order.constants';
@@ -47,7 +48,7 @@ export class VerificationQueryService {
     });
 
     if (!user?.masterProfile) {
-      throw new NotFoundException('Master profile not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
     return {
@@ -144,7 +145,7 @@ export class VerificationQueryService {
     });
 
     if (!verification) {
-      throw new NotFoundException('Verification request not found');
+      throw AppErrors.notFound(AppErrorMessages.VERIFICATION_REQUEST_NOT_FOUND);
     }
 
     return {

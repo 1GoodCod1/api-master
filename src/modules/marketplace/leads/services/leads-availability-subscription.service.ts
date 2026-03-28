@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 @Injectable()
@@ -12,7 +13,7 @@ export class LeadsAvailabilitySubscriptionService {
     });
 
     if (!master) {
-      throw new BadRequestException('Master not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const subscription =

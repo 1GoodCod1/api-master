@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import {
@@ -44,7 +45,7 @@ export class UsersQueryService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- exclude password from response
@@ -133,7 +134,7 @@ export class UsersQueryService {
     });
 
     if (user?.role !== UserRole.CLIENT) {
-      throw new NotFoundException('Client profile not found');
+      throw AppErrors.notFound(AppErrorMessages.CLIENT_PROFILE_NOT_FOUND);
     }
 
     const rows = await this.prisma.clientPhoto.findMany({

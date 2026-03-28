@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ReportStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateReportDto } from '../dto/create-report.dto';
@@ -23,10 +19,10 @@ export class ReportsValidationService {
     const master = await this.prisma.master.findUnique({
       where: { id: masterId },
     });
-    if (!master) throw new NotFoundException('Master not found');
+    if (!master) throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
 
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
 
     const validLead = leadId
       ? await this.prisma.lead.findFirst({
@@ -41,9 +37,7 @@ export class ReportsValidationService {
         });
 
     if (!validLead) {
-      throw new ForbiddenException(
-        'You can only report a master if you have sent a lead to them',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.REPORT_NEED_LEAD);
     }
 
     const existingReport = await this.prisma.report.findFirst({
@@ -55,9 +49,7 @@ export class ReportsValidationService {
     });
 
     if (existingReport) {
-      throw new BadRequestException(
-        'You have already reported this master. Please wait for review.',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.REPORT_ALREADY_PENDING);
     }
 
     return { finalLeadId: leadId || validLead.id };

@@ -1,4 +1,5 @@
-import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { PipeTransform, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 
 @Injectable()
 export class ParseIntPipe implements PipeTransform<string, number> {
@@ -6,9 +7,7 @@ export class ParseIntPipe implements PipeTransform<string, number> {
     const val = parseInt(value, 10);
 
     if (isNaN(val)) {
-      throw new BadRequestException(
-        'Validation failed (numeric string is expected)',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.PARSE_INT_EXPECTED);
     }
 
     return val;

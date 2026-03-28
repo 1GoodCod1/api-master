@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -52,9 +53,7 @@ export class LeadsService {
       );
 
     if (!resolvedClientPhone) {
-      throw new BadRequestException(
-        'Client phone number is missing. Please add it in your profile.',
-      );
+      throw AppErrors.badRequest(AppErrorMessages.LEAD_CLIENT_PHONE_MISSING);
     }
 
     createLeadDto.clientPhone = resolvedClientPhone;

@@ -7,10 +7,9 @@ import {
   Param,
   Query,
   UseGuards,
-  BadRequestException,
-  ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../common/errors';
 import { timingSafeEqual } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -75,7 +74,7 @@ export class PaymentsController {
     if (!expectedSecret) {
       if (nodeEnv === 'production') {
         // В production без секрета вебхук закрыт полностью
-        throw new ForbiddenException('Webhook endpoint is not configured');
+        throw AppErrors.forbidden(AppErrorMessages.WEBHOOK_NOT_CONFIGURED);
       }
       this.logger.warn(
         'MIA_WEBHOOK_SECRET is not set — mia-callback endpoint is UNPROTECTED! Set it in .env',
@@ -91,13 +90,14 @@ export class PaymentsController {
         this.logger.warn(
           `Rejected MIA webhook call — invalid token. orderId: ${body?.orderId ?? 'none'}`,
         );
-        throw new ForbiddenException('Invalid webhook token');
+        throw AppErrors.forbidden(AppErrorMessages.WEBHOOK_INVALID_TOKEN);
       }
     }
     // --- Конец защиты webhook ---
 
     const orderId = body?.orderId;
-    if (!orderId) throw new BadRequestException('orderId required');
+    if (!orderId)
+      throw AppErrors.badRequest(AppErrorMessages.ORDER_ID_REQUIRED);
     return this.paymentsService.handleMiaCallback(orderId);
   }
 
@@ -113,7 +113,8 @@ export class PaymentsController {
     @Body() body: { paymentId: string },
     @GetUser() user: JwtUser,
   ) {
-    if (!body?.paymentId) throw new BadRequestException('paymentId required');
+    if (!body?.paymentId)
+      throw AppErrors.badRequest(AppErrorMessages.PAYMENT_ID_REQUIRED);
     return this.paymentsService.simulateMiaSandboxPayment(
       body.paymentId,
       user.id,
@@ -133,7 +134,7 @@ export class PaymentsController {
   ) {
     // Защита в глубину: IDOR на уровне контроллера (дублируется в сервисе)
     if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
-      throw new ForbiddenException('Access to payment data denied');
+      throw AppErrors.forbidden(AppErrorMessages.PAYMENT_ACCESS_DENIED);
     }
     return this.paymentsService.getPaymentsForMaster(masterId, user);
   }
@@ -149,7 +150,7 @@ export class PaymentsController {
   ) {
     // Защита в глубину: IDOR на уровне контроллера (дублируется в сервисе)
     if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
-      throw new ForbiddenException('Access to payment data denied');
+      throw AppErrors.forbidden(AppErrorMessages.PAYMENT_ACCESS_DENIED);
     }
     return this.paymentsService.getPaymentStats(masterId, user);
   }
@@ -161,7 +162,8 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payments for authenticated master' })
   async getMyPayments(@GetUser() user: JwtUser) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw new BadRequestException('Master profile not found');
+    if (!masterId)
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.paymentsService.getPaymentsForMaster(masterId, user);
   }
 

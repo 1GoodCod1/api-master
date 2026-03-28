@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { AvailabilityStatus } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -171,7 +167,8 @@ export class MastersAvailabilityService {
       where: { userId },
       select: { id: true, slug: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const updated = await this.prisma.master.update({
       where: { id: master.id },
@@ -215,13 +212,12 @@ export class MastersAvailabilityService {
         tariffExpiresAt: true,
       },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const isPremium = getEffectiveTariff(master) === TariffType.PREMIUM;
     if (!isPremium) {
-      throw new ForbiddenException(
-        'Availability status (Available/Busy) and max leads limit are PREMIUM features.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.AVAILABILITY_PREMIUM_ONLY);
     }
 
     const updateData: {
@@ -275,7 +271,8 @@ export class MastersAvailabilityService {
       where: { userId },
       select: { id: true },
     });
-    if (!master) throw new NotFoundException('Master profile not found');
+    if (!master)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
     const data = await this.prisma.master.findUnique({
       where: { id: master.id },
@@ -289,7 +286,9 @@ export class MastersAvailabilityService {
     });
 
     if (!data) {
-      throw new NotFoundException('Master availability data not found');
+      throw AppErrors.notFound(
+        AppErrorMessages.MASTER_AVAILABILITY_DATA_NOT_FOUND,
+      );
     }
 
     const actualActiveCount = await this.prisma.lead.count({

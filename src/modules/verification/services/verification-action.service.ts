@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -46,16 +47,14 @@ export class VerificationActionService {
         include: { masterProfile: true },
       });
 
-      if (!user) throw new NotFoundException('User not found');
+      if (!user) throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
       if (user.role !== UserRole.MASTER)
-        throw new BadRequestException(
-          'Only masters can submit a verification request',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.VERIFICATION_ONLY_MASTERS);
       if (!user.masterProfile)
-        throw new NotFoundException('Master profile not found');
+        throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
       if (dto.phone !== user.phone)
-        throw new BadRequestException(
-          'Phone number must match the number in your profile',
+        throw AppErrors.badRequest(
+          AppErrorMessages.VERIFICATION_PHONE_MISMATCH,
         );
 
       // Проверяем, не подана ли уже заявка
@@ -65,8 +64,8 @@ export class VerificationActionService {
         });
 
       if (existingVerification?.status === VerificationStatus.PENDING) {
-        throw new BadRequestException(
-          'A verification request is already pending review',
+        throw AppErrors.badRequest(
+          AppErrorMessages.VERIFICATION_ALREADY_PENDING,
         );
       }
 
@@ -76,8 +75,8 @@ export class VerificationActionService {
         ConsentType.VERIFICATION_DATA_PROCESSING,
       );
       if (!hasConsent) {
-        throw new BadRequestException(
-          'You must consent to personal data processing before submitting a request',
+        throw AppErrors.badRequest(
+          AppErrorMessages.VERIFICATION_CONSENT_REQUIRED,
         );
       }
 
@@ -186,10 +185,12 @@ export class VerificationActionService {
       });
 
       if (!verification)
-        throw new NotFoundException('Verification request not found');
+        throw AppErrors.notFound(
+          AppErrorMessages.VERIFICATION_REQUEST_NOT_FOUND,
+        );
       if (verification.status !== VerificationStatus.PENDING)
-        throw new BadRequestException(
-          'Verification request has already been processed',
+        throw AppErrors.badRequest(
+          AppErrorMessages.VERIFICATION_ALREADY_PROCESSED,
         );
 
       const status =

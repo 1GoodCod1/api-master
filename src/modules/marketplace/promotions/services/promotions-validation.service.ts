@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 type ServiceItem = { title?: string | null; priceType?: string | null };
@@ -79,9 +76,7 @@ export class PromotionsValidationService {
       },
     });
     if (existing) {
-      throw new ConflictException(
-        'На эту услугу уже действует акция. Создайте акцию на другую услугу или дождитесь окончания текущей.',
-      );
+      throw AppErrors.conflict(AppErrorMessages.PROMOTION_CONFLICT_SERVICE);
     }
   }
 
@@ -103,9 +98,7 @@ export class PromotionsValidationService {
     if (serviceTitle) {
       const title = serviceTitle.trim();
       if (!fixedTitles.includes(title)) {
-        throw new BadRequestException(
-          'Акцию можно применять только к услугам с фиксированной ценой. Этой услуги нет в списке или у неё договорная цена.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.PROMOTION_FIXED_PRICE_ONLY);
       }
       await this.assertNoActivePromotionForService(
         masterId,
@@ -119,9 +112,7 @@ export class PromotionsValidationService {
       (t) => !takenTitles.includes(t),
     );
     if (fixedWithoutPromotion.length === 0) {
-      throw new ConflictException(
-        'Нельзя применить акцию ко всем услугам: на все услуги с фиксированной ценой уже действуют акции. Создайте акцию на одну конкретную услугу или дождитесь окончания текущих.',
-      );
+      throw AppErrors.conflict(AppErrorMessages.PROMOTION_CONFLICT_ALL);
     }
   }
 }

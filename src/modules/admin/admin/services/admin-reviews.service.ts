@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma, ReviewStatus } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -207,7 +208,7 @@ export class AdminReviewsService {
     });
 
     if (!review) {
-      throw new NotFoundException('Review not found');
+      throw AppErrors.notFound(AppErrorMessages.REVIEW_NOT_FOUND);
     }
 
     // По умолчанию VISIBLE при модерации, если фронт не прислал status

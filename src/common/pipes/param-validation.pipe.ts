@@ -1,4 +1,5 @@
-import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { PipeTransform, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import {
   validateSlug,
   validateId,
@@ -20,7 +21,7 @@ export class ValidateSlugPipe implements PipeTransform<string, string> {
     const sanitized = validateSlug(value);
 
     if (!sanitized) {
-      throw new BadRequestException('Invalid slug format');
+      throw AppErrors.badRequest(AppErrorMessages.PARAM_INVALID_SLUG);
     }
 
     return sanitized;
@@ -41,7 +42,7 @@ export class ValidateSlugPipe implements PipeTransform<string, string> {
 export class ValidateIdPipe implements PipeTransform<string, string> {
   transform(value: string): string {
     if (!validateId(value)) {
-      throw new BadRequestException('Invalid ID format');
+      throw AppErrors.badRequest(AppErrorMessages.PARAM_INVALID_ID);
     }
 
     return value;
@@ -72,6 +73,6 @@ export class ValidateParamPipe implements PipeTransform<string, string> {
       return sanitizedSlug;
     }
 
-    throw new BadRequestException('Invalid parameter format');
+    throw AppErrors.badRequest(AppErrorMessages.PARAM_INVALID);
   }
 }

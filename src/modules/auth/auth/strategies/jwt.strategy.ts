@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -51,7 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const cached = await this.cache.get<CachedUserProfile>(cacheKey);
     if (cached) {
       if (cached.isBanned) {
-        throw new UnauthorizedException('Your account is blocked');
+        throw AppErrors.unauthorized(AppErrorMessages.AUTH_ACCOUNT_BLOCKED);
       }
 
       // Если в кэше неполные данные, сбрасываем его
@@ -78,8 +83,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user || user.isBanned) {
-      throw new UnauthorizedException(
-        user?.isBanned ? 'Your account is blocked' : 'User not found',
+      throw AppErrors.unauthorized(
+        AppErrorTemplates.jwtUserMissingOrBanned(!!user?.isBanned),
       );
     }
 

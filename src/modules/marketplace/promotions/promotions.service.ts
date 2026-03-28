@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
@@ -51,7 +52,7 @@ export class PromotionsService {
   private resolveMasterId(user: JwtUser): string {
     const masterId = user.masterProfile?.id;
     if (!masterId) {
-      throw new BadRequestException('Master profile not found');
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
     return masterId;
   }

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
@@ -74,7 +79,7 @@ export class TariffsQueryService {
   @Cacheable((id: string) => `cache:tariff:${id}`, 86400)
   async findOne(id: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Tariff not found');
+    if (!tariff) throw AppErrors.notFound(AppErrorMessages.TARIFF_NOT_FOUND);
     return tariff;
   }
 
@@ -90,7 +95,9 @@ export class TariffsQueryService {
       async () => {
         const tariff = await this.prisma.tariff.findUnique({ where: { type } });
         if (!tariff)
-          throw new NotFoundException(`Tariff with type ${type} not found`);
+          throw AppErrors.notFound(
+            AppErrorTemplates.tariffByTypeNotFound(type),
+          );
         return tariff;
       },
       this.cache.ttl.tariffs,

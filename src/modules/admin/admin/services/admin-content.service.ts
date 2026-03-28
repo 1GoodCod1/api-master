@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PaymentStatus, Prisma, ReviewStatus } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -138,7 +139,7 @@ export class AdminContentService {
     });
 
     if (!review) {
-      throw new NotFoundException('Review not found');
+      throw AppErrors.notFound(AppErrorMessages.REVIEW_NOT_FOUND);
     }
 
     void reason; // Reserved for future moderation reason field

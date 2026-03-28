@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 
 interface RecaptchaVerifyResponse {
@@ -37,7 +38,7 @@ export class RecaptchaService {
     }
 
     if (!token) {
-      throw new BadRequestException('reCAPTCHA token is required');
+      throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_TOKEN_REQUIRED);
     }
 
     try {
@@ -56,13 +57,15 @@ export class RecaptchaService {
 
       if (!data.success) {
         console.warn('reCAPTCHA verification failed:', data['error-codes']);
-        throw new BadRequestException('reCAPTCHA verification failed');
+        throw AppErrors.badRequest(
+          AppErrorMessages.RECAPTCHA_VERIFICATION_FAILED,
+        );
       }
 
       // Проверяем score (для v3)
       if (data.score !== undefined && data.score < this.minScore) {
         console.warn(`reCAPTCHA score too low: ${data.score}`);
-        throw new BadRequestException('Suspicious activity detected');
+        throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_SUSPICIOUS);
       }
 
       // Проверяем action (опционально)
@@ -70,7 +73,7 @@ export class RecaptchaService {
         console.warn(
           `reCAPTCHA action mismatch: expected ${action}, got ${data.action}`,
         );
-        throw new BadRequestException('Invalid reCAPTCHA action');
+        throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_INVALID_ACTION);
       }
 
       return true;
@@ -79,7 +82,7 @@ export class RecaptchaService {
         throw error;
       }
       console.error('reCAPTCHA verification error:', error);
-      throw new BadRequestException('Failed to verify reCAPTCHA');
+      throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_VERIFY_FAILED);
     }
   }
 

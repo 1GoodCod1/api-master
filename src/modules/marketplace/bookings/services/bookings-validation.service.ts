@@ -1,8 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import {
-  Injectable,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+  AppErrors,
+  AppErrorMessages,
+  AppErrorTemplates,
+} from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { UserRole } from '@prisma/client';
 import { ACTIVE_BOOKING_STATUSES } from '../../../../common/constants';
@@ -23,17 +24,13 @@ export class BookingsValidationService {
 
   validateCreateAuth(authUser: BookingsAuthUser): void {
     if (!authUser) {
-      throw new ForbiddenException(
-        'Only authorized users can create bookings. Please log in.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.BOOKING_AUTH_REQUIRED);
     }
     if (
       authUser.role !== UserRole.CLIENT &&
       authUser.role !== UserRole.MASTER
     ) {
-      throw new ForbiddenException(
-        'Only clients or masters can create bookings.',
-      );
+      throw AppErrors.forbidden(AppErrorMessages.BOOKING_ONLY_CLIENT_OR_MASTER);
     }
   }
 
@@ -51,15 +48,11 @@ export class BookingsValidationService {
 
     if (authUser.role === UserRole.MASTER) {
       if (!leadId) {
-        throw new BadRequestException(
-          'Master can only create bookings from a lead (leadId required).',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.BOOKING_MASTER_NEEDS_LEAD);
       }
       const masterProfileId = authUser.masterProfile?.id;
       if (!masterProfileId || masterProfileId !== masterId) {
-        throw new ForbiddenException(
-          'You can only create bookings for your own profile.',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.BOOKING_OWN_PROFILE_ONLY);
       }
       const lead = await this.prisma.lead.findUnique({
         where: { id: leadId },
@@ -73,13 +66,11 @@ export class BookingsValidationService {
         },
       });
       if (lead?.masterId !== masterId) {
-        throw new BadRequestException(
-          'Lead not found or does not belong to this master.',
-        );
+        throw AppErrors.badRequest(AppErrorMessages.BOOKING_LEAD_WRONG_MASTER);
       }
       if (FINAL_LEAD_STATUSES.includes(lead.status)) {
-        throw new BadRequestException(
-          `Cannot create booking from a ${lead.status} lead.`,
+        throw AppErrors.badRequest(
+          AppErrorTemplates.createBookingFromFinalLead(lead.status),
         );
       }
       resolvedPhone = lead.clientPhone;
@@ -87,9 +78,7 @@ export class BookingsValidationService {
       resolvedClientId = lead.clientId;
     } else {
       if (authUser.phoneVerified === false) {
-        throw new ForbiddenException(
-          'Phone verification required to create bookings. Please verify your phone number first.',
-        );
+        throw AppErrors.forbidden(AppErrorMessages.BOOKING_PHONE_VERIFY);
       }
       resolvedClientId = authUser.id;
       if (leadId) {
@@ -98,19 +87,17 @@ export class BookingsValidationService {
           select: { id: true, masterId: true, clientId: true, status: true },
         });
         if (lead?.masterId !== masterId) {
-          throw new BadRequestException(
-            'Lead not found or does not belong to this master.',
+          throw AppErrors.badRequest(
+            AppErrorMessages.BOOKING_LEAD_WRONG_MASTER,
           );
         }
         if (FINAL_LEAD_STATUSES.includes(lead.status)) {
-          throw new BadRequestException(
-            `Cannot create booking from a ${lead.status} lead.`,
+          throw AppErrors.badRequest(
+            AppErrorTemplates.createBookingFromFinalLead(lead.status),
           );
         }
         if (lead.clientId !== authUser.id) {
-          throw new ForbiddenException(
-            'You can only create a booking for your own lead.',
-          );
+          throw AppErrors.forbidden(AppErrorMessages.BOOKING_OWN_LEAD_ONLY);
         }
       }
     }
@@ -125,10 +112,12 @@ export class BookingsValidationService {
 
   validateTimeSlot(start: Date, end: Date): void {
     if (start >= end) {
-      throw new BadRequestException('Start time must be before end time');
+      throw AppErrors.badRequest(
+        AppErrorMessages.BOOKING_SLOT_START_BEFORE_END,
+      );
     }
     if (start < new Date()) {
-      throw new BadRequestException('Start time cannot be in the past');
+      throw AppErrors.badRequest(AppErrorMessages.BOOKING_SLOT_PAST);
     }
   }
 
@@ -147,7 +136,7 @@ export class BookingsValidationService {
     });
 
     if (conflicting) {
-      throw new BadRequestException('This time slot is already booked');
+      throw AppErrors.badRequest(AppErrorMessages.BOOKING_SLOT_TAKEN);
     }
   }
 }

@@ -1,9 +1,5 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { AppErrors, AppErrorMessages } from '../errors';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 
@@ -26,7 +22,7 @@ export class TelegramWebhookSecretGuard implements CanActivate {
       | undefined;
 
     if (header !== secret) {
-      throw new ForbiddenException('Invalid webhook secret');
+      throw AppErrors.forbidden(AppErrorMessages.GUARD_TELEGRAM_WEBHOOK_SECRET);
     }
     return true;
   }
