@@ -54,6 +54,10 @@ describe('PhoneVerificationActionService', () => {
     assertCanVerifyCode: jest.fn(),
   } as unknown as jest.Mocked<PhoneVerificationValidationService>;
 
+  const auditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
   let service: PhoneVerificationActionService;
 
   beforeEach(() => {
@@ -68,6 +72,7 @@ describe('PhoneVerificationActionService', () => {
       cache,
       configService,
       validationService,
+      auditService as never,
     );
   });
 
@@ -123,5 +128,6 @@ describe('PhoneVerificationActionService', () => {
     });
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:master-profile');
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:profile');
+    expect(auditService.log).toHaveBeenCalled();
   });
 });
