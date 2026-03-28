@@ -1,10 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  LeadStatus,
-  PaymentStatus,
-  Prisma,
-  ReviewStatus,
-} from '@prisma/client';
+import { PaymentStatus, Prisma, ReviewStatus } from '@prisma/client';
+import { LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 

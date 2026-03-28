@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { UserRole } from '@prisma/client';
+import { ACTIVE_BOOKING_STATUSES } from '../../../../common/constants';
+import { FINAL_LEAD_STATUSES } from '../../../../common/constants';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import type { BookingsAuthUser } from '../types/bookings-auth-user.types';
 
@@ -75,7 +77,7 @@ export class BookingsValidationService {
           'Lead not found or does not belong to this master.',
         );
       }
-      if (lead.status === 'CLOSED' || lead.status === 'SPAM') {
+      if (FINAL_LEAD_STATUSES.includes(lead.status)) {
         throw new BadRequestException(
           `Cannot create booking from a ${lead.status} lead.`,
         );
@@ -100,7 +102,7 @@ export class BookingsValidationService {
             'Lead not found or does not belong to this master.',
           );
         }
-        if (lead.status === 'CLOSED' || lead.status === 'SPAM') {
+        if (FINAL_LEAD_STATUSES.includes(lead.status)) {
           throw new BadRequestException(
             `Cannot create booking from a ${lead.status} lead.`,
           );
@@ -138,7 +140,7 @@ export class BookingsValidationService {
     const conflicting = await this.prisma.booking.findFirst({
       where: {
         masterId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: [...ACTIVE_BOOKING_STATUSES] },
         startTime: { lt: end },
         endTime: { gt: start },
       },

@@ -24,7 +24,7 @@ const STATEMENT_TIMEOUT_MS = 60_000;
 //   }
 // }
 
-/** pg's PoolClient has internal `connection.stream` at runtime; @types/pg omits it */
+/** У pg PoolClient в рантайме есть connection.stream; в @types/pg это не отражено */
 type PoolClientWithStream = PoolClient & {
   connection?: {
     stream?: {
@@ -39,9 +39,9 @@ function attachKeepAliveToPool(pool: Pool): void {
     try {
       c.connection?.stream?.setKeepAlive?.(true, 60_000);
     } catch {
-      // ignore keepalive setup errors
+      // игнорируем ошибки настройки keepalive
     }
-    // Limit query duration to prevent long-running queries from exhausting the pool
+    // Ограничение длительности запроса — длинные запросы не должны исчерпать пул
     if (typeof client.query === 'function') {
       void client
         .query(`SET statement_timeout = '${STATEMENT_TIMEOUT_MS}'`)
@@ -60,7 +60,7 @@ function createPgPool(
     connectionString,
     max: isTest ? 3 : 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // 10s for Docker/cold DB; was 2s
+    connectionTimeoutMillis: 10000, // 10 с: Docker / холодный старт БД (раньше было 2 с)
     allowExitOnIdle: true,
   });
 
@@ -77,7 +77,7 @@ async function closePgPool(pool: Pool | undefined): Promise<void> {
     pool.removeAllListeners();
     await pool.end();
   } catch {
-    // ignore pool end errors
+    // игнорируем ошибки закрытия пула
   }
 }
 
@@ -163,16 +163,16 @@ export class PrismaService
     try {
       await this.$disconnect();
     } catch {
-      // ignore disconnect errors
+      // игнорируем ошибки отключения
     }
     await closePgPool(this.pool);
 
-    // Close all replica pools and clients
+    // Закрыть все пулы и клиенты реплик
     for (const replicaClient of this.replicaClients) {
       try {
         await replicaClient.$disconnect();
       } catch {
-        // ignore
+        // игнорируем
       }
     }
     for (const replicaPool of this.replicaPools) {

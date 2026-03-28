@@ -28,7 +28,7 @@ export class RecommendationsListener {
       await this.recommendationsService.trackActivity(payload);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Ошибка при обработке события активности: ${msg}`);
+      this.logger.error(`Activity event handling failed: ${msg}`);
     }
   }
 }

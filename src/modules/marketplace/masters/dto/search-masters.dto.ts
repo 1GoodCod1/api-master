@@ -9,7 +9,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { TariffType } from '@prisma/client';
+import { TariffType } from '../../../../common/constants';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 export class SearchMastersDto {

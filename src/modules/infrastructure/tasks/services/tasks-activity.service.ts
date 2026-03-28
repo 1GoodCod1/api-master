@@ -52,7 +52,7 @@ export class TasksActivityService {
    * Запускается ежедневно
    */
   async checkInactiveMasters(): Promise<void> {
-    this.logger.log('Начало проверки неактивных мастеров...');
+    this.logger.log('Starting inactive master check...');
 
     try {
       const inactiveThreshold = new Date();
@@ -70,7 +70,7 @@ export class TasksActivityService {
         reengagementThreshold.getDate() - this.REENGAGEMENT_THRESHOLD_DAYS,
       );
 
-      // Reengagement: мастера неактивны 14–25 дней — email drip
+      // Reengagement: неактивность 14–25 дней — запуск цепочки email drip
       const mastersForReengagement = await this.prisma.master.findMany({
         where: {
           lastActivityAt: {
@@ -90,7 +90,7 @@ export class TasksActivityService {
       });
 
       this.logger.log(
-        `Найдено ${mastersForReengagement.length} мастеров для reengagement`,
+        `Found ${mastersForReengagement.length} masters for reengagement`,
       );
 
       for (const master of mastersForReengagement) {
@@ -129,7 +129,7 @@ export class TasksActivityService {
         },
       });
 
-      this.logger.log(`Найдено ${inactiveMasters.length} неактивных мастеров`);
+      this.logger.log(`Found ${inactiveMasters.length} inactive masters`);
 
       // Обрабатываем каждого неактивного мастера
       for (const master of inactiveMasters) {
@@ -160,7 +160,7 @@ export class TasksActivityService {
       });
 
       this.logger.log(
-        `Найдено ${mastersForWarning.length} мастеров для предупреждения`,
+        `Found ${mastersForWarning.length} masters due for warning`,
       );
 
       // Отправляем предупреждения
@@ -168,9 +168,9 @@ export class TasksActivityService {
         await this.sendInactivityWarning(master);
       }
 
-      this.logger.log('Проверка неактивных мастеров завершена');
+      this.logger.log('Inactive master check completed');
     } catch (error) {
-      this.logger.error('Ошибка при проверке неактивных мастеров:', error);
+      this.logger.error('Inactive master check failed:', error);
       throw error;
     }
   }
@@ -208,13 +208,13 @@ export class TasksActivityService {
       await this.redis.set(cacheKey, '1', 60 * 60 * 24 * 7);
 
       this.logger.log(
-        `Мастер ${master.id} деактивирован: рейтинг снижен с ${master.rating} до ${newRating}`,
+        `Master ${master.id} deactivated: rating ${master.rating} -> ${newRating}`,
       );
 
       // Обновляем счетчики в Redis
       await this.updateRedisCounters(master.id, 'deactivated');
     } catch (error) {
-      this.logger.error(`Ошибка при деактивации мастера ${master.id}:`, error);
+      this.logger.error(`Failed to deactivate master ${master.id}:`, error);
     }
   }
 
@@ -262,10 +262,10 @@ export class TasksActivityService {
       // Сохраняем в кэш, чтобы не отправлять повторно (на 7 дней)
       await this.redis.set(cacheKey, '1', 60 * 60 * 24 * 7);
 
-      this.logger.log(`Предупреждение отправлено мастеру ${master.id}`);
+      this.logger.log(`Inactivity warning sent to master ${master.id}`);
     } catch (error) {
       this.logger.error(
-        `Ошибка при отправке предупреждения мастеру ${master.id}:`,
+        `Failed to send inactivity warning to master ${master.id}:`,
         error,
       );
     }
@@ -304,12 +304,10 @@ export class TasksActivityService {
         },
       });
 
-      this.logger.log(
-        `Уведомление о деактивации отправлено мастеру ${master.id}`,
-      );
+      this.logger.log(`Deactivation notification sent to master ${master.id}`);
     } catch (error) {
       this.logger.error(
-        `Ошибка при отправке уведомления о деактивации мастеру ${master.id}:`,
+        `Failed to send deactivation notification to master ${master.id}:`,
         error,
       );
     }
@@ -329,7 +327,7 @@ export class TasksActivityService {
       await this.redis.incr(counterKey);
       await this.redis.expire(counterKey, 60 * 60 * 24 * 90); // Храним 90 дней
     } catch (error) {
-      this.logger.error('Ошибка при обновлении счетчиков Redis:', error);
+      this.logger.error('Failed to update Redis counters:', error);
     }
   }
 
@@ -358,10 +356,10 @@ export class TasksActivityService {
         await this.redis.del(`master:inactive:${masterId}`);
         await this.redis.del(`master:warning:${masterId}`);
 
-        this.logger.log(`Мастер ${masterId} реактивирован`);
+        this.logger.log(`Master ${masterId} reactivated`);
       }
     } catch (error) {
-      this.logger.error(`Ошибка при реактивации мастера ${masterId}:`, error);
+      this.logger.error(`Failed to reactivate master ${masterId}:`, error);
     }
   }
 
@@ -411,7 +409,7 @@ export class TasksActivityService {
         ratingPenalty: this.RATING_PENALTY,
       };
     } catch (error) {
-      this.logger.error('Ошибка при получении статистики:', error);
+      this.logger.error('Failed to get inactivity stats:', error);
       throw error;
     }
   }

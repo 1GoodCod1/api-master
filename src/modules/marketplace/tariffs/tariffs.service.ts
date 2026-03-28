@@ -3,7 +3,7 @@ import { TariffsQueryService } from './services/tariffs-query.service';
 import { TariffsActionService } from './services/tariffs-action.service';
 import { CreateTariffDto } from './dto/create-tariff.dto';
 import { UpdateTariffDto } from './dto/update-tariff.dto';
-import { TariffType } from '@prisma/client';
+import { TariffType } from '../../../common/constants';
 
 /**
  * TariffsService — координатор модуля тарифов.

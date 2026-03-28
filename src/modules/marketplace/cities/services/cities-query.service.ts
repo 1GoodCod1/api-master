@@ -60,7 +60,7 @@ export class CitiesQueryService {
     });
 
     if (!found) {
-      throw new NotFoundException(`Город с ID "${id}" не найден`);
+      throw new NotFoundException(`City with ID "${id}" not found`);
     }
 
     return found;

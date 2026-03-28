@@ -45,7 +45,7 @@ export function buildDpiaPdf(
 
   const { margin, contentWidth, width: pageWidth } = PAGE;
 
-  // Header banner
+  // Баннер шапки
   doc.rect(0, 0, pageWidth, 100).fill(COLORS.accent);
   doc.fontSize(22).fillColor(COLORS.white).text(t.title, margin, 24, {
     align: 'center',
@@ -74,14 +74,14 @@ export function buildDpiaPdf(
 
   let y = 120;
 
-  // Legal framework info
+  // Сведения о правовой базе
   doc.fontSize(8).fillColor(COLORS.textMuted);
   doc.text(t.supervisoryAuthority, margin, y, { width: contentWidth });
   y = doc.y + 2;
   doc.text(t.legalFramework, margin, y, { width: contentWidth });
   y = doc.y + 12;
 
-  // Section 1: Description
+  // Раздел 1: описание
   y = drawSectionHeader(doc, t.section1, y);
   y = drawParagraph(doc, t.processingDesc, y);
   y += 10;
@@ -104,7 +104,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 2: Purpose & Legal Basis
+  // Раздел 2: цели и правовые основания
   y = drawSectionHeader(doc, t.section2, y);
   const purposes: [string, string][] = [
     [t.purpose_service, t.basis_service],
@@ -121,7 +121,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 3: Necessity & Proportionality
+  // Раздел 3: необходимость и пропорциональность
   y = drawSectionHeader(doc, t.section3, y);
   y = drawParagraph(doc, t.necessityDesc, y);
   y += 8;
@@ -142,7 +142,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 4: Risk Assessment
+  // Раздел 4: оценка рисков
   y = drawSectionHeader(doc, t.section4, y);
   doc.fontSize(11).fillColor(COLORS.text).text(t.riskTitle, margin, y);
   y = doc.y + 6;
@@ -182,7 +182,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 5: Technical Measures
+  // Раздел 5: технические меры
   y = drawSectionHeader(doc, t.section5, y);
   const measureWidths = [contentWidth * 0.25, contentWidth * 0.75];
   y = drawTableRow(
@@ -208,7 +208,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 6: Data Subject Rights
+  // Раздел 6: права субъектов данных
   y = drawSectionHeader(doc, t.section6, y);
   y = drawParagraph(doc, t.rightsDesc, y);
   y += 4;
@@ -227,7 +227,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 7: Platform Statistics
+  // Раздел 7: статистика платформы
   y = drawSectionHeader(doc, t.section7, y);
   const statWidths = [contentWidth * 0.65, contentWidth * 0.35];
   y = drawTableRow(doc, [t.statLabel, t.statValue], statWidths, y, true);
@@ -246,7 +246,7 @@ export function buildDpiaPdf(
   }
   y += 10;
 
-  // Section 8: Conclusion
+  // Раздел 8: заключение
   drawSectionHeader(doc, t.section8, y);
 
   y = ensureSpace(doc, 60);

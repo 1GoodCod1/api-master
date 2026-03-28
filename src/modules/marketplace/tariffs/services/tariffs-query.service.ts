@@ -4,7 +4,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
-import { TariffType } from '@prisma/client';
+import { TariffType } from '../../../../common/constants';
 
 @Injectable()
 export class TariffsQueryService {
@@ -74,7 +74,7 @@ export class TariffsQueryService {
   @Cacheable((id: string) => `cache:tariff:${id}`, 86400)
   async findOne(id: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Тариф не найден');
+    if (!tariff) throw new NotFoundException('Tariff not found');
     return tariff;
   }
 
@@ -90,7 +90,7 @@ export class TariffsQueryService {
       async () => {
         const tariff = await this.prisma.tariff.findUnique({ where: { type } });
         if (!tariff)
-          throw new NotFoundException(`Тариф с типом ${type} не найден`);
+          throw new NotFoundException(`Tariff with type ${type} not found`);
         return tariff;
       },
       this.cache.ttl.tariffs,

@@ -153,7 +153,7 @@ export class RecommendationsService {
 
       return recommendations as unknown[];
     } catch (error) {
-      this.logger.error('Ошибка в рекомендациях:', error);
+      this.logger.error('Recommendations error:', error);
       return [];
     }
   }
@@ -203,7 +203,7 @@ export class RecommendationsService {
       await this.deleteAllRawCacheVariants(data.userId, data.sessionId);
       await client.del(this.legacyCacheKey(data.userId, data.sessionId));
     } catch (error) {
-      this.logger.error('Ошибка трекинга активности:', error);
+      this.logger.error('Activity tracking error:', error);
     }
   }
 }

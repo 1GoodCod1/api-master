@@ -99,10 +99,10 @@ async function bootstrap() {
         `[PRODUCTION] NODE_ENV=production | API=${apiUrl || '(not set)'} | FRONTEND=${frontendUrl || '(not set)'}`,
       );
     }
-    logger.log(`Приложение запущено на: http://localhost:${port}`);
+    logger.log(`Application listening at: http://localhost:${port}`);
     logger.log(`REST API base path: /api/v1`);
     if (!isProd) {
-      logger.log(`Swagger документация: http://localhost:${port}/docs`);
+      logger.log(`Swagger UI: http://localhost:${port}/docs`);
     }
 
     const shutdown = createShutdownHandler(app, isShuttingDownRef);

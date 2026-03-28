@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { ReviewStatus } from '../../../../common/constants';
+import { ReviewStatus, TariffType } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
@@ -163,7 +163,8 @@ export class MastersSearchService {
 
         if (tariffType) {
           where.tariffType = tariffType;
-          if (tariffType !== 'BASIC') where.tariffExpiresAt = { gt: now };
+          if (tariffType !== TariffType.BASIC)
+            where.tariffExpiresAt = { gt: now };
         }
 
         // ✅ Используем специализированный SQL сервис для ранжирования И подсчета (уменьшает время в 2 раза при промахе кеша)

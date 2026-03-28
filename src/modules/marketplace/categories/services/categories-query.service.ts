@@ -104,7 +104,7 @@ export class CategoriesQueryService {
     });
 
     if (!found) {
-      throw new NotFoundException(`Категория с ID "${id}" не найдена`);
+      throw new NotFoundException(`Category with ID "${id}" not found`);
     }
 
     return found;

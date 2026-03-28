@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  VIEWS_HISTORY_PERIOD,
+  type ViewsHistoryPeriod,
+} from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 
@@ -97,7 +101,7 @@ export class MastersStatsService {
 
   async getViewsHistory(
     masterId: string,
-    period: 'week' | 'month',
+    period: ViewsHistoryPeriod,
     limit = 12,
   ): Promise<
     { periodStart: string; periodEnd: string; views: number; label: string }[]
@@ -115,7 +119,7 @@ export class MastersStatsService {
       }),
     };
 
-    if (period === 'week') {
+    if (period === VIEWS_HISTORY_PERIOD.WEEK) {
       const weeks: { start: Date; end: Date }[] = [];
       let cursor = getStartOfISOWeek(new Date());
       for (let i = 0; i < limit; i++) {

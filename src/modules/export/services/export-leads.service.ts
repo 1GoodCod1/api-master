@@ -168,7 +168,7 @@ export class ExportLeadsService {
     const categoryName = master.category?.name ?? '—';
     const cityName = master.city?.name ?? '—';
 
-    // ── Helpers ──────────────────────────────────
+    // ── Вспомогательные ──────────────────────────
     const statusLabel: Record<string, string> = {
       NEW: 'Новый',
       IN_PROGRESS: 'В работе',
@@ -217,7 +217,7 @@ export class ExportLeadsService {
       { key: 'value', width: 44 },
     ];
 
-    // Title
+    // Заголовок
     info.mergeCells('A1:B1');
     const titleCell = info.getCell('A1');
     titleCell.value = 'Отчёт по заявкам';
@@ -264,7 +264,7 @@ export class ExportLeadsService {
       );
     }
 
-    // Status breakdown
+    // Разбивка по статусам
     info.addRow({});
     const statsRow = info.addRow({ label: 'Статистика по статусам' });
     info.mergeCells(`A${statsRow.number}:B${statsRow.number}`);
@@ -322,7 +322,7 @@ export class ExportLeadsService {
     ];
     sheet.columns = colDefs;
 
-    // Header row
+    // Строка заголовков таблицы
     const headerRow = sheet.getRow(1);
     headerRow.height = 26;
     headerRow.font = { bold: true, size: 11, color: { argb: HEADER_FONT } };
@@ -350,7 +350,7 @@ export class ExportLeadsService {
       to: { row: 1, column: colDefs.length },
     };
 
-    // Data rows
+    // Строки данных
     leads.forEach((lead, idx) => {
       const row = sheet.addRow({
         rowNum: idx + 1,
@@ -366,7 +366,7 @@ export class ExportLeadsService {
         filesCount: lead.files.length,
       });
 
-      // Alternating row background
+      // Чередование фона строк
       if (idx % 2 === 1) {
         row.eachCell({ includeEmpty: true }, (cell) => {
           cell.fill = {
@@ -377,13 +377,13 @@ export class ExportLeadsService {
         });
       }
 
-      // Borders & base alignment
+      // Границы и базовое выравнивание
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.border = thinBorder;
         cell.alignment = { vertical: 'middle', wrapText: true };
       });
 
-      // Status cell colour
+      // Цвет ячейки статуса
       const sBg = statusBg[lead.status];
       const sFc = statusFontClr[lead.status];
       if (sBg && sFc) {
@@ -402,7 +402,7 @@ export class ExportLeadsService {
         vertical: 'middle',
       };
 
-      // Premium highlight
+      // Подсветка премиум
       if (lead.isPremium) {
         const pc = row.getCell('isPremium');
         pc.fill = {
@@ -414,7 +414,7 @@ export class ExportLeadsService {
         pc.alignment = { horizontal: 'center', vertical: 'middle' };
       }
 
-      // Spam score highlight
+      // Подсветка спам-оценки
       if (lead.spamScore > 0) {
         row.getCell('spamScore').font = {
           bold: true,
@@ -423,11 +423,11 @@ export class ExportLeadsService {
       }
     });
 
-    // Date format
+    // Формат дат
     sheet.getColumn('createdAt').numFmt = 'dd.mm.yyyy hh:mm';
     sheet.getColumn('updatedAt').numFmt = 'dd.mm.yyyy hh:mm';
 
-    // Summary row
+    // Итоговая строка
     if (leads.length > 0) {
       const sumRow = sheet.addRow({});
       sheet.mergeCells(`A${sumRow.number}:C${sumRow.number}`);

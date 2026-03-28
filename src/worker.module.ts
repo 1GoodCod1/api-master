@@ -6,19 +6,19 @@ import { ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { createBullOptions } from './config/bull.config';
 
-// Shared infrastructure
+// Общая инфраструктура
 import { PrismaModule } from './modules/shared/database/prisma.module';
 import { RedisModule } from './modules/shared/redis/redis.module';
 import { CacheModule } from './modules/shared/cache/cache.module';
 import { EmailModule } from './modules/email/email.module';
 
-// Worker modules (cron, Bull processors, cache warming)
+// Модули воркера (cron, Bull, прогрев кеша)
 import { TasksModule } from './modules/infrastructure/tasks/tasks.module';
 import { NotificationsModule } from './modules/notifications/notifications/notifications.module';
 import { CacheWarmingModule } from './modules/infrastructure/cache-warming/cache-warming.module';
 import { ExportModule } from './modules/export/export.module';
 
-// Modules required by the above as dependencies
+// Зависимости для перечисленных выше модулей
 import { MastersModule } from './modules/marketplace/masters/masters.module';
 import { CategoriesModule } from './modules/marketplace/categories/categories.module';
 import { CitiesModule } from './modules/marketplace/cities/cities.module';
@@ -42,7 +42,7 @@ import { UsersModule } from './modules/users/users.module';
  */
 @Module({
   imports: [
-    // Config
+    // Конфигурация
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -58,7 +58,7 @@ import { UsersModule } from './modules/users/users.module';
     // Планировщик cron
     ScheduleModule.forRoot(),
 
-    // Shared infrastructure
+    // Общая инфраструктура
     PrismaModule,
     RedisModule,
     CacheModule,
@@ -73,7 +73,7 @@ import { UsersModule } from './modules/users/users.module';
     MastersModule,
     WebSocketModule,
 
-    // === Worker modules ===
+    // === Модули воркера ===
     NotificationsModule, // Bull processors: sms, telegram
     TasksModule, // Cron: ежедневные, ежечасные задачи
     CacheWarmingModule, // Прогрев кеша при старте и по расписанию

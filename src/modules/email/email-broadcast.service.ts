@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../shared/database/prisma.service';
+import { parseAppLocale } from '../../common/constants';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import type { TemplateContext } from './templates';
@@ -155,11 +156,7 @@ export class EmailBroadcastService {
 
     for (const user of users) {
       try {
-        const lang: 'en' | 'ru' | 'ro' =
-          user.preferredLanguage &&
-          ['en', 'ru', 'ro'].includes(user.preferredLanguage)
-            ? (user.preferredLanguage as 'en' | 'ru' | 'ro')
-            : 'ro';
+        const lang = parseAppLocale(user.preferredLanguage);
         const ctx: TemplateContext = {
           ...context,
           userName: user.firstName ?? undefined,

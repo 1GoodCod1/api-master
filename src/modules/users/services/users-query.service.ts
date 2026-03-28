@@ -44,7 +44,7 @@ export class UsersQueryService {
     });
 
     if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+      throw new NotFoundException('User not found');
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- exclude password from response
@@ -133,7 +133,7 @@ export class UsersQueryService {
     });
 
     if (user?.role !== UserRole.CLIENT) {
-      throw new NotFoundException('Профиль клиента не найден');
+      throw new NotFoundException('Client profile not found');
     }
 
     const rows = await this.prisma.clientPhoto.findMany({

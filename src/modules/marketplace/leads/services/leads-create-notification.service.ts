@@ -76,7 +76,7 @@ export class LeadsCreateNotificationService {
       this.emailDripService
         .startChain(clientId, 'lead_created')
         .catch((err) => {
-          this.logger.error('Ошибка запуска drip-цепочки lead_created', err);
+          this.logger.error('Failed to start lead_created drip chain', err);
         });
     }
 
@@ -88,7 +88,7 @@ export class LeadsCreateNotificationService {
         masterId: lead.masterId,
       });
     } catch (err) {
-      this.logger.error('Ошибка сохранения in-app уведомления для лида', err);
+      this.logger.error('Failed to save in-app notification for lead', err);
     }
   }
 

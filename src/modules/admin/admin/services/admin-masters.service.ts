@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, TariffType } from '@prisma/client';
-import { ReviewStatus } from '../../../../common/constants';
+import { Prisma } from '@prisma/client';
+import {
+  ReviewStatus,
+  SUBSCRIPTION_TARIFF_TYPES,
+  TariffType,
+} from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import {
@@ -206,7 +210,7 @@ export class AdminMastersService {
     if (data.tariffType !== undefined) {
       const type = data.tariffType as TariffType;
       updateData.tariffType = type;
-      if (type === 'VIP' || type === 'PREMIUM') {
+      if (SUBSCRIPTION_TARIFF_TYPES.includes(type)) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30);
         updateData.tariffExpiresAt = expiresAt;

@@ -5,7 +5,12 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { LeadStatus, NotificationCategory, UserRole } from '@prisma/client';
+import {
+  FINAL_LEAD_STATUSES,
+  LeadStatus,
+  NotificationCategory,
+  UserRole,
+} from '../../../../common/constants';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { decodeId } from '../../../shared/utils/id-encoder';
@@ -22,10 +27,14 @@ import { ReferralsService } from '../../../engagement/referrals/referrals.servic
  * CLOSED и SPAM — финальные статусы. Возврат из них невозможен.
  */
 const VALID_LEAD_STATUS_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
-  NEW: ['IN_PROGRESS', 'CLOSED', 'SPAM'],
-  IN_PROGRESS: ['CLOSED', 'SPAM'],
-  CLOSED: [], // финальный
-  SPAM: [], // финальный
+  [LeadStatus.NEW]: [
+    LeadStatus.IN_PROGRESS,
+    LeadStatus.CLOSED,
+    LeadStatus.SPAM,
+  ],
+  [LeadStatus.IN_PROGRESS]: [LeadStatus.CLOSED, LeadStatus.SPAM],
+  [LeadStatus.CLOSED]: [], // финальный
+  [LeadStatus.SPAM]: [], // финальный
 };
 
 /**
@@ -78,8 +87,7 @@ export class LeadsActionsService {
     if (authUser.role !== UserRole.ADMIN) {
       const allowedTransitions = VALID_LEAD_STATUS_TRANSITIONS[oldStatus] ?? [];
       if (!allowedTransitions.includes(newStatus)) {
-        const finalStates: LeadStatus[] = ['CLOSED', 'SPAM'];
-        if (finalStates.includes(oldStatus)) {
+        if (FINAL_LEAD_STATUSES.includes(oldStatus)) {
           throw new BadRequestException(
             `Lead is already in a final state (${oldStatus}) and cannot be changed.`,
           );
@@ -99,7 +107,7 @@ export class LeadsActionsService {
     });
 
     // Обновление счётчика активных лидов при закрытии (Через централизованный сервис)
-    if (oldStatus !== 'CLOSED' && newStatus === 'CLOSED') {
+    if (oldStatus !== LeadStatus.CLOSED && newStatus === LeadStatus.CLOSED) {
       const updatedMaster = await this.availabilityService.decrementActiveLeads(
         lead.masterId,
       );
@@ -170,7 +178,7 @@ export class LeadsActionsService {
         });
       }
     } catch (err) {
-      this.logger.error('Ошибка отправки уведомления о статусе лида', err);
+      this.logger.error('Failed to send lead status notification', err);
     }
   }
 
@@ -221,7 +229,7 @@ export class LeadsActionsService {
         });
       }
     } catch (error) {
-      this.logger.error('Ошибка уведомления подписчиков', error);
+      this.logger.error('Subscriber notification failed', error);
     }
   }
 }

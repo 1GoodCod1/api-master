@@ -2,13 +2,12 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   buildId: process.env.BUILD_ID || 'local',
   port: parseInt(process.env.PORT || '4000', 10),
-  /** Public API origin (no trailing slash). REST routes are under /api/v1 (see http-app.ts). */
   apiUrl: process.env.API_URL || 'http://localhost:4000',
   frontendUrl:
     process.env.FRONTEND_URL ||
     (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000'),
 
-  /** Global HTTP request timeout (ms). Increase if DB/cache retries can exceed (e.g. 30000). */
+  /** Глобальный таймаут HTTP-запроса (мс). Увеличить, если ретраи БД/кеша дольше (напр. 30000). */
   requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000', 10),
 
   database: {
@@ -22,7 +21,7 @@ export default () => ({
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
-    /** Prod: REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379 */
+    /** Прод: REDIS_SENTINELS=host:26379,... */
     sentinels: process.env.REDIS_SENTINELS
       ? process.env.REDIS_SENTINELS.split(',').map((s) => {
           const parts = s.trim().split(':');
@@ -41,8 +40,8 @@ export default () => ({
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1h',
   },
 
-  // httpOnly cookie for refresh token (must match frontend VITE_USE_HTTPONLY).
-  // Defaults to true. Set USE_HTTPONLY_COOKIE=false to disable (e.g. mobile API clients).
+  // httpOnly-cookie для refresh (должно совпадать с фронтом VITE_USE_HTTPONLY).
+  // По умолчанию true. USE_HTTPONLY_COOKIE=false — для мобильных API-клиентов и т.п.
   auth: {
     useHttpOnlyCookie: process.env.USE_HTTPONLY_COOKIE !== 'false',
     refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'rt',
@@ -50,8 +49,8 @@ export default () => ({
       1,
       parseInt(process.env.REFRESH_COOKIE_MAX_AGE_DAYS || '7', 10) || 7,
     ),
-    // Cookie domain for cross-subdomain support (e.g. '.master-hub.md').
-    // Leave empty in dev; set in production so cookie works across api.* and www.*
+    // Домен cookie для поддоменов (напр. '.master-hub.md').
+    // В dev пусто; в проде задать, чтобы cookie работала на api.* и www.*
     cookieDomain: process.env.COOKIE_DOMAIN || '',
   },
 
@@ -59,7 +58,7 @@ export default () => ({
     secret: process.env.ID_ENCRYPTION_SECRET || '',
   },
 
-  /** MIA / MAIB QR payments (clientId + clientSecret → Bearer token; then create QR) */
+  /** MIA / MAIB QR: clientId + clientSecret → Bearer, затем создание QR */
   mia: {
     clientId: process.env.MIA_CLIENT_ID || '',
     clientSecret: process.env.MIA_CLIENT_SECRET || '',

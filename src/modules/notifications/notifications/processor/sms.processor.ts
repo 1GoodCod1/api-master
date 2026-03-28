@@ -13,13 +13,13 @@ export class SmsProcessor {
   @Process('send-sms')
   async handleSMS(job: Job<SMSJobData>) {
     // Указали тип
-    this.logger.debug(`Обработка SMS job ${job.id} для ${job.data.to}`);
+    this.logger.debug(`Processing SMS job ${job.id} for ${job.data.to}`);
 
     try {
       await this.notificationsService.processSMSJob(job);
-      this.logger.log(`SMS job ${job.id} успешно выполнен`);
+      this.logger.log(`SMS job ${job.id} completed successfully`);
     } catch (error) {
-      this.logger.error(`Ошибка обработки SMS job ${job.id}:`, error);
+      this.logger.error(`SMS job ${job.id} failed:`, error);
       throw error;
     }
   }
@@ -33,12 +33,9 @@ export class SmsProcessor {
     for (const recipient of recipients) {
       try {
         await this.notificationsService.sendSMS(recipient, message);
-        this.logger.log(`Массовая SMS отправлена на ${recipient}`);
+        this.logger.log(`Bulk SMS sent to ${recipient}`);
       } catch (error) {
-        this.logger.error(
-          `Ошибка отправки массовой SMS на ${recipient}:`,
-          error,
-        );
+        this.logger.error(`Bulk SMS send failed for ${recipient}:`, error);
       }
     }
   }

@@ -84,18 +84,18 @@ export class SecurityAuthService {
     newPassword: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new BadRequestException('Пользователь не найден');
+    if (!user) throw new BadRequestException('User not found');
     if (!user.password)
-      throw new BadRequestException('Пароль для этого аккаунта не задан');
+      throw new BadRequestException('No password set for this account');
 
     const isPasswordValid = await argon2.verify(user.password, currentPassword);
     if (!isPasswordValid)
-      throw new UnauthorizedException('Текущий пароль указан неверно');
+      throw new UnauthorizedException('Current password is incorrect');
 
     const isSamePassword = await argon2.verify(user.password, newPassword);
     if (isSamePassword)
       throw new BadRequestException(
-        'Новый пароль должен отличаться от текущего',
+        'New password must differ from the current password',
       );
 
     const hashedPassword = await argon2.hash(newPassword);
@@ -112,7 +112,7 @@ export class SecurityAuthService {
       entityId: userId,
     });
 
-    this.logger.log(`Пароль пользователя ${userId} изменен`);
-    return { message: 'Пароль успешно изменен' };
+    this.logger.log(`Password changed for user ${userId}`);
+    return { message: 'Password changed successfully' };
   }
 }

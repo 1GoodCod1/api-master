@@ -32,7 +32,7 @@ export class NotificationsActionService {
     });
 
     if (!notification) {
-      throw new NotFoundException('Уведомление не найдено');
+      throw new NotFoundException('Notification not found');
     }
 
     if (notification.readAt) {
@@ -88,7 +88,7 @@ export class NotificationsActionService {
         },
       });
     } catch (error) {
-      this.logger.error('Ошибка при сохранении уведомления в БД:', error);
+      this.logger.error('Failed to save notification to database:', error);
       throw error;
     }
   }
@@ -107,7 +107,7 @@ export class NotificationsActionService {
     });
 
     if (!notification) {
-      throw new NotFoundException('Уведомление не найдено');
+      throw new NotFoundException('Notification not found');
     }
 
     await this.prisma.notification.delete({

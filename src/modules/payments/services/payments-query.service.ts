@@ -19,7 +19,7 @@ export class PaymentsQueryService {
         orderBy: { createdAt: 'desc' },
       });
     } catch (err) {
-      this.logger.error('Ошибка getPaymentsForMaster', err);
+      this.logger.error('getPaymentsForMaster failed', err);
       throw err;
     }
   }
@@ -51,7 +51,7 @@ export class PaymentsQueryService {
         recentPayments,
       };
     } catch (err) {
-      this.logger.error('Ошибка getPaymentStats', err);
+      this.logger.error('getPaymentStats failed', err);
       throw err;
     }
   }

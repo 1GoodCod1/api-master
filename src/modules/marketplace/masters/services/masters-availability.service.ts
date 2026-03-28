@@ -8,6 +8,7 @@ import { AvailabilityStatus } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TariffType } from '../../../../common/constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import type { UpdateAvailabilityStatusDto } from '../dto/update-availability-status.dto';
 
@@ -216,7 +217,7 @@ export class MastersAvailabilityService {
     });
     if (!master) throw new NotFoundException('Master profile not found');
 
-    const isPremium = getEffectiveTariff(master) === 'PREMIUM';
+    const isPremium = getEffectiveTariff(master) === TariffType.PREMIUM;
     if (!isPremium) {
       throw new ForbiddenException(
         'Availability status (Available/Busy) and max leads limit are PREMIUM features.',

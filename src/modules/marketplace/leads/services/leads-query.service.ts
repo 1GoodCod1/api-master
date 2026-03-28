@@ -5,7 +5,8 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { LeadStatus, type Prisma, UserRole } from '@prisma/client';
+import { type Prisma, UserRole } from '@prisma/client';
+import { ACTIVE_LEAD_STATUSES, LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
@@ -57,7 +58,7 @@ export class LeadsQueryService {
       return await this.findAllForMaster(masterId, options);
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      this.logger.error('Ошибка findAll лидов', err);
+      this.logger.error('findAll leads failed', err);
       throw err;
     }
   }
@@ -306,10 +307,10 @@ export class LeadsQueryService {
     return {
       total,
       byStatus: {
-        newLeads: statusMap['NEW'] || 0,
-        inProgress: statusMap['IN_PROGRESS'] || 0,
+        newLeads: statusMap[LeadStatus.NEW] || 0,
+        inProgress: statusMap[LeadStatus.IN_PROGRESS] || 0,
         closed: statusMap[LeadStatus.CLOSED] || 0,
-        spam: statusMap['SPAM'] || 0,
+        spam: statusMap[LeadStatus.SPAM] || 0,
       },
     };
   }
@@ -322,7 +323,7 @@ export class LeadsQueryService {
       where: {
         clientId,
         masterId,
-        status: { in: ['NEW', 'IN_PROGRESS'] },
+        status: { in: [...ACTIVE_LEAD_STATUSES] },
       },
       select: {
         id: true,

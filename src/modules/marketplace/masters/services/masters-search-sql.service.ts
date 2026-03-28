@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { TariffType } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 
@@ -42,7 +43,7 @@ export class MastersSearchSqlService {
   async getRankedMasterIds(params: {
     categoryId?: string;
     cityId?: string;
-    tariffType?: 'BASIC' | 'VIP' | 'PREMIUM';
+    tariffType?: TariffType;
     isFeatured?: boolean;
     minRating?: number;
     minPrice?: number;
@@ -132,8 +133,8 @@ export class MastersSearchSqlService {
     }
 
     // -----------------------------------------------------------------------
-    // Full-text search: use tsvector index when search term is present.
-    // Falls back to ILIKE for Russian names that may not tokenize well.
+    // Полнотекстовый поиск: при наличии запроса — tsvector/ts_rank.
+    // Для ФИО/токенизации — запасной ILIKE + fuzzy.
     // -----------------------------------------------------------------------
     let fulltextRankSql: Prisma.Sql | null = null;
 
@@ -212,7 +213,7 @@ export class MastersSearchSqlService {
       whereClauses.push(
         Prisma.sql`m."tariffType" = ${tariffType}::"TariffType"`,
       );
-      if (tariffType !== 'BASIC') {
+      if (tariffType !== TariffType.BASIC) {
         whereClauses.push(Prisma.sql`m."tariffExpiresAt" > ${now}`);
       }
     }
@@ -225,8 +226,7 @@ export class MastersSearchSqlService {
     const tariffRankSql = this.buildTariffRankSql(now);
     const sortSql = this.buildSortSql(sortBy, sortOrder);
 
-    // When a search query is present, boost results by text relevance FIRST,
-    // then by tariff rank, then by the selected sort column.
+    // При поисковом запросе: сначала релевантность текста, затем тариф, затем выбранная сортировка.
     const query = Prisma.sql`
       SELECT m."id", COUNT(*) OVER() as "totalCount"
       FROM "masters" m
@@ -261,7 +261,7 @@ export class MastersSearchSqlService {
 
     return Prisma.sql`
       CASE
-        WHEN m."tariffType" = 'PREMIUM' AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} 
+        WHEN m."tariffType" = ${TariffType.PREMIUM}::"TariffType" AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} 
           THEN 3.0 + LEAST(
             COALESCE((
               SELECT COUNT(*)::float * 0.3 
@@ -278,7 +278,7 @@ export class MastersSearchSqlService {
             LEAST(COALESCE(m."views", 0)::float / 100.0, 1.0) * 0.1,
             2.0
           )
-        WHEN m."tariffType" = 'VIP'   AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} THEN 2.0
+        WHEN m."tariffType" = ${TariffType.VIP}::"TariffType"   AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} THEN 2.0
         ELSE 1.0
       END
     `;

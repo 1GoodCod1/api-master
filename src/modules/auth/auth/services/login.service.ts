@@ -156,7 +156,7 @@ export class LoginService {
       ) {
         throw err;
       }
-      this.logger.error('Ошибка входа', err);
+      this.logger.error('Login failed', err);
       throw err;
     }
   }
@@ -181,7 +181,7 @@ export class LoginService {
 
       return { message: 'Logged out successfully' };
     } catch (err) {
-      this.logger.error('Ошибка выхода', err);
+      this.logger.error('Logout failed', err);
       throw err;
     }
   }

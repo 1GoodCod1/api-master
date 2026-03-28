@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import {
+  ANALYTICS_TIMEFRAME,
+  type AnalyticsTimeframe,
+} from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { RedisService } from '../../shared/redis/redis.service';
@@ -135,7 +139,7 @@ export class AuditLogQueryService {
         items: await this.enrichStreamItemsWithUsers(items),
       };
     } catch {
-      this.logger.warn('Redis Streams недоступны, используем базу данных');
+      this.logger.warn('Redis Streams unavailable, falling back to database');
       return this.getRecentStreamFromDb(limit);
     }
   }
@@ -237,18 +241,18 @@ export class AuditLogQueryService {
     };
   }
 
-  async getStats(timeframe: 'day' | 'week' | 'month' = 'day') {
+  async getStats(timeframe: AnalyticsTimeframe = ANALYTICS_TIMEFRAME.DAY) {
     const now = new Date();
     let startDate: Date;
 
     switch (timeframe) {
-      case 'day':
+      case ANALYTICS_TIMEFRAME.DAY:
         startDate = new Date(now.setDate(now.getDate() - 1));
         break;
-      case 'week':
+      case ANALYTICS_TIMEFRAME.WEEK:
         startDate = new Date(now.setDate(now.getDate() - 7));
         break;
-      case 'month':
+      case ANALYTICS_TIMEFRAME.MONTH:
         startDate = new Date(now.setMonth(now.getMonth() - 1));
         break;
     }

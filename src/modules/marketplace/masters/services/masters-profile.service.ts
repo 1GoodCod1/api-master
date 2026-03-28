@@ -67,9 +67,7 @@ export class MastersProfileService {
           userAgent,
           cachedResult.categoryId ?? undefined,
           cachedResult.cityId ?? undefined,
-        ).catch((err) =>
-          this.logger.error('Ошибка инкремента просмотров', err),
-        );
+        ).catch((err) => this.logger.error('View increment failed', err));
       }
       return cachedResult;
     }
@@ -176,13 +174,13 @@ export class MastersProfileService {
       throw new NotFoundException('Master not found');
     }
 
-    // Response rate: % of leads that master responded to (IN_PROGRESS or CLOSED vs NEW)
-    // Completed projects: only CLOSED leads (excludes SPAM, NEW, IN_PROGRESS)
+    // Доля ответов: % лидов, на которые мастер отреагировал (IN_PROGRESS или CLOSED к NEW)
+    // Завершённые проекты: только CLOSED (без SPAM, NEW, IN_PROGRESS)
     const [respondedCount, totalLeads, closedLeadsCount] = await Promise.all([
       this.prisma.lead.count({
         where: {
           masterId: master.id,
-          status: { in: ['IN_PROGRESS', 'CLOSED'] },
+          status: { in: [LeadStatus.IN_PROGRESS, LeadStatus.CLOSED] },
         },
       }),
       this.prisma.lead.count({ where: { masterId: master.id } }),
@@ -232,7 +230,7 @@ export class MastersProfileService {
         userAgent,
         master.categoryId,
         master.cityId,
-      ).catch((err) => this.logger.error('Ошибка инкремента просмотров', err));
+      ).catch((err) => this.logger.error('View increment failed', err));
     }
 
     return result;

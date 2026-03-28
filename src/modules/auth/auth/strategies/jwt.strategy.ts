@@ -51,7 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const cached = await this.cache.get<CachedUserProfile>(cacheKey);
     if (cached) {
       if (cached.isBanned) {
-        throw new UnauthorizedException('Ваш аккаунт заблокирован');
+        throw new UnauthorizedException('Your account is blocked');
       }
 
       // Если в кэше неполные данные, сбрасываем его
@@ -79,7 +79,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!user || user.isBanned) {
       throw new UnauthorizedException(
-        user?.isBanned ? 'Ваш аккаунт заблокирован' : 'Пользователь не найден',
+        user?.isBanned ? 'Your account is blocked' : 'User not found',
       );
     }
 

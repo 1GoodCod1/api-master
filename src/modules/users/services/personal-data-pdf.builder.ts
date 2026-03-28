@@ -350,7 +350,7 @@ export function buildPersonalDataPdf(
   const contentWidth = pageWidth - margin * 2;
   let y = 110;
 
-  // Header
+  // Шапка
   doc.rect(0, 0, pageWidth, 90).fill(COLORS.primary);
   doc.fontSize(22).fillColor(COLORS.white).text(t.title, margin, 28, {
     align: 'center',
@@ -370,7 +370,7 @@ export function buildPersonalDataPdf(
       { align: 'center', width: contentWidth },
     );
 
-  // Profile section
+  // Раздел профиля
   y = drawSectionHeader(doc, t.profile, y);
   const fullName = formatUserName(data.user.firstName, data.user.lastName, '—');
   const profileItems: [string, string | number | null | undefined][] = [
@@ -392,7 +392,7 @@ export function buildPersonalDataPdf(
   }
   y += 12;
 
-  // Master profile (if exists)
+  // Профиль мастера (если есть)
   if (data.masterProfile) {
     y = drawSectionHeader(doc, t.masterProfile, y);
     const mp = data.masterProfile;
@@ -411,7 +411,7 @@ export function buildPersonalDataPdf(
     y += 12;
   }
 
-  // Leads
+  // Заявки (лиды)
   y = drawSectionHeader(doc, t.leads, y);
   if (data.leads.length > 0) {
     for (let i = 0; i < data.leads.length; i++) {
@@ -440,7 +440,7 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Reviews
+  // Отзывы
   y = drawSectionHeader(doc, t.reviews, y);
   if (data.reviews.length > 0) {
     for (let i = 0; i < data.reviews.length; i++) {
@@ -465,7 +465,7 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Bookings
+  // Бронирования
   y = drawSectionHeader(doc, t.bookings, y);
   if (data.bookings.length > 0) {
     for (let i = 0; i < data.bookings.length; i++) {
@@ -488,7 +488,7 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Login history
+  // История входов
   y = drawSectionHeader(doc, t.loginHistory, y);
   if (data.loginHistory.length > 0) {
     for (let i = 0; i < data.loginHistory.length; i++) {
@@ -511,7 +511,7 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Notifications
+  // Уведомления
   y = drawSectionHeader(doc, t.notifications, y);
   if (data.notifications.length > 0) {
     for (let i = 0; i < Math.min(data.notifications.length, 50); i++) {
@@ -544,7 +544,7 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Consents
+  // Согласия
   y = drawSectionHeader(doc, t.consents ?? 'Consents', y);
   if (data.consents && data.consents.length > 0) {
     for (const c of data.consents) {

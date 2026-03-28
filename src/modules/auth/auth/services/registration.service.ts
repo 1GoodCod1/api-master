@@ -23,6 +23,7 @@ import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 import { ConsentService } from '../../../consent/services/consent.service';
+import { TariffType } from '../../../../common/constants';
 
 type PrismaTransactionClient = Parameters<
   Parameters<PrismaService['$transaction']>[0]
@@ -101,7 +102,7 @@ export class RegistrationService {
             rating: 0,
             totalReviews: 0,
             experienceYears: 0,
-            tariffType: 'BASIC',
+            tariffType: TariffType.BASIC,
             views: 0,
             leadsCount: 0,
           },
@@ -174,7 +175,7 @@ export class RegistrationService {
         name: name || undefined,
       });
     } catch (err) {
-      this.logger.error('Ошибка отправки уведомления о новой регистрации', err);
+      this.logger.error('Failed to send new registration notification', err);
     }
 
     // 7.6. Audit log — регистрация
@@ -190,7 +191,7 @@ export class RegistrationService {
         } satisfies Prisma.InputJsonValue,
       });
     } catch (err) {
-      this.logger.error('Ошибка audit log при регистрации', err);
+      this.logger.error('Audit log failed on registration', err);
     }
 
     // 7.7. Сохранение согласий (GDPR audit trail)

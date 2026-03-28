@@ -17,10 +17,8 @@ function buildCitiesConfig(
 ): CrudCacheableEntityConfig<City, CreateCityDto, UpdateCityDto> {
   return {
     entityName: CitiesActionService.name,
-    entityNameSingular: 'город',
-    entityNameAccusative: 'город',
-    notFoundSuffix: 'не найден',
-    inWhich: 'в котором',
+    entityNameSingular: 'city',
+    entityNameAccusative: 'city',
     getEntityCacheKey: (id) => cache.keys.cityWithStats(id),
     invalidateGlobalCaches: async () => {
       await Promise.all([

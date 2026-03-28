@@ -27,7 +27,8 @@ import { PlansGuard } from '../../../common/guards/plans.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Verified } from '../../../common/decorators/verified.decorator';
 import { Plans } from '../../../common/decorators/plans.decorator';
-import { TariffType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { TariffType } from '../../../common/constants';
 
 @ApiTags('Promotions')
 @Controller('promotions')

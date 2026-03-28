@@ -17,10 +17,8 @@ function buildCategoriesConfig(
 ): CrudCacheableEntityConfig<Category, CreateCategoryDto, UpdateCategoryDto> {
   return {
     entityName: CategoriesActionService.name,
-    entityNameSingular: 'категория',
-    entityNameAccusative: 'категорию',
-    notFoundSuffix: 'не найдена',
-    inWhich: 'в которой',
+    entityNameSingular: 'category',
+    entityNameAccusative: 'category',
     getEntityCacheKey: (id) => cache.keys.categoryWithStats(id),
     invalidateGlobalCaches: async () => {
       await Promise.all([

@@ -4,7 +4,7 @@ import { RedisService } from '../../../shared/redis/redis.service';
 /** Account lockout after 5 failed attempts for 15 minutes */
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_TTL_SEC = 15 * 60; // 15 minutes
-const WINDOW_TTL_SEC = 15 * 60; // Окно для подсчёта неудачных попыток
+const WINDOW_TTL_SEC = 15 * 60; // окно для подсчёта неудачных попыток
 
 @Injectable()
 export class AuthLockoutService {
@@ -35,7 +35,7 @@ export class AuthLockoutService {
       if (count >= LOCKOUT_THRESHOLD) {
         this.logger.warn(`Login locked for email (${count} failed attempts)`);
         throw new ForbiddenException(
-          `Слишком много неудачных попыток входа. Попробуйте через ${Math.ceil(LOCKOUT_TTL_SEC / 60)} минут.`,
+          `Too many failed login attempts. Try again in ${Math.ceil(LOCKOUT_TTL_SEC / 60)} minutes.`,
         );
       }
 
@@ -46,7 +46,7 @@ export class AuthLockoutService {
         if (ipCount >= LOCKOUT_THRESHOLD * 2) {
           this.logger.warn(`Login locked for IP (${ipCount} failed attempts)`);
           throw new ForbiddenException(
-            `Слишком много неудачных попыток с этого IP. Попробуйте через ${Math.ceil(LOCKOUT_TTL_SEC / 60)} минут.`,
+            `Too many failed attempts from this IP. Try again in ${Math.ceil(LOCKOUT_TTL_SEC / 60)} minutes.`,
           );
         }
       }

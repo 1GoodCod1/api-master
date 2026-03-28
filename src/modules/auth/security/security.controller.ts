@@ -55,7 +55,7 @@ export class SecurityController {
     @Req() req: RequestWithUser,
   ) {
     await this.securityService.banUser(userId, body.reason, req.user.id);
-    return { success: true, message: 'Пользователь заблокирован' };
+    return { success: true, message: 'User has been banned' };
   }
 
   @Post('unban-user/:userId')
@@ -68,7 +68,7 @@ export class SecurityController {
     @Req() req: RequestWithUser,
   ) {
     await this.securityService.unbanUser(userId, req.user.id);
-    return { success: true, message: 'Пользователь разблокирован' };
+    return { success: true, message: 'User has been unbanned' };
   }
 
   @Post('blacklist-ip')
@@ -86,7 +86,7 @@ export class SecurityController {
       req.user.id,
       body.expiresAt,
     );
-    return { success: true, message: 'IP добавлен в черный список' };
+    return { success: true, message: 'IP added to blocklist' };
   }
 
   @Post('remove-ip-blacklist/:ipAddress')
@@ -96,6 +96,6 @@ export class SecurityController {
   @ApiOperation({ summary: 'Удалить IP из черного списка (Admin only)' })
   async removeIpFromBlacklist(@Param('ipAddress') ipAddress: string) {
     await this.securityService.removeIpFromBlacklist(ipAddress);
-    return { success: true, message: 'IP удален из черного списка' };
+    return { success: true, message: 'IP removed from blocklist' };
   }
 }

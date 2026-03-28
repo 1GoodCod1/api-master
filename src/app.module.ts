@@ -17,13 +17,13 @@ import { ActivityTrackerInterceptor } from './common/interceptors/activity-track
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { CookieOriginGuard } from './common/guards/cookie-origin.guard';
 
-// Shared modules
+// Общие модули
 import { PrismaModule } from './modules/shared/database/prisma.module';
 import { RedisModule } from './modules/shared/redis/redis.module';
 import { RedisService } from './modules/shared/redis/redis.service';
 import { CacheModule } from './modules/shared/cache/cache.module';
 
-// Feature modules
+// Функциональные модули
 import { AppModule as AppRootModule } from './app/app.module';
 import { AuthGroupModule } from './modules/auth/auth-group.module';
 import { UsersModule } from './modules/users/users.module';
@@ -67,7 +67,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     },
   ],
   imports: [
-    // Configuration
+    // Конфигурация
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -87,16 +87,16 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
       },
     }),
 
-    // Shared modules
+    // Общие модули
     PrismaModule,
     RedisModule,
     CacheModule,
     EmailModule,
 
-    // System modules
+    // Системные модули
     ScheduleModule.forRoot(),
 
-    // Rate limiting (Redis storage in production for shared limits across pods)
+    // Ограничение частоты запросов (Redis в проде — общие лимиты между подами)
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule, RedisModule],
       useFactory: (configService: ConfigService, redis: RedisService) => {
@@ -122,7 +122,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
       inject: [ConfigService],
     }),
 
-    // Monitoring
+    // Мониторинг
     PrometheusModule.register({
       defaultMetrics: {
         enabled: true,
@@ -132,7 +132,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     EventEmitterModule.forRoot(),
     TerminusModule,
 
-    // Feature modules
+    // Функциональные модули
     AppRootModule,
     AuthGroupModule,
     UsersModule,

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
-import { LeadStatus } from '../../../../common/constants';
+import { BookingStatus, LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
 
@@ -18,7 +17,7 @@ export class BookingsLeadSyncService {
     try {
       await this.prisma.lead.update({
         where: { id: leadId },
-        data: { status: 'IN_PROGRESS', updatedAt: new Date() },
+        data: { status: LeadStatus.IN_PROGRESS, updatedAt: new Date() },
       });
     } catch (error) {
       this.logger.warn(
@@ -34,20 +33,20 @@ export class BookingsLeadSyncService {
     if (!booking.leadId) return;
 
     try {
-      if (newStatus === 'CONFIRMED') {
+      if (newStatus === BookingStatus.CONFIRMED) {
         await this.updateLeadStatusOnCreate(booking.leadId);
         return;
       }
 
-      if (newStatus === 'CANCELLED') {
+      if (newStatus === BookingStatus.CANCELLED) {
         await this.prisma.$transaction(async (tx) => {
           await tx.lead.update({
             where: { id: booking.leadId! },
-            data: { status: 'NEW', updatedAt: new Date() },
+            data: { status: LeadStatus.NEW, updatedAt: new Date() },
           });
           await this.availabilityService.decrementActiveLeads(booking.masterId);
         });
-      } else if (newStatus === 'COMPLETED') {
+      } else if (newStatus === BookingStatus.COMPLETED) {
         await this.prisma.$transaction(async (tx) => {
           const lead = await tx.lead.findUnique({
             where: { id: booking.leadId! },

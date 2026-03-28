@@ -64,13 +64,11 @@ export class WebsocketConnectionService implements OnModuleDestroy {
           });
           if (master) {
             await client.join(`master:${master.id}`);
-            this.logger.log(
-              `Мастер ${userId} подписан на комнату master:${master.id}`,
-            );
+            this.logger.log(`Master ${userId} joined room master:${master.id}`);
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Не удалось подписать мастера на комнату: ${msg}`);
+          this.logger.warn(`Failed to subscribe master to room: ${msg}`);
         }
       }
       if (payload.role === UserRole.ADMIN) {
@@ -95,13 +93,11 @@ export class WebsocketConnectionService implements OnModuleDestroy {
         );
       }
 
-      this.logger.log(
-        `Пользователь подключен: ${userId} (Socket: ${client.id})`,
-      );
+      this.logger.log(`User connected: ${userId} (socket: ${client.id})`);
       return userId;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Ошибка при подключении Websocket: ${msg}`);
+      this.logger.error(`Websocket connection error: ${msg}`);
       client.disconnect();
       return null;
     }
@@ -140,11 +136,11 @@ export class WebsocketConnectionService implements OnModuleDestroy {
           );
         }
 
-        this.logger.log(`Пользователь полностью отключен (оффлайн): ${userId}`);
+        this.logger.log(`User fully disconnected (offline): ${userId}`);
         return { userId, isLastConnection: true };
       } else {
         this.userConnections.set(userId, updatedSockets);
-        this.logger.log(`Закрыто одно из соединений пользователя: ${userId}`);
+        this.logger.log(`One of user connections closed: ${userId}`);
       }
     }
     return { userId, isLastConnection: false };
@@ -186,7 +182,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
       return usersWithStatus;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      this.logger.warn('Ошибка получения онлайн-пользователей из Redis:', msg);
+      this.logger.warn('Failed to get online users from Redis:', msg);
       return [];
     }
   }

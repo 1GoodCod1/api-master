@@ -15,13 +15,13 @@ export class TelegramProcessor {
 
   @Process('send-telegram')
   async handleTelegram(job: Job<TelegramJobData>) {
-    this.logger.debug(`Обработка Telegram job ${job.id}`);
+    this.logger.debug(`Processing Telegram job ${job.id}`);
 
     try {
       await this.notificationsService.processTelegramJob(job);
-      this.logger.log(`Telegram job ${job.id} успешно выполнен`);
+      this.logger.log(`Telegram job ${job.id} completed successfully`);
     } catch (error) {
-      this.logger.error(`Ошибка обработки Telegram job ${job.id}:`, error);
+      this.logger.error(`Telegram job ${job.id} failed:`, error);
       throw error;
     }
   }
@@ -34,9 +34,9 @@ export class TelegramProcessor {
 
     try {
       await this.notificationsService.sendTelegram(message, options);
-      this.logger.log(`Broadcast job ${job.id} выполнен`);
+      this.logger.log(`Broadcast job ${job.id} completed`);
     } catch (error) {
-      this.logger.error(`Ошибка обработки broadcast job ${job.id}:`, error);
+      this.logger.error(`Broadcast job ${job.id} failed:`, error);
       throw error;
     }
   }

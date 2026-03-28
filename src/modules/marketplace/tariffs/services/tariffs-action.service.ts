@@ -30,7 +30,9 @@ export class TariffsActionService {
       where: { type: dto.type },
     });
     if (existing) {
-      throw new BadRequestException(`Тариф с типом ${dto.type} уже существует`);
+      throw new BadRequestException(
+        `Tariff with type ${dto.type} already exists`,
+      );
     }
 
     const tariff = await this.prisma.tariff.create({
@@ -70,7 +72,7 @@ export class TariffsActionService {
    */
   async update(id: string, dto: UpdateTariffDto, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Тариф не найден');
+    if (!tariff) throw new NotFoundException('Tariff not found');
 
     if (dto.type && dto.type !== tariff.type) {
       const existing = await this.prisma.tariff.findUnique({
@@ -78,7 +80,7 @@ export class TariffsActionService {
       });
       if (existing)
         throw new BadRequestException(
-          `Тариф с типом ${dto.type} уже существует`,
+          `Tariff with type ${dto.type} already exists`,
         );
     }
 
@@ -119,7 +121,7 @@ export class TariffsActionService {
    */
   async remove(id: string, adminId?: string) {
     const tariff = await this.prisma.tariff.findUnique({ where: { id } });
-    if (!tariff) throw new NotFoundException('Тариф не найден');
+    if (!tariff) throw new NotFoundException('Tariff not found');
 
     const deleted = await this.prisma.tariff.delete({ where: { id } });
 

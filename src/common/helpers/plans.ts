@@ -1,4 +1,4 @@
-type TariffType = 'BASIC' | 'VIP' | 'PREMIUM';
+import { TariffType } from '../constants';
 
 interface MasterTariffFields {
   tariffType?: TariffType;
@@ -8,16 +8,16 @@ interface MasterTariffFields {
 export function getEffectiveTariff(
   master: MasterTariffFields | null | undefined,
 ): TariffType {
-  const type = master?.tariffType ?? 'BASIC';
+  const type = master?.tariffType ?? TariffType.BASIC;
 
-  if (type === 'BASIC') return 'BASIC';
+  if (type === TariffType.BASIC) return TariffType.BASIC;
 
   const expRaw = master?.tariffExpiresAt ?? null;
   const exp = expRaw ? new Date(expRaw) : null;
 
-  if (!exp) return 'BASIC';
-  if (Number.isNaN(exp.getTime())) return 'BASIC';
-  if (exp.getTime() <= Date.now()) return 'BASIC';
+  if (!exp) return TariffType.BASIC;
+  if (Number.isNaN(exp.getTime())) return TariffType.BASIC;
+  if (exp.getTime() <= Date.now()) return TariffType.BASIC;
 
   return type;
 }

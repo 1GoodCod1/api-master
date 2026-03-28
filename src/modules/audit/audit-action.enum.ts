@@ -1,9 +1,9 @@
 /**
- * Centralised audit action enum — single source of truth.
- * Every call to auditService.log() MUST use a value from this enum.
+ * Единый enum действий аудита — единственный источник правды.
+ * Все вызовы auditService.log() должны использовать значения отсюда.
  */
 export enum AuditAction {
-  // ── Auth ────────────────────────────────────────────
+  // ── Аутентификация ──────────────────────────────────
   USER_REGISTERED = 'USER_REGISTERED',
   LOGIN_SUCCESS = 'LOGIN_SUCCESS',
   LOGIN_FAILED = 'LOGIN_FAILED',
@@ -15,28 +15,28 @@ export enum AuditAction {
   PHONE_VERIFIED = 'PHONE_VERIFIED',
   EMAIL_VERIFIED = 'EMAIL_VERIFIED',
 
-  // ── Security ───────────────────────────────────────
+  // ── Безопасность ────────────────────────────────────
   USER_BANNED = 'USER_BANNED',
   USER_UNBANNED = 'USER_UNBANNED',
   IP_BLACKLISTED = 'IP_BLACKLISTED',
   SUSPICIOUS_SCORE_INCREASED = 'SUSPICIOUS_SCORE_INCREASED',
 
-  // ── Consent / GDPR ────────────────────────────────
+  // ── Согласия / GDPR ───────────────────────────────
   CONSENT_GRANTED = 'CONSENT_GRANTED',
   CONSENT_REVOKED = 'CONSENT_REVOKED',
   USER_SELF_DELETED = 'USER_SELF_DELETED',
   USER_DATA_EXPORTED = 'USER_DATA_EXPORTED',
 
-  // ── Admin ──────────────────────────────────────────
+  // ── Админ ───────────────────────────────────────────
   ADMIN_USER_UPDATED = 'ADMIN_USER_UPDATED',
   ADMIN_MASTER_UPDATED = 'ADMIN_MASTER_UPDATED',
 
-  // ── Verification ───────────────────────────────────
+  // ── Верификация ─────────────────────────────────────
   VERIFICATION_SUBMITTED = 'VERIFICATION_SUBMITTED',
   VERIFICATION_REVIEWED = 'VERIFICATION_REVIEWED',
   VERIFICATION_DOCUMENTS_PURGED = 'VERIFICATION_DOCUMENTS_PURGED',
 
-  // ── Tariffs & Payments ─────────────────────────────
+  // ── Тарифы и платежи ────────────────────────────────
   TARIFF_CREATED = 'TARIFF_CREATED',
   TARIFF_UPDATED = 'TARIFF_UPDATED',
   TARIFF_DELETED = 'TARIFF_DELETED',

@@ -45,7 +45,7 @@ export class WebsocketGateway
     private readonly moduleRef: ModuleRef,
     private readonly errorHandler: WebsocketErrorHandlerService,
   ) {
-    this.logger.log('Websocket Gateway constructor вызван');
+    this.logger.log('Websocket Gateway constructor');
   }
 
   // Получаем PrismaService лениво, когда он понадобится
@@ -54,7 +54,7 @@ export class WebsocketGateway
       try {
         this.prisma = this.moduleRef.get(PrismaService, { strict: false });
         if (!this.prisma) {
-          this.logger.warn('PrismaService не найден в модуле');
+          this.logger.warn('PrismaService not found in module');
           return null;
         }
       } catch (error: unknown) {
@@ -67,13 +67,13 @@ export class WebsocketGateway
   }
 
   afterInit(server: Server) {
-    this.logger.log('Websocket Gateway afterInit вызван');
+    this.logger.log('Websocket Gateway afterInit');
     try {
       this.websocketService.initServer(server);
-      this.logger.log('Websocket Gateway инициализирован успешно');
+      this.logger.log('Websocket Gateway initialized successfully');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Ошибка при инициализации Gateway: ${msg}`);
+      this.logger.error(`Gateway initialization failed: ${msg}`);
     }
   }
 
@@ -87,7 +87,7 @@ export class WebsocketGateway
             await this.websocketService.getOfflineNotifications(userId);
 
           client.emit('connected', {
-            message: 'Успешное подключение к уведомлениям',
+            message: 'Connected to notifications',
             userId,
             timestamp: new Date().toISOString(),
             offlineCount: offlineNotifications.length,
@@ -102,7 +102,7 @@ export class WebsocketGateway
           const msg = error instanceof Error ? error.message : 'Unknown error';
           this.logger.error(`Error getting offline notifications: ${msg}`);
           client.emit('connected', {
-            message: 'Успешное подключение к уведомлениям',
+            message: 'Connected to notifications',
             userId,
             timestamp: new Date().toISOString(),
             offlineCount: 0,
@@ -156,7 +156,7 @@ export class WebsocketGateway
       // ЗАЩИТА: Проверяем, что пользователь может подписаться на этого мастера
       const prisma = this.getPrismaService();
       if (!prisma) {
-        this.logger.warn('PrismaService недоступен, пропускаем валидацию');
+        this.logger.warn('PrismaService unavailable, skipping validation');
         await client.join(`master:${sanitizedMasterId}`);
         return { success: true, masterId: sanitizedMasterId };
       }

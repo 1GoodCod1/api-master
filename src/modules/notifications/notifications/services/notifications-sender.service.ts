@@ -104,7 +104,7 @@ export class NotificationsSenderService {
     const chatId = options?.chatId ?? this.configService.get('telegram.chatId');
 
     if (!botToken || !chatId) {
-      this.logger.warn('Токен Telegram-бота или chat id не настроены');
+      this.logger.warn('Telegram bot token or chat id not configured');
       return;
     }
 
@@ -115,7 +115,7 @@ export class NotificationsSenderService {
         parse_mode: 'HTML',
         disable_notification: options?.silent ?? false,
       });
-      this.logger.log('Telegram-сообщение успешно отправлено');
+      this.logger.log('Telegram message sent successfully');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to send Telegram message: ${msg}`);
@@ -139,7 +139,7 @@ export class NotificationsSenderService {
 
     const senderId = this.configService.get<string>('whatsapp.senderId');
     if (!this.twilioClient || !senderId) {
-      this.logger.warn('Twilio client или WhatsApp sender ID не настроены');
+      this.logger.warn('Twilio client or WhatsApp sender ID not configured');
       return;
     }
 
@@ -152,7 +152,7 @@ export class NotificationsSenderService {
         to: normalizedTo,
         from: senderId,
       });
-      this.logger.log('WhatsApp-сообщение успешно отправлено');
+      this.logger.log('WhatsApp message sent successfully');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to send WhatsApp message: ${msg}`);
@@ -305,7 +305,7 @@ export class NotificationsSenderService {
     _options?: Record<string, unknown>,
   ) {
     if (!this.twilioClient) {
-      this.logger.warn('Twilio client не инициализирован, пропускаем SMS');
+      this.logger.warn('Twilio client not initialized, skipping SMS');
       return;
     }
     try {
@@ -331,7 +331,7 @@ export class NotificationsSenderService {
         'sms.httpProvider',
       );
     if (!httpConfig?.url) {
-      this.logger.warn('URL HTTP SMS провайдера не настроен');
+      this.logger.warn('HTTP SMS provider URL not configured');
       return;
     }
     try {

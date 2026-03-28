@@ -29,8 +29,8 @@ interface AnalyticsPdfData {
 }
 
 /**
- * Register Roboto font for Cyrillic support.
- * Falls back to Helvetica if font file is missing.
+ * Подключить шрифт Roboto для кириллицы.
+ * Если файла нет — Helvetica.
  */
 function registerPdfFont(doc: Doc): void {
   const fontPath = path.join(
@@ -204,7 +204,7 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Bookings stats
+  // Статистика записей
   y = drawSectionHeader(doc, t.bookingsStats, y);
   if (data.bookingsStats.length > 0) {
     let col = 0;

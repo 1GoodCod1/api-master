@@ -76,7 +76,7 @@ function drawEntryBlock(
     doc.addPage();
   }
 
-  // Header bar
+  // Полоса шапки
   const headerY = doc.y;
   doc
     .rect(margin, headerY, contentWidth, ENTRY_HEADER_HEIGHT)
@@ -142,7 +142,7 @@ export function buildRopaPdf(
 
   const { margin, contentWidth, width: pageWidth } = PAGE;
 
-  // Header
+  // Шапка
   doc.rect(0, 0, pageWidth, 100).fill(COLORS.primary);
   doc.fontSize(22).fillColor(COLORS.white).text(t.title, margin, 20, {
     align: 'center',
@@ -187,7 +187,7 @@ export function buildRopaPdf(
     drawEntryBlock(doc, entries[i], i, t);
   }
 
-  // Footer
+  // Подвал
   y = doc.y + 10;
   if (y > PAGE.bottomLimit - 30) {
     doc.addPage();

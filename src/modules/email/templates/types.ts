@@ -1,4 +1,6 @@
-export type EmailLang = 'en' | 'ru' | 'ro';
+import type { AppLocale } from '../../../common/constants';
+
+export type EmailLang = AppLocale;
 
 export interface TemplateContext {
   userName?: string;

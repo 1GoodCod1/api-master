@@ -15,7 +15,7 @@ export class ConsentService {
   ) {}
 
   /**
-   * Record user consent with IP and user-agent for GDPR audit trail.
+   * Зафиксировать согласие с IP и user-agent для аудита GDPR.
    */
   async grantConsent(
     userId: string,
@@ -47,7 +47,7 @@ export class ConsentService {
       `Consent granted: user=${userId}, type=${consentType}, version=${meta.version ?? '1.0'}`,
     );
 
-    // Audit log
+    // Audit log: выдача согласия
     await this.auditService.log({
       userId: userId,
       action: AuditAction.CONSENT_GRANTED,
@@ -65,7 +65,7 @@ export class ConsentService {
   }
 
   /**
-   * Revoke consent (GDPR right to withdraw).
+   * Отзыв согласия (право по GDPR).
    */
   async revokeConsent(userId: string, consentType: ConsentType) {
     const consent = await this.prisma.userConsent.update({
@@ -80,7 +80,7 @@ export class ConsentService {
 
     this.logger.log(`Consent revoked: user=${userId}, type=${consentType}`);
 
-    // Audit log
+    // Audit log: отзыв согласия
     await this.auditService.log({
       userId: userId,
       action: AuditAction.CONSENT_REVOKED,
@@ -105,7 +105,7 @@ export class ConsentService {
   }
 
   /**
-   * Get all consents for a user (for GDPR data export).
+   * Все согласия пользователя (для экспорта данных по GDPR).
    */
   async getUserConsents(userId: string) {
     return this.prisma.userConsent.findMany({

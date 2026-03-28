@@ -7,47 +7,43 @@ import {
 import { CacheService } from '../cache/cache.service';
 
 /**
- * Configuration for cacheable entity CRUD operations.
- * Implement in concrete services to provide entity-specific behavior.
+ * Конфигурация CRUD для сущностей с инвалидацией кеша.
+ * Реализуется в конкретных сервисах (города, категории и т.п.).
  */
 export interface CrudCacheableEntityConfig<
   TEntity extends { id: string; isActive?: boolean },
   TCreateDto,
   TUpdateDto,
 > {
-  /** Entity name for logging (e.g. "CitiesActionService") */
+  /** Имя для логов (например CitiesActionService) */
   entityName: string;
-  /** Singular form for error messages (e.g. "город", "категория") */
+  /** Единственное число для текстов ошибок на англ. (city, category) */
   entityNameSingular: string;
-  /** Accusative for "создать X" (e.g. "город", "категорию") */
+  /** Для сообщения об ошибке create в логе (на англ., напр. category) */
   entityNameAccusative: string;
-  /** Suffix for NotFoundException (e.g. "не найден", "не найдена") */
-  notFoundSuffix: string;
-  /** For BadRequest "в котором/которой есть активные мастера" */
-  inWhich: string;
-  /** Cache key for entity by ID */
+  /** Ключ кеша сущности по ID */
   getEntityCacheKey: (id: string) => string;
-  /** Invalidate all caches affected by entity changes */
+  /** Инвалидация всех кешей, затронутых изменениями сущности */
   invalidateGlobalCaches: () => Promise<void>;
-  /** Create entity in DB */
+  /** Создание в БД */
   createEntity: (dto: TCreateDto) => Promise<TEntity>;
-  /** Update entity in DB */
+  /** Обновление в БД */
   updateEntity: (id: string, dto: TUpdateDto) => Promise<TEntity>;
-  /** Find entity with masters count for remove validation */
+  /** Загрузка сущности с числом мастеров (для проверки перед удалением) */
   findWithMastersCount: (
     id: string,
   ) => Promise<{ _count: { masters: number } } | null>;
-  /** Delete entity from DB */
+  /** Удаление из БД */
   deleteEntity: (id: string) => Promise<TEntity>;
-  /** Get current entity for toggleActive (needs isActive) */
+  /** Текущая сущность для toggleActive (нужен isActive) */
   findOneForToggle: (id: string) => Promise<{ isActive: boolean }>;
-  /** Ensure entity exists before update (throws NotFoundException) */
+  /** Проверка существования перед update (иначе NotFoundException) */
   ensureExists: (id: string) => Promise<void>;
 }
 
 /**
- * Generic CRUD action service for cacheable entities (cities, categories).
- * Eliminates duplication between CitiesActionService and CategoriesActionService.
+ * Базовый CRUD для сущностей с кешем (города, категории).
+ * Убирает дублирование между CitiesActionService и CategoriesActionService.
  */
 @Injectable()
 export abstract class CrudCacheableEntityActionService<
@@ -80,7 +76,7 @@ export abstract class CrudCacheableEntityActionService<
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Не удалось создать ${this.config.entityNameAccusative}: ${message}`,
+        `Failed to create ${this.config.entityNameAccusative}: ${message}`,
       );
       throw error;
     }
@@ -101,14 +97,12 @@ export abstract class CrudCacheableEntityActionService<
       const name =
         this.config.entityNameSingular.charAt(0).toUpperCase() +
         this.config.entityNameSingular.slice(1);
-      throw new NotFoundException(
-        `${name} с ID "${id}" ${this.config.notFoundSuffix}`,
-      );
+      throw new NotFoundException(`${name} with ID "${id}" not found`);
     }
 
     if (entity._count.masters > 0) {
       throw new BadRequestException(
-        `Нельзя удалить ${this.config.entityNameSingular}, ${this.config.inWhich} есть активные мастера`,
+        `Cannot delete ${this.config.entityNameSingular}: active masters are linked`,
       );
     }
 

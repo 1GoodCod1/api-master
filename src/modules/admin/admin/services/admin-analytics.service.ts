@@ -6,6 +6,10 @@ import {
   getStartOfTodayInMoldova,
   toDateStringMoldova,
 } from '../../../shared/utils/timezone.util';
+import {
+  ANALYTICS_TIMEFRAME,
+  type AnalyticsTimeframe,
+} from '../../../../common/constants';
 
 /**
  * Сервис для аналитики и статистики
@@ -14,22 +18,22 @@ import {
 export class AdminAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAnalytics(timeframe: 'day' | 'week' | 'month' = 'day') {
+  async getAnalytics(timeframe: AnalyticsTimeframe = ANALYTICS_TIMEFRAME.DAY) {
     const now = new Date();
     let startDate: Date;
 
     switch (timeframe) {
-      case 'day':
+      case ANALYTICS_TIMEFRAME.DAY:
         startDate = getStartOfDateInMoldova(
           new Date(now.getTime() - 24 * 60 * 60 * 1000),
         );
         break;
-      case 'week':
+      case ANALYTICS_TIMEFRAME.WEEK:
         startDate = getStartOfDateInMoldova(
           new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
         );
         break;
-      case 'month':
+      case ANALYTICS_TIMEFRAME.MONTH:
         startDate = new Date(now);
         startDate.setMonth(startDate.getMonth() - 1);
         startDate = getStartOfDateInMoldova(startDate);

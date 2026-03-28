@@ -154,7 +154,9 @@ export class TasksAnalyticsService {
       });
     }
 
-    this.logger.log(`Аналитика агрегирована за последние ${BACKFILL_DAYS} дня`);
+    this.logger.log(
+      `Analytics aggregated for the last ${BACKFILL_DAYS} day(s)`,
+    );
   }
 
   /**

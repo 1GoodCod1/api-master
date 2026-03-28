@@ -3,8 +3,8 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { NotificationsService } from '../../notifications/notifications/notifications.service';
 import { CacheService } from '../../shared/cache/cache.service';
-import { Prisma, TariffType } from '@prisma/client';
-import { PaymentStatus } from '../../../common/constants';
+import { Prisma } from '@prisma/client';
+import { PaymentStatus, TariffType } from '../../../common/constants';
 import { AuditService } from '../../audit/audit.service';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
@@ -91,10 +91,10 @@ export class PaymentsWebhookService {
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        this.logger.warn(`Не удалось отправить уведомление о платеже: ${msg}`);
+        this.logger.warn(`Failed to send payment notification: ${msg}`);
       }
 
-      // Audit log webhook success
+      // Audit log: успешный webhook
       await this.auditService.log({
         userId: payment.userId,
         action: AuditAction.PAYMENT_CONFIRMED,
@@ -122,10 +122,10 @@ export class PaymentsWebhookService {
 
     let tariffType: TariffType;
     switch (tariffTypeStr) {
-      case 'VIP':
+      case TariffType.VIP:
         tariffType = TariffType.VIP;
         break;
-      case 'PREMIUM':
+      case TariffType.PREMIUM:
         tariffType = TariffType.PREMIUM;
         break;
       default:

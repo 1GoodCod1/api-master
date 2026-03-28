@@ -11,7 +11,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Plans } from '../../common/decorators/plans.decorator';
 import { PlansGuard } from '../../common/guards/plans.guard';
-import { TariffType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { TariffType } from '../../common/constants';
 import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
 
 @ApiTags('Analytics')

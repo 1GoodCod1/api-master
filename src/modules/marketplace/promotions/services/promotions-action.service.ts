@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { TariffType } from '../../../../common/constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import { CreatePromotionDto } from '../dto/create-promotion.dto';
 import { UpdatePromotionDto } from '../dto/update-promotion.dto';
@@ -74,9 +75,9 @@ export class PromotionsActionService {
     await this.assertPremiumTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
-    if (!promotion) throw new NotFoundException('Акция не найдена');
+    if (!promotion) throw new NotFoundException('Promotion not found');
     if (promotion.masterId !== masterId)
-      throw new ForbiddenException('Нет доступа');
+      throw new ForbiddenException('Access denied');
 
     const newServiceTitle =
       dto.serviceTitle !== undefined
@@ -118,9 +119,9 @@ export class PromotionsActionService {
     await this.assertPremiumTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
-    if (!promotion) throw new NotFoundException('Акция не найдена');
+    if (!promotion) throw new NotFoundException('Promotion not found');
     if (promotion.masterId !== masterId)
-      throw new ForbiddenException('Нет доступа');
+      throw new ForbiddenException('Access denied');
 
     await this.prisma.promotion.delete({ where: { id } });
     await this.invalidatePromotionCache();
@@ -132,7 +133,7 @@ export class PromotionsActionService {
       where: { id: masterId },
       select: { tariffType: true, tariffExpiresAt: true },
     });
-    if (getEffectiveTariff(master) !== 'PREMIUM') {
+    if (getEffectiveTariff(master) !== TariffType.PREMIUM) {
       throw new ForbiddenException(
         'Service promotions are available for PREMIUM plan only.',
       );

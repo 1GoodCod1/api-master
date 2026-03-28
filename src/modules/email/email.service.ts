@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { DEFAULT_APP_LOCALE, type AppLocale } from '../../common/constants';
 import { EmailTemplateService } from './email-template.service';
 
 @Injectable()
@@ -48,7 +49,7 @@ export class EmailService {
   async sendPasswordResetEmail(
     to: string,
     resetLink: string,
-    lang: 'en' | 'ru' | 'ro' = 'ro',
+    lang: AppLocale = DEFAULT_APP_LOCALE,
   ): Promise<void> {
     const rendered = await this.templateService.render('password-reset', {
       resetLink,
@@ -94,7 +95,7 @@ export class EmailService {
       return;
     }
 
-    // SMTP not configured: log in development
+    // SMTP не настроен: логируем в development
     if (this.configService.get<string>('nodeEnv') === 'development') {
       this.logger.warn(
         devLogWhenNotConfigured ??

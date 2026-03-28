@@ -32,7 +32,7 @@ export class PaymentsController {
     private readonly configService: ConfigService,
   ) {}
 
-  // ==================== MIA PAYMENTS ====================
+  // ==================== ПЛАТЕЖИ MIA ====================
 
   @Post('create-mia-checkout')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,7 +64,7 @@ export class PaymentsController {
     @Body() body: { orderId?: string },
     @Query('token') token: string,
   ) {
-    // --- Webhook protection ---
+    // --- Защита webhook ---
     // Конфигурируй URL каллбека в MIA дашборде:
     //   https://your-api.com/payments/mia-callback?token=<MIA_WEBHOOK_SECRET>
     const expectedSecret = this.configService.get<string>(
@@ -81,7 +81,7 @@ export class PaymentsController {
         'MIA_WEBHOOK_SECRET is not set — mia-callback endpoint is UNPROTECTED! Set it in .env',
       );
     } else {
-      // Constant-time comparison — защита от timing attacks
+      // Сравнение за constant-time — защита от timing attacks
       const tokenBuf = Buffer.from(token ?? '');
       const secretBuf = Buffer.from(expectedSecret);
       const valid =
@@ -94,7 +94,7 @@ export class PaymentsController {
         throw new ForbiddenException('Invalid webhook token');
       }
     }
-    // --- End webhook protection ---
+    // --- Конец защиты webhook ---
 
     const orderId = body?.orderId;
     if (!orderId) throw new BadRequestException('orderId required');
@@ -120,7 +120,7 @@ export class PaymentsController {
     );
   }
 
-  // ==================== QUERY & STATS ====================
+  // ==================== ЗАПРОСЫ И СТАТИСТИКА ====================
 
   @Get('master/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -131,7 +131,7 @@ export class PaymentsController {
     @Param('masterId') masterId: string,
     @GetUser() user: JwtUser,
   ) {
-    // Defense-in-depth: IDOR check at controller level (also enforced in service)
+    // Защита в глубину: IDOR на уровне контроллера (дублируется в сервисе)
     if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
       throw new ForbiddenException('Access to payment data denied');
     }
@@ -147,7 +147,7 @@ export class PaymentsController {
     @Param('masterId') masterId: string,
     @GetUser() user: JwtUser,
   ) {
-    // Defense-in-depth: IDOR check at controller level (also enforced in service)
+    // Защита в глубину: IDOR на уровне контроллера (дублируется в сервисе)
     if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
       throw new ForbiddenException('Access to payment data denied');
     }
@@ -165,7 +165,7 @@ export class PaymentsController {
     return this.paymentsService.getPaymentsForMaster(masterId, user);
   }
 
-  // ==================== UPGRADES ====================
+  // ==================== АПГРЕЙДЫ ====================
 
   @Post('confirm-pending-upgrade')
   @UseGuards(JwtAuthGuard, RolesGuard)

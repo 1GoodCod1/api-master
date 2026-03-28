@@ -6,6 +6,7 @@ import { UsersQueryService } from './services/users-query.service';
 import { UsersManageService } from './services/users-manage.service';
 import { UsersAvatarService } from './services/users-avatar.service';
 import { UsersGdprService } from './services/users-gdpr.service';
+import { type AppLocale } from '../../common/constants';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   buildPersonalDataPdf,
@@ -93,7 +94,7 @@ export class UsersService {
    */
   async setPreferredLanguage(
     userId: string,
-    lang: 'en' | 'ru' | 'ro',
+    lang: AppLocale,
   ): Promise<{ preferredLanguage: string }> {
     await this.manageService.setPreferredLanguage(userId, lang);
     return { preferredLanguage: lang };

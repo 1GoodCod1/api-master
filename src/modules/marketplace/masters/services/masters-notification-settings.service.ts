@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LeadNotifyChannel } from '../../../../common/constants';
+import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateNotificationSettingsDto } from '../dto/update-notification-settings.dto';
 
@@ -32,8 +33,7 @@ export class MastersNotificationSettingsService {
     });
     if (!master) throw new NotFoundException('Master profile not found');
 
-    const isPremium =
-      master.tariffType === 'VIP' || master.tariffType === 'PREMIUM';
+    const isPremium = isVipOrPremiumTariff(master.tariffType);
     const data: {
       telegramChatId?: string | null;
       whatsappPhone?: string | null;

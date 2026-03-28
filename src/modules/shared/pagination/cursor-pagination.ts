@@ -1,35 +1,34 @@
 /**
- * Universal cursor-based pagination helpers.
+ * Универсальная курсорная пагинация.
  *
- * Supports any Prisma model that has `id` (string) and `createdAt` (Date).
- * The cursor is an opaque, URL-safe, base64url-encoded JSON token.
+ * Подходит для моделей Prisma с `id` (string) и `createdAt` (Date).
+ * Курсор — непрозрачный URL-safe base64url JSON.
  *
- * This module provides:
- * - `encodeCursor` / `decodeCursor` — low-level token operations
- * - `applyCursorToWhere` — builds a Prisma `where` clause that efficiently
- *    skips records already seen by the client
- * - `buildPaginatedResponse` — constructs the standardised pagination meta
+ * Модуль даёт:
+ * - encodeCursor / decodeCursor — низкоуровневые операции с токеном
+ * - applyCursorToWhere — условие Prisma `where` для пропуска уже отданных строк
+ * - buildPaginatedResponse — стандартизированная meta пагинации
  */
 
 // ---------------------------------------------------------------------------
-// Types
+// Типы
 // ---------------------------------------------------------------------------
 
 export interface CursorPayload {
-  /** ISO-8601 timestamp of the last item the client received */
+  /** ISO-8601 последнего отданного клиенту элемента */
   createdAt: string;
-  /** Primary ID of that item (tie-breaker for rows with identical createdAt) */
+  /** ID того же элемента (развязка при одинаковом createdAt) */
   id: string;
 }
 
 export interface PaginationMeta {
   total: number;
   limit: number;
-  /** null when no more pages */
+  /** null, если страниц больше нет */
   nextCursor: string | null;
-  /** Previous cursor for bi-directional paging (optional) */
+  /** Предыдущий курсор для двунаправленной пагинации (опционально) */
   prevCursor?: string | null;
-  /** For backwards-compat: current page (cursor mode always uses 1) */
+  /** Совместимость: номер страницы (в режиме курсора часто 1) */
   page: number;
   totalPages: number;
   hasMore: boolean;
@@ -41,7 +40,7 @@ export interface PaginatedResult<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Encode / Decode
+// Кодирование / декодирование
 // ---------------------------------------------------------------------------
 
 export function encodeCursor(payload: CursorPayload): string {
@@ -68,16 +67,16 @@ export function decodeCursor(
 }
 
 // ---------------------------------------------------------------------------
-// Build WHERE clause
+// Условие WHERE
 // ---------------------------------------------------------------------------
 
 /**
- * Applies a cursor to an existing Prisma `where` clause.
+ * Добавляет курсор к существующему Prisma `where`.
  *
- * For **DESC** ordering (default — newest first):
+ * Сортировка **DESC** (по умолчанию — сначала новые):
  *   `(createdAt < cursor.createdAt) OR (createdAt = cursor.createdAt AND id < cursor.id)`
  *
- * For **ASC** ordering (oldest first):
+ * Сортировка **ASC** (сначала старые):
  *   `(createdAt > cursor.createdAt) OR (createdAt = cursor.createdAt AND id > cursor.id)`
  */
 export function applyCursorToWhere<TWhere extends Record<string, unknown>>(
@@ -102,15 +101,14 @@ export function applyCursorToWhere<TWhere extends Record<string, unknown>>(
 }
 
 // ---------------------------------------------------------------------------
-// Build paginated response
+// Ответ с пагинацией
 // ---------------------------------------------------------------------------
 
 /**
- * Constructs a standardised paginated response.
+ * Собирает стандартный ответ с пагинацией.
  *
- * The caller should fetch `limit + 1` items from the DB.
- * If we receive more items than `limit`, the extra item proves that more
- * data exists and is used to derive `nextCursor`.
+ * Запрос в БД: `limit + 1` строк.
+ * Если строк больше `limit`, лишняя показывает наличие следующей страницы и даёт `nextCursor`.
  */
 export function buildPaginatedResponse<
   T extends { id: string; createdAt: Date },
@@ -146,12 +144,12 @@ export function buildPaginatedResponse<
 }
 
 // ---------------------------------------------------------------------------
-// Order-by helper
+// Сортировка
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the standard order-by array for cursor pagination.
- * Always includes `id` as a tie-breaker.
+ * Стандартный orderBy для курсорной пагинации.
+ * Всегда включает `id` как развязку.
  */
 export function cursorOrderBy(
   order: 'asc' | 'desc' = 'desc',
@@ -160,7 +158,7 @@ export function cursorOrderBy(
 }
 
 // ---------------------------------------------------------------------------
-// Convenience: build the Prisma query params
+// Сборка параметров запроса Prisma
 // ---------------------------------------------------------------------------
 
 export interface CursorQueryParams {
@@ -171,8 +169,7 @@ export interface CursorQueryParams {
 }
 
 /**
- * All-in-one helper: given base `where`, raw `cursor` token, page, limit —
- * returns the Prisma query params to use.
+ * Сводный хелпер: base `where`, токен `cursor`, page, limit → параметры Prisma.
  */
 export function buildCursorQuery(
   baseWhere: Record<string, unknown>,
@@ -191,11 +188,11 @@ export function buildCursorQuery(
   const orderBy = cursorOrderBy(order);
 
   if (usedCursor) {
-    // Fetch limit+1 to determine hasMore
+    // Берём limit+1, чтобы узнать hasMore
     return { where, orderBy, take: limit + 1, usedCursor };
   }
 
-  // Offset-based fallback for first page or when no cursor
+  // Первая страница или без курсора — offset
   const pageNum = Math.max(1, Number(page) || 1);
   return {
     where,

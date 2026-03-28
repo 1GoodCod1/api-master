@@ -210,7 +210,7 @@ export class AdminReviewsService {
       throw new NotFoundException('Review not found');
     }
 
-    // Default to VISIBLE when approving via "Moderate" (status not sent from frontend)
+    // По умолчанию VISIBLE при модерации, если фронт не прислал status
     const resolvedStatus = (status || 'VISIBLE') as ReviewStatus;
 
     const updated = await this.prisma.review.update({
@@ -222,7 +222,7 @@ export class AdminReviewsService {
       },
     });
 
-    // Invalidate reviews cache so master page shows updated data
+    // Сброс кеша отзывов — страница мастера подтянет актуальные данные
     await this.cache.invalidateMasterRelated(review.masterId);
 
     if (resolvedStatus === ReviewStatus.VISIBLE) {

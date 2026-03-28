@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { parseAppLocale } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { EmailService } from '../../email/email.service';
@@ -97,7 +98,7 @@ export class DigestService {
 
     if (subs.length === 0) return 0;
 
-    this.logger.log(`Отправка дайджеста ${subs.length} подписчикам`);
+    this.logger.log(`Sending digest to ${subs.length} subscribers`);
 
     const announcement = await this.appSettings.getDigestAnnouncement();
 
@@ -106,11 +107,7 @@ export class DigestService {
       try {
         const templateName =
           sub.user.role === UserRole.MASTER ? 'digest-master' : 'digest-client';
-        const lang: 'en' | 'ru' | 'ro' =
-          sub.user.preferredLanguage &&
-          ['en', 'ru', 'ro'].includes(sub.user.preferredLanguage)
-            ? (sub.user.preferredLanguage as 'en' | 'ru' | 'ro')
-            : 'ro';
+        const lang = parseAppLocale(sub.user.preferredLanguage);
         const rendered = await this.templateService.render(templateName, {
           userName: sub.user.firstName ?? undefined,
           lang,
@@ -130,7 +127,7 @@ export class DigestService {
       }
     }
 
-    this.logger.log(`Дайджест отправлен: ${sent}/${subs.length}`);
+    this.logger.log(`Digest sent: ${sent}/${subs.length}`);
     return sent;
   }
 }

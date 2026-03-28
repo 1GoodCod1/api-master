@@ -10,6 +10,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { APP_LOCALE, APP_LOCALES } from '../../common/constants';
 import { ComplianceService } from './services/compliance.service';
 
 @ApiTags('Compliance')
@@ -28,9 +29,13 @@ export class ComplianceController {
 
   @Get('dpia')
   @ApiOperation({ summary: 'Download DPIA report as PDF' })
-  @ApiQuery({ name: 'locale', required: false, enum: ['en', 'ru', 'ro'] })
+  @ApiQuery({
+    name: 'locale',
+    required: false,
+    enum: [...APP_LOCALES],
+  })
   async downloadDpia(
-    @Query('locale') locale: string = 'en',
+    @Query('locale') locale: string = APP_LOCALE.EN,
     @Res() res: Response,
   ) {
     await this.complianceService.streamDpiaPdf(res, locale);
@@ -38,9 +43,13 @@ export class ComplianceController {
 
   @Get('ropa')
   @ApiOperation({ summary: 'Download ROPA report as PDF' })
-  @ApiQuery({ name: 'locale', required: false, enum: ['en', 'ru', 'ro'] })
+  @ApiQuery({
+    name: 'locale',
+    required: false,
+    enum: [...APP_LOCALES],
+  })
   async downloadRopa(
-    @Query('locale') locale: string = 'en',
+    @Query('locale') locale: string = APP_LOCALE.EN,
     @Res() res: Response,
   ) {
     await this.complianceService.streamRopaPdf(res, locale);

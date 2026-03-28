@@ -59,7 +59,7 @@ export class WebPushService {
   }
 
   /**
-   * Save push subscription for a user
+   * Сохранить push-подписку пользователя
    */
   async subscribe(
     userId: string,
@@ -76,7 +76,7 @@ export class WebPushService {
   }
 
   /**
-   * Remove push subscription
+   * Удалить push-подписку
    */
   async unsubscribe(endpoint: string) {
     await this.prisma.pushSubscription.deleteMany({
@@ -86,7 +86,7 @@ export class WebPushService {
   }
 
   /**
-   * Send push notification to a specific user (all their devices)
+   * Отправить push конкретному пользователю (все его устройства)
    */
   async sendToUser(userId: string, payload: PushPayload): Promise<number> {
     if (!this.enabled) {
@@ -124,7 +124,7 @@ export class WebPushService {
               : undefined;
 
           if (statusCode === 410 || statusCode === 404) {
-            // Subscription expired or not found, mark for removal
+            // Подписка истекла или не найдена — помечаем на удаление
             staleIds.push(sub.id);
           } else {
             this.logger.warn(
@@ -135,7 +135,7 @@ export class WebPushService {
       }),
     );
 
-    // Clean up stale subscriptions
+    // Удаляем устаревшие подписки
     if (staleIds.length > 0) {
       await this.prisma.pushSubscription.deleteMany({
         where: { id: { in: staleIds } },
@@ -147,7 +147,7 @@ export class WebPushService {
   }
 
   /**
-   * Get VAPID public key for frontend
+   * Публичный ключ VAPID для фронтенда
    */
   getPublicKey(): string {
     return this.publicKey;

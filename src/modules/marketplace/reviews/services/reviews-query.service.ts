@@ -99,9 +99,9 @@ export class ReviewsQueryService {
                   },
                 },
               },
-              // Replies inlined (typically 0-1 — master reply)
+              // Ответы встроены (обычно 0–1 — ответ мастера)
               replies: true,
-              // Use _count instead of loading all votes to avoid N+1
+              // _count вместо загрузки всех голосов — без N+1
               _count: {
                 select: { votes: true },
               },
@@ -240,9 +240,9 @@ export class ReviewsQueryService {
     return this.cache.getOrSet(
       cacheKey,
       async () => {
-        // Status distribution + rating distribution in parallel
+        // Распределение по статусам и по оценкам — параллельно
         const [statusGroups, ratingStats] = await Promise.all([
-          // Single groupBy for all status counts instead of 4-5 separate count() calls
+          // Один groupBy по статусам вместо 4–5 отдельных count()
           this.prisma.review.groupBy({
             by: ['status'],
             where: { masterId },
@@ -255,7 +255,7 @@ export class ReviewsQueryService {
           }),
         ]);
 
-        // Build status counts from single query
+        // Счётчики статусов из одного запроса
         const statusMap: Record<string, number> = {};
         let total = 0;
         for (const g of statusGroups) {
@@ -298,7 +298,7 @@ export class ReviewsQueryService {
 
     const clientPhone = user.phone.trim();
 
-    // Use parallel count queries instead of fetching full objects
+    // Два count() параллельно вместо загрузки сущностей целиком
     const [existingCount, closedLead] = await Promise.all([
       this.prisma.review.count({
         where: { masterId, clientId },

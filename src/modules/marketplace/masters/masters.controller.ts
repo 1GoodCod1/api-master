@@ -1,5 +1,10 @@
 import { UserRole } from '@prisma/client';
 import {
+  VIEWS_HISTORY_PERIOD,
+  VIEWS_HISTORY_PERIODS,
+  type ViewsHistoryPeriod,
+} from '../../../common/constants';
+import {
   Controller,
   Get,
   Post,
@@ -201,14 +206,21 @@ export class MastersController {
   @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get profile views history (past weeks or months)' })
-  @ApiQuery({ name: 'period', required: true, enum: ['week', 'month'] })
+  @ApiQuery({
+    name: 'period',
+    required: true,
+    enum: [...VIEWS_HISTORY_PERIODS],
+  })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getViewsHistory(
     @GetUser() user: JwtUser,
-    @Query('period') period: 'week' | 'month' = 'week',
+    @Query('period') period: ViewsHistoryPeriod = VIEWS_HISTORY_PERIOD.WEEK,
     @Query('limit', new ParseIntPipe({ optional: true })) limit = 12,
   ) {
-    const safePeriod = period === 'month' ? 'month' : 'week';
+    const safePeriod =
+      period === VIEWS_HISTORY_PERIOD.MONTH
+        ? VIEWS_HISTORY_PERIOD.MONTH
+        : VIEWS_HISTORY_PERIOD.WEEK;
     return this.mastersService.getViewsHistory(
       user.id,
       safePeriod,

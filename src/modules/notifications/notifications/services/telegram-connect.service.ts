@@ -1,6 +1,7 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
 import { randomBytes } from 'crypto';
 import axios from 'axios';
 
@@ -43,8 +44,7 @@ export class TelegramConnectService {
     });
     if (!master) throw new ForbiddenException('Master profile not found');
 
-    const isPremium =
-      master.tariffType === 'VIP' || master.tariffType === 'PREMIUM';
+    const isPremium = isVipOrPremiumTariff(master.tariffType);
     if (!isPremium) {
       throw new ForbiddenException(
         'Telegram connect is available for VIP and PREMIUM plans only',

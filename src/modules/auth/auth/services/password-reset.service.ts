@@ -11,6 +11,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { EmailService } from '../../../email/email.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { parseAppLocale } from '../../../../common/constants';
 import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
@@ -81,12 +82,7 @@ export class PasswordResetService {
         );
       }
       const resetLink = `${frontendUrl || 'http://localhost:3000'}/reset-password?token=${token}`;
-      const lang = (
-        user.preferredLanguage &&
-        ['en', 'ru', 'ro'].includes(user.preferredLanguage)
-          ? user.preferredLanguage
-          : 'ro'
-      ) as 'en' | 'ru' | 'ro';
+      const lang = parseAppLocale(user.preferredLanguage);
       await this.emailService.sendPasswordResetEmail(
         user.email,
         resetLink,

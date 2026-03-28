@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { TariffType } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { PaymentsMiaService } from './payments-mia.service';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
@@ -48,7 +49,7 @@ export class PaymentsUpgradeService {
         );
       }
 
-      if (getEffectiveTariff(master) !== 'VIP') {
+      if (getEffectiveTariff(master) !== TariffType.VIP) {
         await this.resetPendingUpgrade(master.id);
         throw new BadRequestException(
           'Current tariff is not VIP. Cannot upgrade to PREMIUM.',
@@ -64,7 +65,7 @@ export class PaymentsUpgradeService {
       // Сбрасываем флаг, так как сессия создана
       await this.resetPendingUpgrade(master.id);
 
-      // Audit log upgrade confirmed
+      // Audit log: апгрейд подтверждён
       await this.auditService.log({
         userId: userId,
         action: AuditAction.TARIFF_UPGRADE_CONFIRMED,
@@ -83,7 +84,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('Ошибка confirmPendingUpgrade', err);
+      this.logger.error('confirmPendingUpgrade failed', err);
       throw err;
     }
   }
@@ -101,7 +102,7 @@ export class PaymentsUpgradeService {
 
       await this.resetPendingUpgrade(master.id);
 
-      // Audit log upgrade cancelled
+      // Audit log: апгрейд отменён
       await this.auditService.log({
         userId: userId,
         action: AuditAction.TARIFF_UPGRADE_CANCELLED,
@@ -117,7 +118,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('Ошибка cancelPendingUpgrade', err);
+      this.logger.error('cancelPendingUpgrade failed', err);
       throw err;
     }
   }
@@ -136,7 +137,7 @@ export class PaymentsUpgradeService {
         },
       });
       if (!master) throw new NotFoundException('Master not found');
-      if (master.tariffType === 'BASIC' || !master.tariffExpiresAt) {
+      if (master.tariffType === TariffType.BASIC || !master.tariffExpiresAt) {
         throw new BadRequestException('No active paid tariff to cancel.');
       }
       if (master.tariffExpiresAt.getTime() <= Date.now()) {
@@ -148,7 +149,7 @@ export class PaymentsUpgradeService {
         data: { tariffCancelAtPeriodEnd: true },
       });
 
-      // Audit log subscription cancelled
+      // Audit log: подписка отменена
       await this.auditService.log({
         userId: userId,
         action: AuditAction.SUBSCRIPTION_CANCELLED,
@@ -170,7 +171,7 @@ export class PaymentsUpgradeService {
       ) {
         throw err;
       }
-      this.logger.error('Ошибка cancelTariffAtPeriodEnd', err);
+      this.logger.error('cancelTariffAtPeriodEnd failed', err);
       throw err;
     }
   }

@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PaymentStatus } from '../../../../common/constants';
+import {
+  PaymentStatus,
+  SUBSCRIPTION_TARIFF_TYPES,
+  TariffType,
+} from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
@@ -25,7 +29,7 @@ export class TasksTariffService {
 
     const premiumMasters = await this.prisma.master.findMany({
       where: {
-        tariffType: 'PREMIUM',
+        tariffType: TariffType.PREMIUM,
         tariffExpiresAt: { gt: now },
       },
       include: {
@@ -72,7 +76,7 @@ export class TasksTariffService {
     const expiredMasters = await this.prisma.master.findMany({
       where: {
         tariffExpiresAt: { lt: now },
-        tariffType: { not: 'BASIC' },
+        tariffType: { not: TariffType.BASIC },
       },
       include: { user: true },
     });
@@ -81,7 +85,7 @@ export class TasksTariffService {
       await this.prisma.master.update({
         where: { id: master.id },
         data: {
-          tariffType: 'BASIC',
+          tariffType: TariffType.BASIC,
           tariffExpiresAt: null,
           tariffCancelAtPeriodEnd: false,
           isFeatured: false,
@@ -139,7 +143,7 @@ export class TasksTariffService {
         orderBy: { createdAt: SORT_DESC },
       });
 
-      const newTariffType = lastPayment ? master.tariffType : 'BASIC';
+      const newTariffType = lastPayment ? master.tariffType : TariffType.BASIC;
 
       await this.prisma.master.update({
         where: { id: master.id },
@@ -147,8 +151,8 @@ export class TasksTariffService {
           pendingUpgradeTo: null,
           pendingUpgradeCreatedAt: null,
           tariffType: newTariffType,
-          isFeatured: newTariffType !== 'BASIC',
-          ...(newTariffType === 'BASIC' && !lastPayment
+          isFeatured: newTariffType !== TariffType.BASIC,
+          ...(newTariffType === TariffType.BASIC && !lastPayment
             ? { tariffExpiresAt: null }
             : {}),
         },
@@ -195,7 +199,7 @@ export class TasksTariffService {
 
     const mastersToNotify = await this.prisma.master.findMany({
       where: {
-        tariffType: { in: ['VIP', 'PREMIUM'] },
+        tariffType: { in: [...SUBSCRIPTION_TARIFF_TYPES] },
         tariffExpiresAt: {
           gte: new Date(twoDaysFromNow.getTime() - 60 * 60 * 1000),
           lte: new Date(twoDaysFromNow.getTime() + 60 * 60 * 1000),

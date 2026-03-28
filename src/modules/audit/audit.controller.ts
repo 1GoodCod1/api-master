@@ -6,6 +6,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { ANALYTICS_TIMEFRAMES } from '../../common/constants';
 import { AuditService } from './audit.service';
 import { AuditCleanupDto } from './dto/audit-cleanup.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -62,7 +63,7 @@ export class AuditController {
   @ApiQuery({
     name: 'timeframe',
     required: false,
-    enum: ['day', 'week', 'month'],
+    enum: [...ANALYTICS_TIMEFRAMES],
   })
   async getStats(@Query('timeframe') timeframe?: string) {
     return this.auditService.getStatsFromQuery(timeframe);

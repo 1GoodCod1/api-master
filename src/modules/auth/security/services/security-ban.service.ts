@@ -134,6 +134,6 @@ export class SecurityBanService {
       where: { ipAddress },
     });
 
-    this.logger.log(`IP ${ipAddress} удален из черного списка`);
+    this.logger.log(`IP ${ipAddress} removed from blocklist`);
   }
 }

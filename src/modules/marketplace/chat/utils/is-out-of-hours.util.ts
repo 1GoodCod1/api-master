@@ -7,15 +7,15 @@ export function isOutOfHours(
 ): boolean {
   const hour = getHourInMoldova(now);
 
-  // Normalize to 0..24 bounds defensively
+  // Нормализация в пределах 0..24
   const start = Math.min(Math.max(workStartHour, 0), 23);
   const end = Math.min(Math.max(workEndHour, 1), 24);
 
-  // Typical day shift: start < end (this is enforced in schedule settings)
+  // Обычная дневная смена: start < end (так задано в настройках расписания)
   if (start < end) {
     return hour < start || hour >= end;
   }
 
-  // Fallback for night shifts (e.g. 22..6)
+  // Ночная смена (напр. 22..6)
   return hour < start && hour >= end;
 }

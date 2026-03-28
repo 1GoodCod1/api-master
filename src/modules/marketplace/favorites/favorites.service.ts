@@ -57,7 +57,7 @@ export class FavoritesService {
     });
 
     if (!master) {
-      throw new NotFoundException('Мастер не найден');
+      throw new NotFoundException('Master not found');
     }
 
     // Проверяем, не добавлен ли уже
@@ -71,7 +71,7 @@ export class FavoritesService {
     });
 
     if (existing) {
-      throw new BadRequestException('Мастер уже в избранном');
+      throw new BadRequestException('Master is already in favorites');
     }
 
     // Создаем избранное
@@ -128,7 +128,7 @@ export class FavoritesService {
     });
 
     if (!favorite) {
-      throw new NotFoundException('Запись в избранном не найдена');
+      throw new NotFoundException('Favorite entry not found');
     }
 
     await this.prisma.favorite.delete({

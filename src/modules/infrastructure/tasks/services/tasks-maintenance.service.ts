@@ -78,7 +78,7 @@ export class TasksMaintenanceService {
     ]);
 
     if (redisPing !== 'PONG') {
-      this.logger.error('Ошибка проверки здоровья Redis');
+      this.logger.error('Redis health check failed');
       await this.notifications.sendTelegram('🚨 Redis health check failed!');
     }
 

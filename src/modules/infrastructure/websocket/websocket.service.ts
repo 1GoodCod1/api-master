@@ -37,10 +37,10 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
   private initTimeout: NodeJS.Timeout | null = null;
 
   onModuleInit() {
-    this.logger.log('WebsocketService onModuleInit вызван');
+    this.logger.log('WebsocketService onModuleInit');
     // Используем сохранение ссылки на таймер для возможности отмены
     this.initTimeout = setTimeout(() => {
-      this.logger.log('Запуск настройки Redis subscriptions...');
+      this.logger.log('Starting Redis subscriptions setup...');
       this.setupRedisSubscriptions().catch((error: unknown) => {
         const msg = error instanceof Error ? error.message : String(error);
         this.logger.error(`Failed to setup Redis subscriptions: ${msg}`);
@@ -54,7 +54,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
    */
   initServer(server: Server) {
     this.messagingService.setServer(server);
-    this.logger.log('Websocket Server проброшен в сервисы');
+    this.logger.log('Websocket server injected into services');
   }
 
   /**
@@ -81,7 +81,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
 
   async sendToUser(userId: string, event: string, data: any) {
     try {
-      // Санитизируем данные перед отправкой
+      // Санитизация данных перед отправкой
       const sanitizedData = sanitizeNotificationData(data);
       return this.messagingService.sendToUser(userId, event, sanitizedData);
     } catch (error) {
@@ -92,7 +92,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
 
   sendToMaster(masterId: string, event: string, data: unknown) {
     try {
-      // Санитизируем данные перед отправкой
+      // Санитизация данных перед отправкой
       const sanitizedData = sanitizeNotificationData(data);
       return this.messagingService.sendToMaster(masterId, event, sanitizedData);
     } catch (error) {
@@ -102,7 +102,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
 
   sendToAdmins(event: string, data: unknown) {
     try {
-      // Санитизируем данные перед отправкой
+      // Санитизация данных перед отправкой
       const sanitizedData = sanitizeNotificationData(data);
       return this.messagingService.sendToAdmins(event, sanitizedData);
     } catch (error) {
@@ -112,7 +112,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
 
   sendToAll(event: string, data: unknown) {
     try {
-      // Санитизируем данные перед отправкой
+      // Санитизация данных перед отправкой
       const sanitizedData = sanitizeNotificationData(data);
       return this.messagingService.sendToAll(event, sanitizedData);
     } catch (error) {
@@ -242,7 +242,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // --- Redis Subscriptions ---
+  // --- Подписки Redis ---
 
   private async setupRedisSubscriptions() {
     try {
@@ -363,11 +363,9 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
       });
 
       redisSub.on('ready', () => {
-        this.logger.log('Redis subscriber готов');
+        this.logger.log('Redis subscriber ready');
         channels.forEach((ch) => void redisSub.subscribe(ch));
-        this.logger.log(
-          `Подписка на Redis каналы оформлена: ${channels.join(', ')}`,
-        );
+        this.logger.log(`Subscribed to Redis channels: ${channels.join(', ')}`);
       });
 
       redisSub.on('message', (channel: string, message: string) => {
@@ -462,8 +460,8 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
     if (typeof data.type === 'string' && data.type === 'BACKUP_COMPLETED') {
       this.sendToAdmins('system:notification', {
         type: 'BACKUP',
-        title: 'Резервное копирование',
-        message: 'Резервное копирование завершено успешно',
+        title: 'Backup',
+        message: 'Backup completed successfully',
         data,
         timestamp: new Date().toISOString(),
       });
@@ -475,7 +473,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
     if (this.initTimeout) {
       clearTimeout(this.initTimeout);
       this.initTimeout = null;
-      this.logger.log('Таймаут настройки Redis subscriptions отменён');
+      this.logger.log('Redis subscriptions setup timeout cancelled');
     }
 
     if (this.redisSubscriber) {
@@ -483,9 +481,9 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
         // Удаляем все обработчики событий перед закрытием для предотвращения утечек памяти
         this.redisSubscriber.removeAllListeners();
         await this.redisSubscriber.quit().catch(() => {});
-        this.logger.log('Redis subscriber закрыт');
+        this.logger.log('Redis subscriber closed');
       } catch {
-        this.logger.debug('Redis subscriber закрыт');
+        this.logger.debug('Redis subscriber closed');
       } finally {
         this.redisSubscriber = null;
       }

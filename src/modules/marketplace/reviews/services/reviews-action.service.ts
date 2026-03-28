@@ -46,13 +46,13 @@ export class ReviewsActionService {
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
     if (!user?.phone) {
       throw new BadRequestException(
-        'Пользователь или телефон не найдены. Пожалуйста, заполните профиль.',
+        'User or phone not found. Please complete your profile.',
       );
     }
 
     if (authUser?.role === UserRole.CLIENT && !authUser.phoneVerified) {
       throw new ForbiddenException(
-        'Для написания отзывов необходимо подтвердить номер телефона.',
+        'Phone verification is required to write reviews.',
       );
     }
 
@@ -60,14 +60,14 @@ export class ReviewsActionService {
       where: { id: masterId },
       include: { user: { select: { phone: true } } },
     });
-    if (!master) throw new NotFoundException('Мастер не найден');
+    if (!master) throw new NotFoundException('Master not found');
 
     // Проверка на дубликат (один отзыв на мастера от клиента)
     const existingReview = await this.prisma.review.findFirst({
       where: { masterId, clientId },
     });
     if (existingReview) {
-      throw new BadRequestException('Вы уже оставили отзыв об этом мастере');
+      throw new BadRequestException('You have already reviewed this master');
     }
 
     // Валидация leadId: лид принадлежит клиенту, имеет правильный статус, нет дубликата
@@ -84,7 +84,7 @@ export class ReviewsActionService {
     });
 
     if (!lead) {
-      throw new BadRequestException('Указанная заявка не найдена.');
+      throw new BadRequestException('Lead not found.');
     }
     const phoneMatches =
       Boolean(user.phone?.trim() && lead.clientPhone?.trim()) &&
@@ -92,14 +92,14 @@ export class ReviewsActionService {
     const isLeadOwner =
       lead.clientId === clientId || (lead.clientId == null && phoneMatches);
     if (!isLeadOwner) {
-      throw new ForbiddenException('Эта заявка принадлежит другому клиенту.');
+      throw new ForbiddenException('This lead belongs to another client.');
     }
     if (lead.masterId !== masterId) {
-      throw new BadRequestException('Заявка относится к другому мастеру.');
+      throw new BadRequestException('Lead belongs to another master.');
     }
     if (lead.status !== LeadStatus.CLOSED) {
       throw new BadRequestException(
-        'Отзыв можно оставить только после того, как заказ будет выполнен (статус CLOSED).',
+        'You can leave a review only after the order is completed (status CLOSED).',
       );
     }
 
@@ -108,7 +108,7 @@ export class ReviewsActionService {
       where: { leadId },
     });
     if (reviewForLead) {
-      throw new BadRequestException('Отзыв на эту заявку уже оставлен.');
+      throw new BadRequestException('A review for this lead already exists.');
     }
 
     // Валидация критериев
@@ -224,7 +224,7 @@ export class ReviewsActionService {
    */
   async updateStatus(id: string, status: ReviewStatus, moderatedBy?: string) {
     const review = await this.prisma.review.findUnique({ where: { id } });
-    if (!review) throw new NotFoundException('Отзыв не найден');
+    if (!review) throw new NotFoundException('Review not found');
 
     const updatedReview = await this.prisma.review.update({
       where: { id },
@@ -314,13 +314,11 @@ export class ReviewsActionService {
     const validCriteria = ['quality', 'speed', 'price', 'politeness'];
     for (const crit of criteria) {
       if (!validCriteria.includes(crit.criteria)) {
-        throw new BadRequestException(
-          `Некорректный критерий: ${crit.criteria}`,
-        );
+        throw new BadRequestException(`Invalid criterion: ${crit.criteria}`);
       }
       if (crit.rating < 1 || crit.rating > 5) {
         throw new BadRequestException(
-          `Рейтинг критерия ${crit.criteria} должен быть от 1 до 5`,
+          `Criterion ${crit.criteria} rating must be between 1 and 5`,
         );
       }
     }
@@ -338,9 +336,9 @@ export class ReviewsActionService {
       where: { id: reviewId },
       select: { id: true, masterId: true, clientId: true },
     });
-    if (!review) throw new NotFoundException('Отзыв не найден');
+    if (!review) throw new NotFoundException('Review not found');
     if (review.masterId !== masterId) {
-      throw new ForbiddenException('Вы не можете ответить на этот отзыв');
+      throw new ForbiddenException('You cannot reply to this review');
     }
 
     // Проверка, существует ли уже ответ
@@ -373,9 +371,9 @@ export class ReviewsActionService {
       where: { reviewId },
       include: { review: { select: { clientId: true } } },
     });
-    if (!reply) throw new NotFoundException('Ответ не найден');
+    if (!reply) throw new NotFoundException('Reply not found');
     if (reply.masterId !== masterId) {
-      throw new ForbiddenException('Нет доступа');
+      throw new ForbiddenException('Access denied');
     }
 
     await this.prisma.reviewReply.delete({ where: { reviewId } });
@@ -395,13 +393,13 @@ export class ReviewsActionService {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
     });
-    if (!review) throw new NotFoundException('Отзыв не найден');
+    if (!review) throw new NotFoundException('Review not found');
 
     const existingVote = await this.prisma.reviewVote.findUnique({
       where: { reviewId_userId: { reviewId, userId } },
     });
     if (existingVote) {
-      throw new BadRequestException('Вы уже голосовали за этот отзыв');
+      throw new BadRequestException('You have already voted on this review');
     }
 
     const vote = await this.prisma.reviewVote.create({
@@ -421,7 +419,7 @@ export class ReviewsActionService {
     const vote = await this.prisma.reviewVote.findUnique({
       where: { reviewId_userId: { reviewId, userId } },
     });
-    if (!vote) throw new NotFoundException('Голос не найден');
+    if (!vote) throw new NotFoundException('Vote not found');
 
     await this.prisma.reviewVote.delete({
       where: { reviewId_userId: { reviewId, userId } },

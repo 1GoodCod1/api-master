@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { parseAppLocale } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
@@ -9,12 +10,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return v != null && typeof v === 'object' && !Array.isArray(v);
 }
 
-function parseLang(s: string | null | undefined): 'en' | 'ru' | 'ro' {
-  if (s === 'en' || s === 'ru' || s === 'ro') return s;
-  return 'ro';
-}
-
-/** Copy only primitive values from metadata to avoid unsafe assignment from Prisma JsonValue */
+/** Копируем из metadata только примитивы, чтобы не тащить небезопасный JsonValue в шаблон */
 function toTemplateContext(metadata: Record<string, unknown>): TemplateContext {
   const ctx: TemplateContext = {};
   for (const [k, v] of Object.entries(metadata)) {
@@ -36,20 +32,20 @@ function toTemplateContext(metadata: Record<string, unknown>): TemplateContext {
  */
 interface ChainStep {
   template: string;
-  delayMs: number; // delay from chain start in ms
+  delayMs: number; // задержка от старта цепочки, мс
 }
 
 const CHAINS: Record<string, ChainStep[]> = {
-  // Temporarily disabled — no welcome drip emails
+  // Временно отключено — нет welcome drip
   welcome: [],
-  // Temporarily disabled — no lead drip emails
+  // Временно отключено — нет drip по новому лиду
   lead_created: [],
-  // Temporarily disabled — no post-close review request email
+  // Временно отключено — нет письма с просьбой отзыва после закрытия
   lead_closed: [],
   reengagement: [
-    { template: 'reengagement', delayMs: 0 }, // immediately (triggered after 14d inactivity)
+    { template: 'reengagement', delayMs: 0 }, // сразу (триггер после 14 дн. неактивности)
   ],
-  // Temporarily disabled — no master onboarding drip emails
+  // Временно отключено — нет onboarding drip для мастера
   master_welcome: [],
 };
 
@@ -64,7 +60,7 @@ export class EmailDripService {
   ) {}
 
   /**
-   * Start a new drip chain for a user
+   * Запустить новую drip-цепочку для пользователя
    */
   async startChain(
     userId: string,
@@ -81,7 +77,7 @@ export class EmailDripService {
       return;
     }
 
-    // Check if chain already exists
+    // Уже есть активная цепочка?
     const existing = await this.prisma.emailDripStatus.findUnique({
       where: { userId_chainType: { userId, chainType } },
     });
@@ -90,19 +86,19 @@ export class EmailDripService {
       this.logger.debug(`Chain ${chainType} already active for user ${userId}`);
       return;
     }
-    // Reengagement: don't restart if already completed (avoid daily spam)
+    // Reengagement: не перезапускать после COMPLETED (без ежедневного спама)
     if (chainType === 'reengagement' && existing?.status === 'COMPLETED') {
       this.logger.debug(`Reengagement already sent for user ${userId}`);
       return;
     }
 
-    // Send first step immediately if delay is 0
+    // Первый шаг сразу, если delay = 0
     const firstStep = chain[0];
     if (firstStep.delayMs === 0) {
       await this.sendStep(userId, chainType, 0, context);
     }
 
-    // Calculate next send time
+    // Время следующей отправки
     const nextStep = chain.length > 1 ? chain[1] : null;
     const nextSendAt = nextStep
       ? new Date(Date.now() + nextStep.delayMs)
@@ -133,7 +129,7 @@ export class EmailDripService {
   }
 
   /**
-   * Process pending drip emails (called by CRON/scheduler)
+   * Обработать отложенные drip-письма (CRON / планировщик)
    */
   async processPendingDrips() {
     const now = new Date();
@@ -153,7 +149,7 @@ export class EmailDripService {
           },
         },
       },
-      take: 50, // process in batches
+      take: 50, // пакетами
     });
 
     this.logger.log(`Processing ${pendingDrips.length} pending drip emails`);
@@ -174,10 +170,10 @@ export class EmailDripService {
         await this.sendStep(drip.userId, drip.chainType, drip.step, {
           ...toTemplateContext(metadata),
           userName: user.firstName ?? undefined,
-          lang: parseLang(user.preferredLanguage),
+          lang: parseAppLocale(user.preferredLanguage),
         });
 
-        // Advance to next step
+        // Переход к следующему шагу
         const nextStep = drip.step + 1;
         if (nextStep >= chain.length) {
           await this.prisma.emailDripStatus.update({
@@ -236,7 +232,7 @@ export class EmailDripService {
     const ctx: TemplateContext = {
       ...context,
       userName: user.firstName ?? undefined,
-      lang: parseLang(user.preferredLanguage),
+      lang: parseAppLocale(user.preferredLanguage),
     };
 
     const rendered = await this.templateService.render(step.template, ctx);

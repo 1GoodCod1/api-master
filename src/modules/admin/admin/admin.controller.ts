@@ -20,6 +20,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import {
+  ANALYTICS_TIMEFRAME,
+  ANALYTICS_TIMEFRAMES,
+  type AnalyticsTimeframe,
+} from '../../../common/constants';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -375,10 +380,10 @@ export class AdminController {
   @ApiQuery({
     name: 'timeframe',
     required: false,
-    enum: ['day', 'week', 'month'],
+    enum: [...ANALYTICS_TIMEFRAMES],
   })
   async getAnalytics(
-    @Query('timeframe') timeframe: 'day' | 'week' | 'month' = 'day',
+    @Query('timeframe') timeframe: AnalyticsTimeframe = ANALYTICS_TIMEFRAME.DAY,
   ) {
     return this.adminService.getAnalytics(timeframe);
   }

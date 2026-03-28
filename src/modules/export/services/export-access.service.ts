@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { TariffType } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
@@ -34,7 +35,7 @@ export class ExportAccessService {
       }
 
       const effectiveTariff = getEffectiveTariff(master);
-      if (effectiveTariff !== 'PREMIUM') {
+      if (effectiveTariff !== TariffType.PREMIUM) {
         throw new ForbiddenException(
           'Export is only available for PREMIUM tariff',
         );

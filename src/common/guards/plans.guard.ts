@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { TariffType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { TariffType } from '../constants';
 import type { Request } from 'express';
 import { PLANS_KEY } from '../decorators/plans.decorator';
 

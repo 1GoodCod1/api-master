@@ -14,7 +14,7 @@ export class ChatGatewayNotificationService {
   ) {}
 
   /**
-   * Send notification to offline user via in-app + optional SMS when master responds.
+   * Уведомить офлайн-пользователя: in-app + опционально SMS, когда мастер ответил в чате.
    */
   async notifyOfflineUser(
     message: OutgoingChatMessage,

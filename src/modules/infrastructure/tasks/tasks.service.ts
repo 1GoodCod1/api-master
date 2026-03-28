@@ -31,7 +31,7 @@ export class TasksService {
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDailyTasks() {
-    this.logger.log('Запуск ежедневных задач...');
+    this.logger.log('Starting daily tasks...');
 
     await Promise.all([
       this.maintenanceTasks.cleanOldLeads(),
@@ -44,7 +44,7 @@ export class TasksService {
       this.digestTasks.sendDigest(),
     ]);
 
-    this.logger.log('Ежедневные задачи завершены');
+    this.logger.log('Daily tasks completed');
   }
 
   /**
@@ -52,7 +52,7 @@ export class TasksService {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async handleHourlyTasks() {
-    this.logger.log('Запуск ежечасных задач...');
+    this.logger.log('Starting hourly tasks...');
 
     await Promise.all([
       this.maintenanceTasks.syncRedisCounters(),

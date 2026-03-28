@@ -1,3 +1,5 @@
+import type { AppLocale } from '../../../common/constants';
+
 export const ropaLabelKeys = [
   'title',
   'subtitle',
@@ -588,7 +590,7 @@ const ro: RopaLabels = {
     'Acest Registru al activităților de prelucrare este menținut în conformitate cu Legea nr. 133/2011 (Republica Moldova) și Articolul 30 din GDPR, și va fi actualizat la orice modificare materială a operațiunilor de prelucrare. Autoritate de supraveghere: CNPDCP.',
 };
 
-export const ROPA_LABELS: Record<'en' | 'ru' | 'ro', RopaLabels> = {
+export const ROPA_LABELS: Record<AppLocale, RopaLabels> = {
   en,
   ru,
   ro,

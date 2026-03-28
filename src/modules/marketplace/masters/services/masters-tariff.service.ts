@@ -4,8 +4,13 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Payment, Prisma, TariffType, UserRole } from '@prisma/client';
-import { PaymentStatus } from '../../../../common/constants';
+import { Payment, Prisma, UserRole } from '@prisma/client';
+import {
+  PaymentStatus,
+  SUBSCRIPTION_TARIFF_TYPES,
+  TariffType,
+} from '../../../../common/constants';
+import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -91,7 +96,7 @@ export class MastersTariffService {
         master.tariffCancelAtPeriodEnd,
       );
       const isExpiredResult: boolean = Boolean(isExpired);
-      // Prisma select with relation returns Payment[]; type is not narrowed by ESLint
+      // Prisma: связь payments; ESLint не сужает тип до Payment[]
       const payments = master.payments;
       const lastPayment: Payment | null = payments.at(0) ?? null;
 
@@ -126,10 +131,10 @@ export class MastersTariffService {
       // Конвертируем строку в enum TariffType
       let tariffType: TariffType;
       switch (tariffTypeStr) {
-        case 'VIP':
+        case TariffType.VIP:
           tariffType = TariffType.VIP;
           break;
-        case 'PREMIUM':
+        case TariffType.PREMIUM:
           tariffType = TariffType.PREMIUM;
           break;
         default:
@@ -141,8 +146,7 @@ export class MastersTariffService {
         data: {
           tariffType,
           tariffExpiresAt: expiresAt,
-          isFeatured:
-            tariffType === TariffType.VIP || tariffType === TariffType.PREMIUM,
+          isFeatured: isVipOrPremiumTariff(tariffType),
         },
       });
 
@@ -159,7 +163,7 @@ export class MastersTariffService {
   }
 
   /**
-   * Extend current tariff by days. For BASIC: grants days of VIP. For VIP/PREMIUM: adds days to expiry.
+   * Продлить тариф на N дней. BASIC → даёт дни VIP; VIP/PREMIUM → добавляет дни к дате окончания.
    */
   async extendTariffByDays(
     masterId: string,
@@ -189,7 +193,7 @@ export class MastersTariffService {
       let newTariffType = master.tariffType;
       let newExpiresAt: Date;
 
-      if (master.tariffType === 'BASIC' || isExpired) {
+      if (master.tariffType === TariffType.BASIC || isExpired) {
         newTariffType = TariffType.VIP;
         newExpiresAt = new Date();
         newExpiresAt.setDate(newExpiresAt.getDate() + days);
@@ -204,9 +208,7 @@ export class MastersTariffService {
         data: {
           tariffType: newTariffType,
           tariffExpiresAt: newExpiresAt,
-          isFeatured:
-            newTariffType === TariffType.VIP ||
-            newTariffType === TariffType.PREMIUM,
+          isFeatured: isVipOrPremiumTariff(newTariffType),
         },
       });
 
@@ -227,7 +229,7 @@ export class MastersTariffService {
    */
   async claimFreePlan(
     userId: string,
-    tariffType: 'VIP' | 'PREMIUM',
+    tariffType: (typeof SUBSCRIPTION_TARIFF_TYPES)[number],
     onInvalidate?: InvalidateMasterCacheFn,
   ) {
     const user = await this.prisma.user.findUnique({
@@ -256,7 +258,7 @@ export class MastersTariffService {
       this.cache.del(this.cache.keys.userMasterProfile(userId)),
     ]);
 
-    // Audit log
+    // Audit log: бесплатный тариф
     await this.auditService.log({
       userId: userId,
       action: AuditAction.FREE_PLAN_CLAIMED,

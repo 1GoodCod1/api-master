@@ -1,10 +1,13 @@
-import { TariffType } from '@prisma/client';
+import {
+  SUBSCRIPTION_TARIFF_TYPES,
+  TariffType,
+} from '../../../common/constants';
 
 /** VIP или PREMIUM — платные тарифы с датой окончания подписки. */
 export function isVipOrPremiumTariff(
   tariffType: TariffType | null | undefined,
 ): boolean {
-  return tariffType === TariffType.VIP || tariffType === TariffType.PREMIUM;
+  return tariffType != null && SUBSCRIPTION_TARIFF_TYPES.includes(tariffType);
 }
 
 export function isPremiumTariff(

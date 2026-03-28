@@ -137,7 +137,7 @@ export class VerificationDocumentsPurgeService {
         } satisfies Prisma.InputJsonValue,
       });
     } catch (err) {
-      this.logger.error('Audit log при удалении файлов верификации', err);
+      this.logger.error('Audit log failed on verification file deletion', err);
     }
 
     return fileIds.length;

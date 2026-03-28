@@ -142,7 +142,7 @@ export class AdminSystemService {
         totalCommands: parseInt(infoObj['total_commands_processed']) || 0,
       };
     } catch (error) {
-      this.logger.error('Ошибка получения Redis info:', error);
+      this.logger.error('Failed to get Redis info:', error);
       return {
         connectedClients: 0,
         usedMemory: '0B',

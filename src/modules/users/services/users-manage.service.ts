@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { type AppLocale } from '../../../common/constants';
 import { UpdateUserDto } from '../dto/update-user.dto';
 
 @Injectable()
@@ -21,7 +22,7 @@ export class UsersManageService {
       const user = await this.prisma.user.findUnique({ where: { id } });
 
       if (!user) {
-        throw new NotFoundException('Пользователь не найден');
+        throw new NotFoundException('User not found');
       }
 
       return await this.prisma.user.update({
@@ -58,7 +59,7 @@ export class UsersManageService {
     const user = await this.prisma.user.findUnique({ where: { id } });
 
     if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+      throw new NotFoundException('User not found');
     }
 
     const updated = await this.prisma.user.update({
@@ -82,7 +83,7 @@ export class UsersManageService {
     });
 
     if (!user) {
-      throw new NotFoundException('Пользователь не найден');
+      throw new NotFoundException('User not found');
     }
 
     const newVerified = !user.isVerified;
@@ -105,10 +106,7 @@ export class UsersManageService {
   /**
    * Установить предпочитаемый язык для email-шаблонов
    */
-  async setPreferredLanguage(
-    userId: string,
-    lang: 'en' | 'ru' | 'ro',
-  ): Promise<void> {
+  async setPreferredLanguage(userId: string, lang: AppLocale): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { preferredLanguage: lang },

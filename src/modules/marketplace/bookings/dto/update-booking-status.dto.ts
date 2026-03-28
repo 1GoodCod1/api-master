@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus } from '../../../../common/constants';
 
 export class UpdateBookingStatusDto {
   @ApiProperty({ enum: BookingStatus })

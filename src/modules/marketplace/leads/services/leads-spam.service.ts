@@ -61,7 +61,7 @@ export class LeadsSpamService {
       await redis.setex(recentLeadKey, 300, '1');
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      this.logger.error('Ошибка checkProtection', err);
+      this.logger.error('checkProtection failed', err);
       throw err;
     }
   }

@@ -15,9 +15,9 @@ export class CacheWarmingService implements OnModuleInit {
 
   onModuleInit(): void {
     setImmediate(() => {
-      this.logger.log('Запуск начального прогрева кеша...');
+      this.logger.log('Starting initial cache warm-up...');
       void this.warmCriticalCache()
-        .then(() => this.logger.log('Начальный прогрев кеша завершён'))
+        .then(() => this.logger.log('Initial cache warm-up completed'))
         .catch((error) =>
           this.logger.error('Failed to warm initial cache', error),
         );

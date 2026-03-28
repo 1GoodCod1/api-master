@@ -1,4 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type {
+  SubscriptionTariffType,
+  ViewsHistoryPeriod,
+} from '../../../common/constants';
 import type { RequestWithOptionalUser } from '../../../common/decorators/get-user.decorator';
 import { decodeId, encodeId } from '../../shared/utils/id-encoder';
 import { SearchMastersDto } from './dto/search-masters.dto';
@@ -204,7 +208,11 @@ export class MastersService {
     return this.statsService.getStats(master.id);
   }
 
-  async getViewsHistory(userId: string, period: 'week' | 'month', limit = 12) {
+  async getViewsHistory(
+    userId: string,
+    period: ViewsHistoryPeriod,
+    limit = 12,
+  ) {
     const master = await this.profileService.getProfile(userId);
     return this.statsService.getViewsHistory(master.id, period, limit);
   }
@@ -266,7 +274,7 @@ export class MastersService {
   }
 
   /** Верифицированный мастер получает тариф бесплатно 1 кликом */
-  async claimFreePlan(userId: string, tariffType: 'VIP' | 'PREMIUM') {
+  async claimFreePlan(userId: string, tariffType: SubscriptionTariffType) {
     return this.tariffService.claimFreePlan(
       userId,
       tariffType,

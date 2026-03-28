@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { TariffType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { TariffType } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { AnalyticsMasterService } from './services/analytics-master.service';
 import { AnalyticsBusinessService } from './services/analytics-business.service';

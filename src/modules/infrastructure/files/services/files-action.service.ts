@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { TariffType } from '../../../../common/constants';
 import { extname } from 'path';
 import { unlinkIfExists } from '../../../shared/utils/file-magic';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -163,9 +164,9 @@ export class FilesActionService {
     return fileUrl;
   }
 
-  private getPhotoLimitForTariff(t: 'BASIC' | 'VIP' | 'PREMIUM'): number {
-    if (t === 'BASIC') return 5;
-    if (t === 'VIP') return 10;
+  private getPhotoLimitForTariff(t: TariffType): number {
+    if (t === TariffType.BASIC) return 5;
+    if (t === TariffType.VIP) return 10;
     return 15; // PREMIUM
   }
 

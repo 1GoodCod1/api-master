@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationCategory } from '@prisma/client';
+import { BookingStatus } from '../../../../common/constants';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 import { formatDateTime } from '../../../shared/utils/format-date.util';
@@ -10,7 +11,7 @@ export class BookingsNotificationService {
 
   constructor(private readonly inAppNotifications: InAppNotificationService) {}
 
-  /** Master proposed a time — notify client to confirm or reject */
+  /** Мастер предложил время — уведомить клиента подтвердить или отклонить */
   async notifyBookingPending(
     masterId: string,
     master: {
@@ -27,7 +28,7 @@ export class BookingsNotificationService {
         master.user.lastName,
       );
 
-      // Notify client to confirm
+      // Уведомить клиента о подтверждении
       if (clientId) {
         await this.inAppNotifications.notify({
           userId: clientId,
@@ -184,7 +185,7 @@ export class BookingsNotificationService {
           bookingId: booking.id,
           leadId: booking.leadId ?? undefined,
           masterId: booking.masterId,
-          status: 'COMPLETED',
+          status: BookingStatus.COMPLETED,
         },
         priority: 'normal',
       });

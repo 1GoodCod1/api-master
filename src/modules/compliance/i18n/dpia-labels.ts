@@ -1,3 +1,5 @@
+import type { AppLocale } from '../../../common/constants';
+
 export const dpiaLabelKeys = [
   'title',
   'subtitle',
@@ -567,7 +569,7 @@ const ro: DpiaLabels = {
   date: 'Data',
 };
 
-export const DPIA_LABELS: Record<'en' | 'ru' | 'ro', DpiaLabels> = {
+export const DPIA_LABELS: Record<AppLocale, DpiaLabels> = {
   en,
   ru,
   ro,

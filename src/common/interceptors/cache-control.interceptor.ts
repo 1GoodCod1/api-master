@@ -25,7 +25,7 @@ export class CacheControlInterceptor implements NestInterceptor {
       const path = stripApiPrefix(request.path);
       const isProd = process.env.NODE_ENV === 'production';
 
-      // Categories and cities
+      // Категории и города
       if (path === '/categories' || path === '/cities') {
         if (isProd) {
           response.setHeader(
@@ -39,7 +39,7 @@ export class CacheControlInterceptor implements NestInterceptor {
           );
         }
       }
-      // Popular masters (aligns with Redis popularMasters)
+      // Популярные мастера (согласовано с Redis popularMasters)
       else if (path === '/masters/popular') {
         if (isProd) {
           response.setHeader(
@@ -67,7 +67,7 @@ export class CacheControlInterceptor implements NestInterceptor {
           );
         }
       }
-      // Masters search, new, landing-stats, promotions active
+      // Поиск мастеров, new, landing-stats, активные акции
       else if (
         path === '/masters' ||
         path === '/masters/new' ||
@@ -79,7 +79,7 @@ export class CacheControlInterceptor implements NestInterceptor {
           'public, max-age=300, stale-while-revalidate=60',
         );
       }
-      // Master profile by slug, master photos
+      // Профиль мастера по slug, фото мастера
       else if (
         /^\/masters\/[^/]+$/.test(path) ||
         /^\/masters\/[^/]+\/photos$/.test(path)

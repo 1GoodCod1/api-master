@@ -118,7 +118,7 @@ export class ExportProcessor implements OnModuleInit, OnModuleDestroy {
       }
 
       if (cleaned > 0) {
-        this.logger.log(`Очистка: удалено ${cleaned} устаревших export-файлов`);
+        this.logger.log(`Cleanup: removed ${cleaned} stale export file(s)`);
       }
     } catch {
       // директория может ещё не существовать

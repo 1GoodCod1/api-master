@@ -1,11 +1,12 @@
 import path from 'path';
 import type PDFDocument from 'pdfkit';
+import { APP_LOCALE, type AppLocale } from '../../../common/constants';
 
-// ==================== Types ====================
+// ==================== Типы ====================
 
 export type Doc = InstanceType<typeof PDFDocument>;
 
-// ==================== Constants ====================
+// ==================== Константы ====================
 
 export const COLORS = {
   primary: '#0f766e',
@@ -30,7 +31,7 @@ export const PAGE = {
   bottomLimit: 730,
 } as const;
 
-// ==================== Font ====================
+// ==================== Шрифт ====================
 
 export function registerPdfFont(doc: Doc): void {
   const fontPath = path.resolve(
@@ -51,22 +52,23 @@ export function registerPdfFont(doc: Doc): void {
   }
 }
 
-// ==================== Locale ====================
+// ==================== Локаль ====================
 
-export type SupportedLocale = 'en' | 'ru' | 'ro';
+/** Алиас: те же коды, что AppLocale из common/constants. */
+export type SupportedLocale = AppLocale;
 
 export function resolveLocale(locale: string): SupportedLocale {
   const l = locale?.toLowerCase();
-  if (l?.startsWith('ru')) return 'ru';
-  if (l?.startsWith('ro')) return 'ro';
-  return 'en';
+  if (l?.startsWith('ru')) return APP_LOCALE.RU;
+  if (l?.startsWith('ro')) return APP_LOCALE.RO;
+  return APP_LOCALE.EN;
 }
 
 export function getLocaleString(locale: SupportedLocale): string {
   const map: Record<SupportedLocale, string> = {
-    en: 'en-US',
-    ru: 'ru-RU',
-    ro: 'ro-RO',
+    [APP_LOCALE.EN]: 'en-US',
+    [APP_LOCALE.RU]: 'ru-RU',
+    [APP_LOCALE.RO]: 'ro-RO',
   };
   return map[locale];
 }
@@ -101,17 +103,17 @@ export function formatDateShort(locale: SupportedLocale): string {
   }
 }
 
-// ==================== Labels helper ====================
+// ==================== Подписи (i18n) ====================
 
 export function getLabels<T extends Record<string, string>>(
   allLabels: Record<SupportedLocale, T>,
   locale: string,
 ): T {
   const lang = resolveLocale(locale);
-  return allLabels[lang] ?? allLabels.en;
+  return allLabels[lang] ?? allLabels[APP_LOCALE.EN];
 }
 
-// ==================== Drawing helpers ====================
+// ==================== Отрисовка ====================
 
 export function ensureSpace(doc: Doc, needed: number): number {
   if (doc.y + needed > PAGE.bottomLimit) {
@@ -184,7 +186,7 @@ export function drawTableRow(
   return doc.y + 6;
 }
 
-// ==================== Page numbers ====================
+// ==================== Номера страниц ====================
 
 export function addPageNumbers(doc: Doc): void {
   const range = doc.bufferedPageRange();

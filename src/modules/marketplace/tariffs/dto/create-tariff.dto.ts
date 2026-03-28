@@ -8,7 +8,7 @@ import {
   IsEnum,
   IsArray,
 } from 'class-validator';
-import { TariffType } from '@prisma/client';
+import { TariffType } from '../../../../common/constants';
 
 export class CreateTariffDto {
   @ApiProperty()

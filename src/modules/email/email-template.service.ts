@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  DEFAULT_APP_LOCALE,
+  parseAppLocale,
+  type AppLocale,
+} from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
 import { sanitizeEmailHtml } from '../shared/utils/sanitize-html.util';
 import { TEMPLATES } from './templates';
@@ -114,9 +119,7 @@ export class EmailTemplateService {
         `Email template "${templateName}" is temporarily disabled and cannot be sent`,
       );
     }
-    const lang = (
-      ['en', 'ru', 'ro'].includes(context.lang as string) ? context.lang : 'ro'
-    ) as 'en' | 'ru' | 'ro';
+    const lang = parseAppLocale(context.lang as string);
     const raw = {
       ...context,
       frontendUrl: this.frontendUrl,
@@ -168,7 +171,7 @@ export class EmailTemplateService {
    */
   renderDefault(
     templateName: string,
-    lang: 'en' | 'ru' | 'ro' = 'ro',
+    lang: AppLocale = DEFAULT_APP_LOCALE,
   ): { subject: string; bodyHtml: string } | null {
     const template = TEMPLATES[templateName];
     if (!template) return null;

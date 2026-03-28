@@ -8,6 +8,11 @@ import {
   assertCleanupSafety,
   buildAuditCleanupWhere,
 } from './audit-cleanup.helper';
+import {
+  ANALYTICS_TIMEFRAME,
+  ANALYTICS_TIMEFRAMES,
+  type AnalyticsTimeframe,
+} from '../../common/constants';
 
 export interface AuditLogData {
   userId?: string | null;
@@ -47,7 +52,7 @@ export class AuditService {
     return this.query.getRecentStream(limit);
   }
 
-  async getStats(timeframe: 'day' | 'week' | 'month' = 'day') {
+  async getStats(timeframe: AnalyticsTimeframe = ANALYTICS_TIMEFRAME.DAY) {
     return this.query.getStats(timeframe);
   }
 
@@ -111,10 +116,9 @@ export class AuditService {
    * Валидирует timeframe и возвращает статистику (для контроллера).
    */
   getStatsFromQuery(timeframe?: string) {
-    const valid = ['day', 'week', 'month'] as const;
-    const tf = valid.includes(timeframe as (typeof valid)[number])
-      ? (timeframe as (typeof valid)[number])
-      : 'day';
+    const tf = ANALYTICS_TIMEFRAMES.includes(timeframe as AnalyticsTimeframe)
+      ? (timeframe as AnalyticsTimeframe)
+      : ANALYTICS_TIMEFRAME.DAY;
     return this.query.getStats(tf);
   }
 

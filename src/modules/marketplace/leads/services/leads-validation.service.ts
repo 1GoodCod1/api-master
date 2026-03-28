@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { ACTIVE_LEAD_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 interface MasterLeadsFields {
@@ -127,12 +128,12 @@ export class LeadsValidationService {
           where: {
             clientId,
             masterId,
-            status: { in: ['NEW', 'IN_PROGRESS'] },
+            status: { in: [...ACTIVE_LEAD_STATUSES] },
           },
         });
         if (existingOpenLead) {
           throw new BadRequestException(
-            'У вас уже есть активная заявка к этому мастеру. Дождитесь её завершения перед отправкой новой.',
+            'You already have an active lead to this master. Wait until it is completed before sending another.',
           );
         }
       }

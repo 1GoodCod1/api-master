@@ -4,7 +4,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { BookingStatus, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { BookingStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingStatusDto } from '../dto/update-booking-status.dto';
@@ -14,10 +15,10 @@ import { BookingsLeadSyncService } from './bookings-lead-sync.service';
 import { BookingsNotificationService } from './bookings-notification.service';
 
 const VALID_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['COMPLETED', 'CANCELLED'],
-  COMPLETED: [],
-  CANCELLED: [],
+  [BookingStatus.PENDING]: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
+  [BookingStatus.CONFIRMED]: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
+  [BookingStatus.COMPLETED]: [],
+  [BookingStatus.CANCELLED]: [],
 };
 
 @Injectable()
@@ -67,9 +68,9 @@ export class BookingsActionService {
     this.validation.validateTimeSlot(start, end);
     await this.validation.ensureNoConflict(masterId, start, end);
 
-    // Both master and client create bookings as PENDING.
-    // Master must confirm client bookings; client must confirm master bookings.
-    const initialStatus: BookingStatus = 'PENDING';
+    // И мастер, и клиент создают запись со статусом PENDING.
+    // Мастер подтверждает запись клиента; клиент — запись, предложенную мастером.
+    const initialStatus: BookingStatus = BookingStatus.PENDING;
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -105,7 +106,7 @@ export class BookingsActionService {
     const isMasterCreating = authUser.role === UserRole.MASTER;
 
     if (isMasterCreating) {
-      // Master proposed time → notify client to confirm/reject
+      // Мастер предложил время → уведомить клиента подтвердить/отклонить
       void this.notifications
         .notifyBookingPending(
           masterId,
@@ -117,7 +118,7 @@ export class BookingsActionService {
         )
         .catch((e) => this.logger.error('notifyBookingPending failed', e));
     } else {
-      // Client booked → notify master to confirm/reject
+      // Клиент записался → уведомить мастера подтвердить/отклонить
       void this.notifications
         .notifyBookingPendingForMaster(
           masterId,
@@ -154,7 +155,7 @@ export class BookingsActionService {
     if (booking.clientId !== clientUserId) {
       throw new BadRequestException('You can only confirm your own bookings');
     }
-    if (booking.status !== 'PENDING') {
+    if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException(
         `Cannot confirm booking with status ${booking.status}. Only PENDING bookings can be confirmed.`,
       );
@@ -162,7 +163,7 @@ export class BookingsActionService {
 
     const updated = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CONFIRMED' },
+      data: { status: BookingStatus.CONFIRMED },
       include: {
         master: {
           include: {
@@ -182,7 +183,7 @@ export class BookingsActionService {
       },
     });
 
-    // Now that client confirmed, move lead to IN_PROGRESS
+    // После подтверждения клиентом переводим лид в IN_PROGRESS
     void this.leadSync
       .updateLeadStatusOnCreate(booking.leadId)
       .catch((e) =>
@@ -221,7 +222,7 @@ export class BookingsActionService {
     if (booking.clientId !== clientUserId) {
       throw new BadRequestException('You can only reject your own bookings');
     }
-    if (booking.status !== 'PENDING') {
+    if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException(
         `Cannot reject booking with status ${booking.status}. Only PENDING bookings can be rejected.`,
       );
@@ -229,7 +230,7 @@ export class BookingsActionService {
 
     const updated = await this.prisma.booking.update({
       where: { id: bookingId },
-      data: { status: 'CANCELLED' },
+      data: { status: BookingStatus.CANCELLED },
       include: {
         master: {
           include: {
@@ -317,7 +318,7 @@ export class BookingsActionService {
       .updateLeadOnStatusChange(booking, newStatus)
       .catch((e) => this.logger.error('updateLeadOnStatusChange failed', e));
 
-    if (newStatus === 'CONFIRMED') {
+    if (newStatus === BookingStatus.CONFIRMED) {
       void this.notifications
         .notifyBookingConfirmed(
           booking.masterId,
@@ -328,11 +329,11 @@ export class BookingsActionService {
           booking.id,
         )
         .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
-    } else if (newStatus === 'CANCELLED') {
+    } else if (newStatus === BookingStatus.CANCELLED) {
       void this.notifications
         .notifyBookingCancelled(booking)
         .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
-    } else if (newStatus === 'COMPLETED') {
+    } else if (newStatus === BookingStatus.COMPLETED) {
       void this.notifications
         .notifyBookingCompletedForClient({
           id: updated.id,

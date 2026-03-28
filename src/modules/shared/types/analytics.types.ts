@@ -142,7 +142,7 @@ export interface ComparisonData {
 export interface ForecastData {
   nextWeekLeads: number;
   nextWeekViews: number;
-  confidence: number; // 0-100%
+  confidence: number; // 0–100 %
 }
 
 export interface AdvancedAnalyticsResponse extends MasterAnalyticsResponse {

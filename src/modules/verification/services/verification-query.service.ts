@@ -47,7 +47,7 @@ export class VerificationQueryService {
     });
 
     if (!user?.masterProfile) {
-      throw new NotFoundException('Профиль мастера не найден');
+      throw new NotFoundException('Master profile not found');
     }
 
     return {
@@ -144,7 +144,7 @@ export class VerificationQueryService {
     });
 
     if (!verification) {
-      throw new NotFoundException('Заявка на верификацию не найдена');
+      throw new NotFoundException('Verification request not found');
     }
 
     return {

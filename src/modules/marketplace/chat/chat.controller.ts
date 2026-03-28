@@ -41,7 +41,7 @@ export class ChatController {
   }
 
   @Get('unread-count')
-  @Throttle({ default: { limit: 120, ttl: 60000 } }) // 120 req/min — polling + refetch
+  @Throttle({ default: { limit: 120, ttl: 60000 } })
   @Roles(UserRole.CLIENT, UserRole.MASTER)
   @ApiOperation({ summary: 'Get unread messages count' })
   @ApiResponse({ status: 200, description: 'Unread count' })

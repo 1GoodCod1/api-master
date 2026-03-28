@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationCategory } from '@prisma/client';
+import { ACTIVE_BOOKING_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 
@@ -19,17 +20,17 @@ export class TasksBookingReminderService {
   ) {}
 
   /**
-   * Send reminders for bookings that are 24h or 1h away
-   * Called hourly from TasksService
+   * Напоминания о бронированиях за 24ч и за 1ч до начала.
+   * Вызывается ежечасно из TasksService.
    */
   async sendBookingReminders() {
     const now = new Date();
 
-    // 24h reminders: bookings between 23-25h from now
+    // Напоминания за 24ч: записи через 23–25 ч от текущего момента
     const twentyThreeHours = new Date(now.getTime() + 23 * 60 * 60 * 1000);
     const twentyFiveHours = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
-    // 1h reminders: bookings between 30min-90min from now
+    // Напоминания за 1ч: записи через 30–90 мин от текущего момента
     const thirtyMinutes = new Date(now.getTime() + 30 * 60 * 1000);
     const ninetyMinutes = new Date(now.getTime() + 90 * 60 * 1000);
 
@@ -45,7 +46,7 @@ export class TasksBookingReminderService {
       const bookings = await this.prisma.booking.findMany({
         where: {
           startTime: { gte: from, lte: to },
-          status: { in: ['CONFIRMED', 'PENDING'] },
+          status: { in: [...ACTIVE_BOOKING_STATUSES] },
           reminders: {
             none: { type },
           },
@@ -101,7 +102,7 @@ export class TasksBookingReminderService {
             priority: type === '1h' ? 'high' : 'normal',
           });
 
-          // Notify client (if registered)
+          // Уведомить клиента (если зарегистрирован)
           if (booking.clientId) {
             await this.inAppNotifications.notify({
               userId: booking.clientId,

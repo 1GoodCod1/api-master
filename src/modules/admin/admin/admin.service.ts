@@ -31,6 +31,12 @@ import { EmailTemplateService } from '../../email/email-template.service';
 import { DigestService } from '../../notifications/digest/digest.service';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { EmailTemplateOverrideRepository } from './services/email-template-override.repository';
+import {
+  ANALYTICS_TIMEFRAME,
+  type AnalyticsTimeframe,
+  parseAppLocale,
+  type AppLocale,
+} from '../../../common/constants';
 
 /**
  * Главный сервис админки - координатор для специализированных сервисов
@@ -59,7 +65,7 @@ export class AdminService {
     private readonly emailTemplateOverrideRepo: EmailTemplateOverrideRepository,
   ) {}
 
-  // ==================== DASHBOARD ====================
+  // ==================== ДАШБОРД ====================
 
   async getDashboardData() {
     try {
@@ -231,7 +237,7 @@ export class AdminService {
 
   // ==================== АНАЛИТИКА ====================
 
-  async getAnalytics(timeframe: 'day' | 'week' | 'month' = 'day') {
+  async getAnalytics(timeframe: AnalyticsTimeframe = ANALYTICS_TIMEFRAME.DAY) {
     return this.analyticsService.getAnalytics(timeframe);
   }
 
@@ -277,7 +283,7 @@ export class AdminService {
     return this.activityService.getInactivityStats();
   }
 
-  // ==================== EMAIL BROADCAST ====================
+  // ==================== РАССЫЛКА EMAIL ====================
 
   async sendEmailBroadcast(
     segment: BroadcastSegment,
@@ -291,7 +297,7 @@ export class AdminService {
     return this.emailBroadcast.getAvailableTemplates();
   }
 
-  // ==================== DIGEST ====================
+  // ==================== ДАЙДЖЕСТ ====================
 
   async getDigestStats(): Promise<{ subscriberCount: number }> {
     const subscriberCount = await this.digestService.getSubscriberCount();
@@ -323,9 +329,7 @@ export class AdminService {
     templateId: string,
     lang: string,
   ): Promise<{ subject: string; bodyHtml: string } | null> {
-    const validLang = ['en', 'ru', 'ro'].includes(lang)
-      ? (lang as 'en' | 'ru' | 'ro')
-      : 'ro';
+    const validLang: AppLocale = parseAppLocale(lang);
     return Promise.resolve(
       this.emailTemplateService.renderDefault(templateId, validLang),
     );

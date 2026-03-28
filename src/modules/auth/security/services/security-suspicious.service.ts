@@ -20,7 +20,7 @@ export class SecuritySuspiciousService {
    */
   @Cron(CronExpression.EVERY_10_MINUTES)
   async checkSuspiciousAccounts() {
-    this.logger.log('Запуск проверки подозрительных аккаунтов...');
+    this.logger.log('Starting suspicious account check...');
 
     try {
       // 1. Проверка на спам-лиды
@@ -95,7 +95,7 @@ export class SecuritySuspiciousService {
 
       return usersToBlock;
     } catch (error) {
-      this.logger.error('Ошибка при проверке подозрительных аккаунтов:', error);
+      this.logger.error('Suspicious account check failed:', error);
       return [];
     }
   }

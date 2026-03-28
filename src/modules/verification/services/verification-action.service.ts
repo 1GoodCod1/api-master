@@ -46,16 +46,16 @@ export class VerificationActionService {
         include: { masterProfile: true },
       });
 
-      if (!user) throw new NotFoundException('Пользователь не найден');
+      if (!user) throw new NotFoundException('User not found');
       if (user.role !== UserRole.MASTER)
         throw new BadRequestException(
-          'Только мастера могут подавать заявку на верификацию',
+          'Only masters can submit a verification request',
         );
       if (!user.masterProfile)
-        throw new NotFoundException('Профиль мастера не найден');
+        throw new NotFoundException('Master profile not found');
       if (dto.phone !== user.phone)
         throw new BadRequestException(
-          'Номер телефона должен совпадать с номером в профиле',
+          'Phone number must match the number in your profile',
         );
 
       // Проверяем, не подана ли уже заявка
@@ -66,18 +66,18 @@ export class VerificationActionService {
 
       if (existingVerification?.status === VerificationStatus.PENDING) {
         throw new BadRequestException(
-          'Заявка на верификацию уже подана и ожидает рассмотрения',
+          'A verification request is already pending review',
         );
       }
 
-      // GDPR: verify user has granted consent for document data processing
+      // GDPR: проверка согласия на обработку данных документов
       const hasConsent = await this.consentService.hasConsent(
         userId,
         ConsentType.VERIFICATION_DATA_PROCESSING,
       );
       if (!hasConsent) {
         throw new BadRequestException(
-          'Необходимо дать согласие на обработку персональных данных перед подачей заявки',
+          'You must consent to personal data processing before submitting a request',
         );
       }
 
@@ -152,11 +152,11 @@ export class VerificationActionService {
           } satisfies Prisma.InputJsonValue,
         });
       } catch (err) {
-        this.logger.error('Audit log при подаче заявки на верификацию', err);
+        this.logger.error('Audit log failed on verification submit', err);
       }
 
       return {
-        message: 'Заявка на верификацию успешно отправлена',
+        message: 'Verification request submitted successfully',
         verificationId: verification.id,
       };
     } catch (err) {
@@ -185,9 +185,12 @@ export class VerificationActionService {
         include: { master: true },
       });
 
-      if (!verification) throw new NotFoundException('Заявка не найдена');
+      if (!verification)
+        throw new NotFoundException('Verification request not found');
       if (verification.status !== VerificationStatus.PENDING)
-        throw new BadRequestException('Заявка уже была обработана');
+        throw new BadRequestException(
+          'Verification request has already been processed',
+        );
 
       const status =
         dto.decision === VerificationDecision.APPROVE
@@ -280,11 +283,14 @@ export class VerificationActionService {
           } satisfies Prisma.InputJsonValue,
         });
       } catch (err) {
-        this.logger.error('Audit log при рассмотрении верификации', err);
+        this.logger.error('Audit log failed on verification review', err);
       }
 
       return {
-        message: `Заявка ${dto.decision === VerificationDecision.APPROVE ? 'одобрена' : 'отклонена'} успешно`,
+        message:
+          dto.decision === VerificationDecision.APPROVE
+            ? 'Verification request approved successfully'
+            : 'Verification request rejected successfully',
       };
     } catch (err) {
       if (

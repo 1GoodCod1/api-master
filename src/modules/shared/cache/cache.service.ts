@@ -91,22 +91,22 @@ export class CacheService {
   }
 
   /**
-   * Set value in cache
+   * Записать значение в кеш
    */
   async set(key: string, value: any, ttl?: number): Promise<void> {
     try {
       const effectiveTtl = ttl || this.defaultTTL;
       await this.redis.set(key, value, effectiveTtl);
-      // Register key in pattern set for O(members) invalidation (no SCAN needed)
+      // Регистрация ключа в наборе для инвалидации O(members) без SCAN
       void this.registerKeyInSet(key, effectiveTtl).catch(() => {});
     } catch (error) {
       this.logger.error(`Cache set error for key ${key}:`, error);
-      // Fail silently, don't break the application
+      // Тихий сбой — не ломаем приложение
     }
   }
 
   /**
-   * Delete key from cache
+   * Удалить ключ из кеша
    */
   async del(key: string): Promise<void> {
     try {
@@ -117,24 +117,24 @@ export class CacheService {
   }
 
   /**
-   * Register a cache key in a Redis Set for fast pattern-based invalidation.
-   * The set name is derived by stripping the last segment of the key.
+   * Регистрация ключа кеша в Redis Set для быстрой инвалидации по шаблону.
+   * Имя набора — префикс ключа без последнего сегмента.
    *
-   * Example:
+   * Пример:
    *   key = 'cache:master:abc123:full'
    *   set = 'keyset:cache:master:abc123:*'
    *
-   * This replaces SCAN (which blocks at 1M+ keys in production) with O(members) DEL.
+   * Вместо SCAN (на 1M+ ключей в проде тяжело) — O(members) DEL.
    */
   private async registerKeyInSet(key: string, dataTtl?: number): Promise<void> {
     try {
       const client = this.redis.getClient();
-      // Build tracking set name from key prefix (strip last ':segment')
+      // Имя набора отслеживания: префикс ключа (без последнего ':segment')
       const lastColon = key.lastIndexOf(':');
       if (lastColon < 0) return;
       const prefix = key.slice(0, lastColon);
       const setName = `keyset:${prefix}:*`;
-      // SADD + expire the set proportionally to data TTL (min 1h, max 24h)
+      // SADD + expire набора пропорционально TTL данных (мин 1 ч, макс 24 ч)
       const keysetTtl = Math.min(
         Math.max((dataTtl ?? this.defaultTTL) * 2, 3600),
         86400,
@@ -142,28 +142,28 @@ export class CacheService {
       await client.sadd(setName, key);
       await client.expire(setName, keysetTtl);
     } catch {
-      // Non-critical: if this fails, invalidation falls back to SCAN
+      // Некритично: при сбое инвалидация уйдёт в SCAN
     }
   }
 
   /**
-   * Delete multiple keys by pattern.
+   * Удаление ключей по шаблону.
    *
-   * Strategy (in priority order):
-   * 1) Read from the Redis Set registered during set() — O(members), non-blocking
-   * 2) Fall back to SCAN if the set is empty or missing (e.g., cold start)
+   * Стратегия (по приоритету):
+   * 1) Чтение из Redis Set, заполненного при set() — O(members)
+   * 2) Иначе SCAN, если набор пуст (холодный старт и т.д.)
    *
-   * NOTE: SCAN fallback is kept but scoped to COUNT=100 batches to minimise blocking.
+   * SCAN — пакетами COUNT=100, чтобы снизить блокировки.
    */
   async delByPattern(pattern: string): Promise<number> {
     try {
       const client = this.redis.getClient();
       const setName = `keyset:${pattern}`;
 
-      // 1) Fast path: read from key-set registry
+      // 1) Быстрый путь: реестр key-set
       const keys: string[] = await client.smembers(setName);
 
-      // 2) Fallback SCAN for keys not yet in the registry (e.g., pre-upgrade keys)
+      // 2) SCAN для ключей не из реестра (напр. до миграции)
       if (keys.length === 0) {
         let cursor = '0';
         do {
@@ -181,7 +181,7 @@ export class CacheService {
 
       if (keys.length === 0) return 0;
 
-      // Delete keys + the tracking set itself in batches of 100
+      // Удаление ключей и набора отслеживания пакетами по 100
       const batchSize = 100;
       let deleted = 0;
       for (let i = 0; i < keys.length; i += batchSize) {
@@ -190,7 +190,7 @@ export class CacheService {
         deleted += batch.length;
       }
 
-      // Remove the exhausted tracking set
+      // Удалить исчерпанный набор отслеживания
       await client.del(setName);
       return deleted;
     } catch (error) {
@@ -202,7 +202,7 @@ export class CacheService {
     }
   }
 
-  /** Detect transient DB/pool errors that are worth retrying once */
+  /** Временные ошибки БД/пула — имеет смысл один ретрай */
   private isRetryableConnectionError(error: unknown): boolean {
     const msg = error instanceof Error ? error.message : String(error);
     return (
@@ -213,21 +213,21 @@ export class CacheService {
   }
 
   /**
-   * Get or set pattern (cache-aside)
-   * Retries fetch once on transient DB connection errors (e.g. pool timeout).
+   * Cache-aside: get или вычислить и положить.
+   * Один повтор fetch при временной ошибке соединения с БД (таймаут пула и т.п.).
    */
   async getOrSet<T>(
     key: string,
     fetchFn: () => Promise<T>,
     ttl?: number,
   ): Promise<T> {
-    // Try to get from cache
+    // Пробуем взять из кеша
     const cached = await this.get<T>(key);
     if (cached !== null) {
       return cached;
     }
 
-    // Cache Stampede Protection (Singleflight pattern)
+    // Защита от cache stampede (singleflight)
     // Если другой запрос уже вычисляет значение для этого ключа — ждём его
     const inFlightPromise = this.inFlightRequests.get(key) as
       | Promise<T>
@@ -245,7 +245,7 @@ export class CacheService {
         try {
           const value = await fetchFn();
           await this.redis.set(key, value, ttl || this.defaultTTL);
-          void this.registerKeyInSet(key, ttl).catch(() => {}); // track for set-based invalidation
+          void this.registerKeyInSet(key, ttl).catch(() => {}); // для инвалидации через наборы
           return value;
         } catch (error) {
           lastError = error;
@@ -285,13 +285,12 @@ export class CacheService {
   }
 
   /**
-   * Invalidate by pattern AND delete a leaf key that doesn't match the pattern.
-   * Use when the cache has both: a leaf key (e.g. `cache:categories:all`) and
-   * keys with subsegments (e.g. `cache:categories:all:{"isActive":true}`).
+   * Инвалидация по шаблону и удаление листового ключа, который шаблоном не покрывается.
+   * Когда есть и лист (`cache:categories:all`), и ключи с суффиксами.
    *
-   * @param leafKey - Exact key to delete (e.g. from cache.keys.categoriesAll())
-   * @param pattern - Pattern for keys with subsegments (e.g. `cache:categories:all:*`)
-   * @returns Number of keys deleted by pattern
+   * @param leafKey — точный ключ (напр. cache.keys.categoriesAll())
+   * @param pattern — шаблон для ключей с подсегментами
+   * @returns число удалённых по шаблону
    */
   async invalidateWithLeafKey(
     leafKey: string,
@@ -330,11 +329,11 @@ export class CacheService {
   } as const;
 
   /**
-   * Full master-related cache invalidation (profile, search, top, popular, new).
-   * Runs all invalidations in parallel. Use when master profile/data changed.
+   * Полная инвалидация кеша, связанного с мастером (профиль, поиск, топы).
+   * Параллельно. При изменении профиля/данных мастера.
    *
-   * @param masterId - Master ID
-   * @param slugs - Optional old/new slugs for profile-by-slug keys
+   * @param masterId — ID мастера
+   * @param slugs — старый/новый slug для ключей по slug
    */
   async invalidateMasterRelated(
     masterId: string,
@@ -358,8 +357,7 @@ export class CacheService {
   }
 
   /**
-   * Lightweight master data invalidation (leads, stats). Use when only leads/stats changed.
-   * Does NOT invalidate search, top, popular, new.
+   * Лёгкая инвалидация (лиды, stats). Без поиска/топов/popular/new.
    */
   async invalidateMasterData(masterId: string): Promise<void> {
     await Promise.all([
@@ -383,7 +381,7 @@ export class CacheService {
   }
 
   /**
-   * Get TTL for key
+   * TTL ключа
    */
   async getTTL(key: string): Promise<number> {
     try {
@@ -396,13 +394,13 @@ export class CacheService {
   }
 
   /**
-   * Increment counter
+   * Инкремент счётчика
    */
   async incr(key: string, ttl?: number): Promise<number> {
     try {
       const value = await this.redis.incr(key);
       if (ttl && value === 1) {
-        // Set TTL only on first increment
+        // TTL только при первом инкременте
         await this.redis.expire(key, ttl);
       }
       return value;
@@ -413,7 +411,7 @@ export class CacheService {
   }
 
   /**
-   * Build cache key with prefix
+   * Собрать ключ кеша с префиксом
    */
   buildKey(
     parts: (string | number | null | undefined)[],
@@ -425,10 +423,10 @@ export class CacheService {
   }
 
   /**
-   * Cache key builders for common patterns
+   * Построители ключей для типовых сценариев
    */
   readonly keys: CacheKeyBuilders = {
-    // Search
+    // Поиск
     searchMasters: (params: {
       categoryId?: string | null;
       cityId?: string | null;
@@ -468,7 +466,7 @@ export class CacheService {
       ]);
     },
 
-    // Master profile
+    // Профиль мастера
     masterFull: (idOrSlug: string) =>
       this.buildKey(['cache', 'master', idOrSlug, 'full']),
 
@@ -506,19 +504,19 @@ export class CacheService {
         limit,
       ]),
 
-    // Categories
+    // Категории
     categoriesAll: () => this.buildKey(['cache', 'categories', 'all']),
 
     categoryWithStats: (id: string) =>
       this.buildKey(['cache', 'category', id, 'with-stats']),
 
-    // Cities
+    // Города
     citiesAll: () => this.buildKey(['cache', 'cities', 'all']),
 
     cityWithStats: (id: string) =>
       this.buildKey(['cache', 'city', id, 'with-stats']),
 
-    // Tariffs
+    // Тарифы
     tariffsAll: () => this.buildKey(['cache', 'tariffs', 'all']),
 
     tariffById: (id: string) => this.buildKey(['cache', 'tariff', id]),
@@ -526,7 +524,7 @@ export class CacheService {
     tariffByType: (type: string) =>
       this.buildKey(['cache', 'tariff', 'type', type]),
 
-    // Leads
+    // Заявки (лиды)
     masterLeads: (masterId: string, status: string | null, page: number) =>
       this.buildKey([
         'cache',
@@ -539,18 +537,18 @@ export class CacheService {
         page,
       ]),
 
-    // User
+    // Пользователь
     userProfile: (id: string) =>
       this.buildKey(['cache', 'user', id, 'profile']),
 
     userMasterProfile: (id: string) =>
       this.buildKey(['cache', 'user', id, 'master-profile']),
 
-    // Analytics
+    // Аналитика
     analytics: (masterId: string, period: string, type: string) =>
       this.buildKey(['cache', 'analytics', 'master', masterId, period, type]),
 
-    // Top masters
+    // Топ мастеров
     topMasters: (
       categoryId: string | null,
       cityId: string | null,
@@ -565,15 +563,15 @@ export class CacheService {
         limit,
       ]),
 
-    // Popular masters
+    // Популярные мастера
     popularMasters: (limit: number) =>
       this.buildKey(['cache', 'masters', 'popular', limit]),
 
-    // New masters
+    // Новые мастера
     newMasters: (limit: number) =>
       this.buildKey(['cache', 'masters', 'new', limit]),
 
-    // Search suggestions (autocomplete)
+    // Подсказки поиска (автодополнение)
     searchSuggest: (q: string, cityId: string | null) =>
       this.buildKey([
         'cache',
@@ -582,32 +580,32 @@ export class CacheService {
         cityId || 'null',
       ]),
 
-    // Search filters (v2: includes slug/value for i18n)
+    // Фильтры поиска (v2: slug/value для i18n)
     searchFilters: () =>
       this.buildKey(['cache', 'masters', 'search-filters', 'v2']),
   };
 
   /**
-   * TTL constants
+   * Константы TTL
    */
   ttl = {
-    search: 300, // 5 minutes
-    masterProfile: 180, // 3 minutes
-    masterStats: 300, // 5 minutes
-    reviews: 900, // 15 minutes
-    categories: 3600, // 1 hour
-    cities: 7200, // 2 hours
-    tariffs: 86400, // 24 hours
-    leads: 120, // 2 minutes
-    userProfile: 900, // 15 minutes
-    analyticsDay: 600, // 10 minutes
-    analyticsWeek: 1800, // 30 minutes
-    analyticsMonth: 3600, // 1 hour
-    topMasters: 600, // 10 minutes
-    popularMasters: 600, // 10 minutes
-    newMasters: 180, // 3 minutes
-    searchFilters: 3600, // 1 hour
-    landingStats: 600, // 10 minutes
-    notifications: 60, // 1 minute (frequently changing)
+    search: 300, // 5 мин
+    masterProfile: 180, // 3 мин
+    masterStats: 300, // 5 мин
+    reviews: 900, // 15 мин
+    categories: 3600, // 1 ч
+    cities: 7200, // 2 ч
+    tariffs: 86400, // 24 ч
+    leads: 120, // 2 мин
+    userProfile: 900, // 15 мин
+    analyticsDay: 600, // 10 мин
+    analyticsWeek: 1800, // 30 мин
+    analyticsMonth: 3600, // 1 ч
+    topMasters: 600, // 10 мин
+    popularMasters: 600, // 10 мин
+    newMasters: 180, // 3 мин
+    searchFilters: 3600, // 1 ч
+    landingStats: 600, // 10 мин
+    notifications: 60, // 1 мин (часто меняется)
   };
 }

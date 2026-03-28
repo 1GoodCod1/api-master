@@ -3,6 +3,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { NotificationCategory, SenderType } from '@prisma/client';
+import { LeadStatus } from '../../../../common/constants';
 
 @Injectable()
 export class ChatLeadTransitionService {
@@ -35,7 +36,10 @@ export class ChatLeadTransitionService {
         },
       });
 
-      if (!conversation?.leadId || conversation.lead?.status !== 'NEW') {
+      if (
+        !conversation?.leadId ||
+        conversation.lead?.status !== LeadStatus.NEW
+      ) {
         return;
       }
 
@@ -61,13 +65,13 @@ export class ChatLeadTransitionService {
       await this.prisma.lead.update({
         where: { id: conversation.leadId },
         data: {
-          status: 'IN_PROGRESS',
+          status: LeadStatus.IN_PROGRESS,
           updatedAt: new Date(),
         },
       });
 
       this.logger.log(
-        `Lead ${conversation.leadId} auto-transitioned to IN_PROGRESS due to chat message exchange`,
+        `Lead ${conversation.leadId} auto-transitioned to ${LeadStatus.IN_PROGRESS} due to chat message exchange`,
       );
 
       await this.cache.invalidateMasterData(conversation.masterId);
@@ -83,7 +87,7 @@ export class ChatLeadTransitionService {
         this.inAppNotifications
           .notifyLeadStatusUpdated(master.userId, {
             leadId: conversation.leadId,
-            status: 'IN_PROGRESS',
+            status: LeadStatus.IN_PROGRESS,
             clientName,
           })
           .catch((err) =>
@@ -98,10 +102,13 @@ export class ChatLeadTransitionService {
             userId: clientId,
             category: NotificationCategory.LEAD_STATUS_UPDATED,
             title: 'Статус заявки обновлён',
-            message: 'Ваша заявка — IN_PROGRESS',
+            message: `Ваша заявка — ${LeadStatus.IN_PROGRESS}`,
             messageKey: 'notifications.messages.leadStatusUpdated',
-            messageParams: { status: 'IN_PROGRESS' },
-            metadata: { leadId: conversation.leadId, status: 'IN_PROGRESS' },
+            messageParams: { status: LeadStatus.IN_PROGRESS },
+            metadata: {
+              leadId: conversation.leadId,
+              status: LeadStatus.IN_PROGRESS,
+            },
           })
           .catch((err) =>
             this.logger.warn(

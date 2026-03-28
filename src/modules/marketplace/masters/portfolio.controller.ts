@@ -28,7 +28,8 @@ import { PlansGuard } from '../../../common/guards/plans.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Plans } from '../../../common/decorators/plans.decorator';
 import { GetUser } from '../../../common/decorators/get-user.decorator';
-import { TariffType, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import { TariffType } from '../../../common/constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
 @ApiTags('Portfolio')
@@ -36,7 +37,7 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 
-  // ─── Public endpoints ───────────────────────────────────────
+  // ─── Публичные эндпоинты ────────────────────────────────────
 
   @Get('master/:masterId')
   @ApiOperation({ summary: 'Get portfolio items for master (public)' })
@@ -60,7 +61,7 @@ export class PortfolioController {
     return this.portfolioService.findOne(id);
   }
 
-  // ─── Master-only endpoints ──────────────────────────────────
+  // ─── Только для мастера ─────────────────────────────────────
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)

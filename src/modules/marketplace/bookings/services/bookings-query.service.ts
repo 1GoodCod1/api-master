@@ -3,7 +3,12 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import {
+  ACTIVE_BOOKING_STATUSES,
+  ACTIVE_LEAD_STATUSES,
+  BookingStatus,
+} from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
@@ -97,7 +102,7 @@ export class BookingsQueryService {
       where: {
         masterId,
         startTime: { gte: startOfDay, lte: endOfDay },
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: [...ACTIVE_BOOKING_STATUSES] },
       },
       orderBy: { startTime: SORT_ASC },
     });
@@ -179,7 +184,7 @@ export class BookingsQueryService {
       this.prisma.lead.findMany({
         where: {
           masterId,
-          status: { in: ['NEW', 'IN_PROGRESS'] },
+          status: { in: [...ACTIVE_LEAD_STATUSES] },
           bookings: { none: {} },
         },
         orderBy: { createdAt: SORT_DESC },

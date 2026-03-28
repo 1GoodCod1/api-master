@@ -19,7 +19,7 @@ export class UsersAvatarService {
       where: { id: userId },
       select: { id: true, role: true, avatarFileId: true },
     });
-    if (!user) throw new NotFoundException('Пользователь не найден');
+    if (!user) throw new NotFoundException('User not found');
 
     if (!fileId || fileId.trim() === '') {
       await this.prisma.user.update({
@@ -46,16 +46,16 @@ export class UsersAvatarService {
     }
 
     const file = await this.prisma.file.findUnique({ where: { id: fileId } });
-    if (!file) throw new NotFoundException('Файл не найден');
+    if (!file) throw new NotFoundException('File not found');
 
     if (file.uploadedById !== userId) {
       throw new BadRequestException(
-        'Вы можете использовать только свои собственные файлы в качестве аватара',
+        'You can only use your own files as avatar',
       );
     }
 
     if (!String(file.mimetype).startsWith('image/')) {
-      throw new BadRequestException('Аватар должен быть изображением');
+      throw new BadRequestException('Avatar must be an image');
     }
 
     if (user.role === UserRole.CLIENT) {
@@ -94,7 +94,7 @@ export class UsersAvatarService {
     });
 
     if (user?.role !== UserRole.CLIENT) {
-      throw new NotFoundException('Профиль клиента не найден');
+      throw new NotFoundException('Client profile not found');
     }
 
     await this.prisma.clientPhoto.deleteMany({

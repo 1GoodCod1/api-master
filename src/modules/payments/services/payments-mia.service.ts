@@ -8,8 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { TariffsService } from '../../marketplace/tariffs/tariffs.service';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
-import { Prisma, TariffType } from '@prisma/client';
-import { PaymentStatus } from '../../../common/constants';
+import { Prisma } from '@prisma/client';
+import { PaymentStatus, TariffType } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import { PaymentsWebhookService } from './payments-webhook.service';
 import { AuditService } from '../../audit/audit.service';
@@ -162,7 +162,10 @@ export class PaymentsMiaService {
     }
 
     const currentEffectiveTariff = getEffectiveTariff(master);
-    if (currentEffectiveTariff === 'VIP' && tariffType === 'PREMIUM') {
+    if (
+      currentEffectiveTariff === TariffType.VIP &&
+      tariffType === TariffType.PREMIUM
+    ) {
       const canUpgrade =
         !master.tariffExpiresAt ||
         new Date(master.tariffExpiresAt).getTime() <= Date.now() ||
@@ -210,7 +213,7 @@ export class PaymentsMiaService {
         },
       });
 
-      // Audit log sandbox payment creation
+      // Audit log: создание платежа (sandbox)
       await this.auditService.log({
         userId: userId,
         action: AuditAction.PAYMENT_CREATED,
@@ -319,7 +322,7 @@ export class PaymentsMiaService {
       },
     });
 
-    // Audit log payment creation
+    // Audit log: создание платежа
     await this.auditService.log({
       userId: userId,
       action: AuditAction.PAYMENT_CREATED,
@@ -359,9 +362,9 @@ export class PaymentsMiaService {
   }
 
   /**
-   * Sandbox only: simulate payment via MIA POST /v2/mia/test-pay.
-   * Call after create-mia-checkout: uses paymentId from that response.
-   * On success, completes the payment and activates tariff (same as callback).
+   * Только sandbox: симуляция оплаты через MIA POST /v2/mia/test-pay.
+   * Вызывать после create-mia-checkout — paymentId из ответа.
+   * При успехе завершает платёж и активирует тариф (как callback).
    */
   async simulateSandboxPayment(paymentId: string, userId: string) {
     const sandbox = this.configService.get<boolean>('mia.sandbox');

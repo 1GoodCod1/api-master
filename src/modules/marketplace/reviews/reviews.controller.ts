@@ -131,11 +131,11 @@ export class ReviewsController {
   }
 
   // ============================================
-  // REVIEW REPLIES (Master replies to reviews)
+  // ОТВЕТЫ НА ОТЗЫВЫ (мастер отвечает)
   // ============================================
 
   @Post(':id/reply')
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 replies per minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MASTER)
   @ApiBearerAuth()
@@ -158,11 +158,11 @@ export class ReviewsController {
   }
 
   // ============================================
-  // REVIEW VOTES (Helpful review voting)
+  // ГОЛОСА «ПОЛЕЗНЫЙ ОТЗЫВ»
   // ============================================
 
   @Post(':id/vote')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 votes per minute
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // не более 10 голосов в минуту
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
