@@ -8,6 +8,7 @@ import { NotificationsModule } from '../notifications/notifications/notification
 import { EncryptionModule } from '../shared/encryption/encryption.module';
 import { ConsentModule } from '../consent/consent.module';
 import { AuditModule } from '../audit/audit.module';
+import { FilesModule } from '../infrastructure/files/files.module';
 import { VerificationQueryService } from './services/verification-query.service';
 import { VerificationActionService } from './services/verification-action.service';
 import { VerificationDocumentsPurgeService } from './services/verification-documents-purge.service';
@@ -21,6 +22,7 @@ import { VerificationDocumentsPurgeService } from './services/verification-docum
     EncryptionModule,
     ConsentModule,
     AuditModule,
+    FilesModule,
   ],
   controllers: [VerificationController],
   providers: [

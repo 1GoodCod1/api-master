@@ -1,4 +1,4 @@
-import { readFile, unlink } from 'fs/promises';
+import { open, unlink } from 'fs/promises';
 
 /** Magic bytes и допустимые расширения (расширение должно соответствовать содержимому) */
 const MAGIC: { buf: number[]; exts: string[] }[] = [
@@ -16,10 +16,13 @@ const ALLOWED_EXTS = new Set([
   'jpg',
   'png',
   'gif',
+  'webp',
   'pdf',
   'doc',
   'docx',
 ]);
+
+const HEAD_BYTES = 12;
 
 function getExt(originalname: string): string {
   const i = originalname.lastIndexOf('.');
@@ -27,25 +30,54 @@ function getExt(originalname: string): string {
 }
 
 /**
- * Проверяет, что первые байты файла соответствуют заявленному расширению.
- * Вызывать только при file.path (локальный diskStorage). Для S3 не вызывать.
- * @throws Error с сообщением при несоответствии
+ * Читает только первые 12 байт файла вместо всего файла.
  */
-export async function validateFileMagic(
-  filePath: string,
+async function readFileHead(filePath: string): Promise<Buffer> {
+  const fh = await open(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(HEAD_BYTES);
+    const { bytesRead } = await fh.read(buf, 0, HEAD_BYTES, 0);
+    return buf.subarray(0, bytesRead);
+  } finally {
+    await fh.close();
+  }
+}
+
+/**
+ * Валидация magic bytes из готового буфера.
+ * Используется и для локальных файлов, и для S3 (после Range GET).
+ * @throws Error при несоответствии
+ */
+export function validateMagicFromBuffer(
+  head: Buffer,
   originalname: string,
-): Promise<void> {
+): void {
   const ext = getExt(originalname);
   if (!ALLOWED_EXTS.has(ext)) {
     throw new Error('Invalid file extension');
   }
-  const head = await readFile(filePath, { encoding: null });
-  const head12 = head.subarray(0, 12);
+
+  // WebP: RIFF....WEBP
+  if (
+    head.length >= 12 &&
+    head[0] === 0x52 &&
+    head[1] === 0x49 &&
+    head[2] === 0x46 &&
+    head[3] === 0x46 &&
+    head[8] === 0x57 &&
+    head[9] === 0x45 &&
+    head[10] === 0x42 &&
+    head[11] === 0x50
+  ) {
+    if (ext === 'webp') return;
+    throw new Error(`File content (webp) does not match extension .${ext}`);
+  }
+
   for (const { buf, exts } of MAGIC) {
     const magicBuf = Buffer.from(buf);
     if (
-      head12.length >= magicBuf.length &&
-      head12.subarray(0, magicBuf.length).equals(magicBuf)
+      head.length >= magicBuf.length &&
+      head.subarray(0, magicBuf.length).equals(magicBuf)
     ) {
       if (exts.includes(ext)) return;
       throw new Error(
@@ -56,38 +88,47 @@ export async function validateFileMagic(
   throw new Error('File content could not be recognised as an allowed type');
 }
 
-const LEAD_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
-
-const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
 /**
- * Только изображения для вложений к заявке (JPEG/PNG/GIF/WebP).
- * Вызывать при file.path (локальный disk). Для S3 — дублировать проверку MIME на уровне сервиса.
+ * Проверяет, что первые байты файла соответствуют заявленному расширению.
+ * Читает только первые 12 байт (не весь файл).
+ * @throws Error с сообщением при несоответствии
  */
-export async function validateLeadImageMagic(
+export async function validateFileMagic(
   filePath: string,
   originalname: string,
 ): Promise<void> {
+  const head = await readFileHead(filePath);
+  validateMagicFromBuffer(head, originalname);
+}
+
+const LEAD_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+/**
+ * Валидация magic bytes из буфера — только изображения для заявок.
+ * @throws Error при несоответствии
+ */
+export function validateLeadImageMagicFromBuffer(
+  head: Buffer,
+  originalname: string,
+): void {
   const ext = getExt(originalname);
   if (!LEAD_IMAGE_EXTS.has(ext)) {
     throw new Error('Invalid file extension');
   }
 
-  const head = await readFile(filePath, { encoding: null });
-  const head12 = head.subarray(0, 12);
-
-  if (head12[0] === 0xff && head12[1] === 0xd8 && head12[2] === 0xff) {
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) {
     if (ext === 'jpg' || ext === 'jpeg') return;
     throw new Error('File content does not match extension');
   }
 
+  const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   if (head.length >= 8 && head.subarray(0, 8).equals(PNG_SIG)) {
     if (ext === 'png') return;
     throw new Error('File content does not match extension');
   }
 
   const gifHdr = Buffer.from([0x47, 0x49, 0x46, 0x38]);
-  if (head12.length >= 4 && head12.subarray(0, 4).equals(gifHdr)) {
+  if (head.length >= 4 && head.subarray(0, 4).equals(gifHdr)) {
     if (ext === 'gif') return;
     throw new Error('File content does not match extension');
   }
@@ -110,6 +151,18 @@ export async function validateLeadImageMagic(
   throw new Error(
     'File content could not be recognised as an allowed image type',
   );
+}
+
+/**
+ * Только изображения для вложений к заявке (JPEG/PNG/GIF/WebP).
+ * Читает только первые 12 байт.
+ */
+export async function validateLeadImageMagic(
+  filePath: string,
+  originalname: string,
+): Promise<void> {
+  const head = await readFileHead(filePath);
+  validateLeadImageMagicFromBuffer(head, originalname);
 }
 
 export async function unlinkIfExists(path: string): Promise<void> {

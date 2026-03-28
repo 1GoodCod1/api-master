@@ -34,7 +34,7 @@ function getValidB2Endpoint(custom: unknown, fallback: string): string {
   }
 }
 
-const ALLOWED_EXTENSIONS = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+const ALLOWED_EXTENSIONS = /jpeg|jpg|png|gif|webp|pdf|doc|docx|txt/;
 
 const fileFilter = (
   _req: unknown,
@@ -86,10 +86,30 @@ export function createMulterOptions(configService: ConfigService) {
     );
 
     // multer-s3 has no proper TypeScript types
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const autoContentType = multerS3.AUTO_CONTENT_TYPE as (
+      req: Express.Request,
+      file: Express.Multer.File,
+      cb: (
+        err: Error | null,
+        mime?: string,
+        stream?: NodeJS.ReadableStream,
+      ) => void,
+    ) => void;
+
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const s3Storage: StorageEngine = multerS3({
       s3,
       bucket: b2Bucket,
+      contentType: autoContentType,
+      contentDisposition: 'inline',
+      metadata: (
+        _req: Express.Request,
+        _file: Express.Multer.File,
+        cb: (err: Error | null, metadata?: Record<string, string>) => void,
+      ) => {
+        cb(null, { 'x-amz-meta-source': 'master-hub' });
+      },
       key: (
         _req: Express.Request,
         file: Express.Multer.File,

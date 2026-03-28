@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { StorageService } from '../../infrastructure/files/services/storage.service';
 
 @Injectable()
 export class UsersAvatarService {
+  private readonly logger = new Logger(UsersAvatarService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly storageService: StorageService,
   ) {}
 
   async setAvatar(userId: string, fileId?: string) {
@@ -102,6 +106,11 @@ export class UsersAvatarService {
         data: { avatarFileId: null },
       });
     }
+
+    // Удаляем файл из хранилища если он больше нигде не используется
+    this.storageService.deleteOrphanedFile(fileId).catch((err) => {
+      this.logger.warn(`Failed to cleanup orphaned file ${fileId}`, err);
+    });
 
     return { ok: true };
   }

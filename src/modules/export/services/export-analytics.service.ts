@@ -1,9 +1,5 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { randomUUID } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -60,47 +56,6 @@ export class ExportAnalyticsService {
       buildAnalyticsPdf(doc, pdfData, locale);
       doc.end();
     });
-  }
-
-  async exportAnalyticsToFile(
-    masterId: string,
-    user: JwtUser,
-    locale: string = 'en',
-  ): Promise<string> {
-    const filePath = path.join(
-      os.tmpdir(),
-      `export-analytics-${randomUUID()}.pdf`,
-    );
-    const writeStream = fs.createWriteStream(filePath);
-
-    try {
-      await this.accessService.validateExportAccess(masterId, user);
-      const pdfData = await this.fetchAnalyticsData(masterId);
-
-      await new Promise<void>((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50 });
-        doc.pipe(writeStream);
-        doc.on('error', reject);
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-        buildAnalyticsPdf(doc, pdfData, locale);
-        doc.end();
-      });
-
-      return filePath;
-    } catch (err) {
-      writeStream.destroy();
-      try {
-        await fs.promises.unlink(filePath);
-      } catch {
-        // игнорировать ошибки очистки
-      }
-      if (err instanceof BadRequestException) {
-        throw err;
-      }
-      this.logger.error('exportAnalyticsToFile failed', err);
-      throw err;
-    }
   }
 
   private async fetchAnalyticsData(

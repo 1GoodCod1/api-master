@@ -35,7 +35,7 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Post('upload')
-  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 uploads per minute per user
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   @ApiBearerAuth()
@@ -49,7 +49,7 @@ export class FilesController {
   }
 
   @Post('upload-many')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 batch uploads per minute
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalJwtAuthGuard, RequireAuthWhenNotForLeadGuard)
   @UseInterceptors(FilesInterceptor('files', 10))
   @ApiConsumes('multipart/form-data')

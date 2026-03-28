@@ -6,13 +6,17 @@ import {
 } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { StorageService } from '../../../infrastructure/files/services/storage.service';
 import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 
 @Injectable()
 export class MastersPhotosService {
   private readonly logger = new Logger(MastersPhotosService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   async getMasterPhotos(masterIdOrSlug: string, limit = 15) {
     try {
@@ -121,6 +125,11 @@ export class MastersPhotosService {
       if (onCacheInvalidate) {
         await onCacheInvalidate(master.id, master.slug);
       }
+
+      // Удаляем файл из хранилища если он больше нигде не используется
+      this.storageService.deleteOrphanedFile(fileId).catch((err) => {
+        this.logger.warn(`Failed to cleanup orphaned file ${fileId}`, err);
+      });
 
       return { ok: true };
     } catch (err) {

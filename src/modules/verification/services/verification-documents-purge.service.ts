@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { unlink } from 'fs/promises';
+import { StorageService } from '../../infrastructure/files/services/storage.service';
 import { AuditService } from '../../audit/audit.service';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
@@ -19,7 +17,7 @@ export class VerificationDocumentsPurgeService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
     private readonly auditService: AuditService,
   ) {}
 
@@ -107,7 +105,7 @@ export class VerificationDocumentsPurgeService {
     if (fileIds.length === 0) return 0;
 
     for (const path of filePaths) {
-      await this.deleteFileFromStorage(path);
+      await this.storageService.deleteFromStorage(path);
     }
 
     await this.prisma.masterVerification.update({
@@ -141,41 +139,5 @@ export class VerificationDocumentsPurgeService {
     }
 
     return fileIds.length;
-  }
-
-  private async deleteFileFromStorage(filePath: string): Promise<void> {
-    try {
-      if (filePath.startsWith('http')) {
-        const url = new URL(filePath);
-        const key = url.pathname.replace(/^\/[^/]+\//, '');
-        const b2KeyId = this.configService.get<string>('b2.applicationKeyId');
-        const b2Key = this.configService.get<string>('b2.applicationKey');
-        const b2Bucket = this.configService.get<string>('b2.bucket');
-        const b2Region = this.configService.get<string>(
-          'b2.region',
-          'eu-central-003',
-        );
-
-        if (b2KeyId && b2Key && b2Bucket) {
-          const s3 = new S3Client({
-            credentials: { accessKeyId: b2KeyId, secretAccessKey: b2Key },
-            region: b2Region,
-            endpoint: `https://s3.${b2Region}.backblazeb2.com`,
-            forcePathStyle: true,
-          });
-          await s3.send(
-            new DeleteObjectCommand({ Bucket: b2Bucket, Key: key }),
-          );
-        }
-      } else {
-        const localPath = filePath.startsWith('/') ? `.${filePath}` : filePath;
-        await unlink(localPath).catch(() => {});
-      }
-    } catch (err) {
-      this.logger.warn(
-        `Failed to delete file from storage: ${filePath}`,
-        err instanceof Error ? err.message : String(err),
-      );
-    }
   }
 }

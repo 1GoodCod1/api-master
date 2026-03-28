@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { StorageService } from '../../../infrastructure/files/services/storage.service';
 import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import {
   CreatePortfolioItemDto,
@@ -17,7 +18,10 @@ import {
 export class PortfolioService {
   private readonly logger = new Logger(PortfolioService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   /**
    * Get all portfolio items for a master (public)
@@ -171,7 +175,18 @@ export class PortfolioService {
       throw AppErrors.forbidden(AppErrorMessages.PORTFOLIO_DELETE_OWN_ONLY);
     }
 
+    const fileIds = [item.beforeFileId, item.afterFileId].filter(
+      (id): id is string => id != null,
+    );
     await this.prisma.portfolioItem.delete({ where: { id: itemId } });
+
+    // Удаляем файлы из хранилища если они больше нигде не используются
+    for (const fid of fileIds) {
+      this.storageService.deleteOrphanedFile(fid).catch((err) => {
+        this.logger.warn(`Failed to cleanup orphaned file ${fid}`, err);
+      });
+    }
+
     return { deleted: true };
   }
 

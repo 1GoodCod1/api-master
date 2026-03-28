@@ -7,8 +7,6 @@ import {
 import { UserRole } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import * as fs from 'fs';
-import { stat } from 'fs/promises';
 import type { Response } from 'express';
 import { randomUUID } from 'crypto';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
@@ -22,6 +20,7 @@ import type {
   ExportJobStatusDto,
   EnqueueResultDto,
 } from './types';
+import { StorageService } from '../infrastructure/files/services/storage.service';
 
 export type { ExportJobType };
 export type { ExportJobStatus, ExportJobStatusDto, EnqueueResultDto };
@@ -34,11 +33,11 @@ const VALID_EXPORT_TYPES: ExportJobType[] = ['csv', 'excel', 'pdf'];
  * КАК РАБОТАЕТ:
  * 1. Клиент POST /export/queue → сразу получает jobId (HTTP 202)
  * 2. Задача ставится в Bull-очередь «export» → worker подхватывает
- * 3. Worker генерирует файл → сохраняет на диск (uploads/exports/)
+ * 3. Worker генерирует файл → загружает в B2 (или локальный диск в dev)
  * 4. Клиент опрашивает GET /export/status/:jobId до status = 'done'
- * 5. Клиент загружает GET /export/download/:jobId — стриминг с диска
+ * 5. Клиент загружает GET /export/download/:jobId — стриминг из хранилища
  * 6. Завершённые задачи удаляются из Redis через 10 минут
- * 7. Файлы на диске чистятся ExportProcessor каждые 10 минут
+ * 7. Файлы в хранилище чистятся ExportProcessor каждые 10 минут
  */
 @Injectable()
 export class ExportQueueService {
@@ -46,6 +45,7 @@ export class ExportQueueService {
 
   constructor(
     @InjectQueue('export') private readonly exportQueue: Queue<ExportJobData>,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -143,22 +143,24 @@ export class ExportQueueService {
     result: ExportJobResult,
     res: Response,
   ): Promise<void> {
-    const stats = await stat(result.filePath);
+    const { stream, size } = await this.storageService.getFileStream(
+      result.filePath,
+    );
 
     res.setHeader('Content-Type', result.contentType);
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="${result.filename}"`,
     );
-    res.setHeader('Content-Length', stats.size);
+    if (size > 0) {
+      res.setHeader('Content-Length', size);
+    }
 
-    const stream = fs.createReadStream(result.filePath);
     stream.on('error', (err) => {
       this.logger.error('Export file stream error', err);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Failed to read export file' });
       }
-      stream.destroy();
     });
     stream.pipe(res);
   }

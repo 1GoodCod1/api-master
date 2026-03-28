@@ -5,6 +5,7 @@ import { PrismaModule } from '../../shared/database/prisma.module';
 import { RedisModule } from '../../shared/redis/redis.module';
 import { CacheModule } from '../../shared/cache/cache.module';
 import { TasksModule } from '../../infrastructure/tasks/tasks.module';
+import { FilesModule } from '../../infrastructure/files/files.module';
 import { AdminUsersService } from './services/admin-users.service';
 import { AdminMastersService } from './services/admin-masters.service';
 import { AdminLeadsService } from './services/admin-leads.service';
@@ -25,6 +26,7 @@ import { ConsentModule } from '../../consent/consent.module';
     RedisModule,
     CacheModule,
     TasksModule,
+    FilesModule,
     AppSettingsModule,
     DigestModule,
     AuditModule,

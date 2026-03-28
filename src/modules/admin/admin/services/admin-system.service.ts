@@ -3,14 +3,16 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';
 import { RedisService } from '../../../shared/redis/redis.service';
-import * as fs from 'fs';
-import * as path from 'path';
+import { StorageService } from '../../../infrastructure/files/services/storage.service';
 import * as os from 'os';
 import { SORT_ASC } from '../../../../common/constants';
 import type { SystemStats } from '../types';
 
+const BACKUP_PREFIX = 'backups/';
+
 /**
- * Сервис для системных операций: бэкапы и мониторинг
+ * Сервис для системных операций: бэкапы и мониторинг.
+ * Бэкапы хранятся в B2 (прод) или на локальном диске (dev).
  */
 @Injectable()
 export class AdminSystemService {
@@ -19,6 +21,7 @@ export class AdminSystemService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly storageService: StorageService,
   ) {}
 
   // ==================== СИСТЕМНАЯ ИНФОРМАЦИЯ ====================
@@ -147,11 +150,8 @@ export class AdminSystemService {
 
   async createBackup() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupDir = path.join(process.cwd(), 'backups');
-
-    await fs.promises.mkdir(backupDir, { recursive: true });
-
-    const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
+    const filename = `backup-${timestamp}.json`;
+    const key = `${BACKUP_PREFIX}${filename}`;
 
     const [users, masters, statistics] = await Promise.all([
       this.fetchUsersPaginated(),
@@ -166,19 +166,21 @@ export class AdminSystemService {
       statistics,
     };
 
-    await fs.promises.writeFile(
-      backupFile,
-      JSON.stringify(backupData, null, 2),
+    const buffer = Buffer.from(JSON.stringify(backupData, null, 2), 'utf-8');
+    const storagePath = await this.storageService.uploadBuffer(
+      key,
+      buffer,
+      'application/json',
     );
 
-    await this.rotateBackups(backupDir);
+    await this.rotateBackups();
 
-    this.logger.log(`Backup created: ${backupFile}`);
+    this.logger.log(`Backup created: ${storagePath}`);
 
     return {
       success: true,
-      filename: `backup-${timestamp}.json`,
-      path: backupFile,
+      filename,
+      path: storagePath,
       timestamp: backupData.timestamp,
     };
   }
@@ -251,96 +253,64 @@ export class AdminSystemService {
     return masters;
   }
 
-  private async rotateBackups(backupDir: string): Promise<void> {
-    let entries: string[];
+  private async rotateBackups(): Promise<void> {
     try {
-      entries = await fs.promises.readdir(backupDir);
-    } catch {
-      return;
-    }
-    const jsonFiles = entries.filter((file) => file.endsWith('.json'));
-    if (jsonFiles.length <= AdminSystemService.MAX_BACKUPS) return;
+      const files = await this.storageService.listFiles(BACKUP_PREFIX);
+      const jsonFiles = files
+        .filter((f) => f.key.endsWith('.json'))
+        .sort((a, b) => a.lastModified.getTime() - b.lastModified.getTime());
 
-    const filesWithStats = await Promise.all(
-      jsonFiles.map(async (file) => {
-        const stats = await fs.promises.stat(path.join(backupDir, file));
-        return { file, mtime: stats.mtime };
-      }),
-    );
-    const sorted = filesWithStats.sort(
-      (a, b) => a.mtime.getTime() - b.mtime.getTime(),
-    );
-    const toDelete = sorted.slice(
-      0,
-      sorted.length - AdminSystemService.MAX_BACKUPS,
-    );
-    for (const { file } of toDelete) {
-      try {
-        await fs.promises.unlink(path.join(backupDir, file));
-        this.logger.log(`Rotated old backup: ${file}`);
-      } catch (err) {
-        this.logger.warn(`Failed to delete old backup ${file}:`, err);
+      if (jsonFiles.length <= AdminSystemService.MAX_BACKUPS) return;
+
+      const toDelete = jsonFiles.slice(
+        0,
+        jsonFiles.length - AdminSystemService.MAX_BACKUPS,
+      );
+      for (const file of toDelete) {
+        try {
+          await this.storageService.deleteByKey(file.key);
+          this.logger.log(`Rotated old backup: ${file.key}`);
+        } catch (err) {
+          this.logger.warn(`Failed to delete old backup ${file.key}:`, err);
+        }
       }
+    } catch (err) {
+      this.logger.warn('Backup rotation failed:', err);
     }
   }
 
   async listBackups(): Promise<
-    { filename: string; size: string; modified: Date; created: Date }[]
+    { filename: string; size: string; modified: Date }[]
   > {
-    const backupDir = path.join(process.cwd(), 'backups');
-
-    let entries: string[];
     try {
-      entries = await fs.promises.readdir(backupDir);
+      const files = await this.storageService.listFiles(BACKUP_PREFIX);
+      return files
+        .filter((f) => f.key.endsWith('.json'))
+        .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
+        .map((f) => ({
+          filename: f.key.replace(BACKUP_PREFIX, ''),
+          size: this.formatBytes(f.size),
+          modified: f.lastModified,
+        }));
     } catch {
       return [];
     }
-
-    const jsonFiles = entries.filter((file) => file.endsWith('.json'));
-    const filesWithStats = await Promise.all(
-      jsonFiles.map(async (file) => {
-        const stats = await fs.promises.stat(path.join(backupDir, file));
-        return {
-          filename: file,
-          size: this.formatBytes(stats.size),
-          modified: stats.mtime,
-          created: stats.birthtime,
-        };
-      }),
-    );
-
-    return filesWithStats.sort(
-      (a, b) => b.modified.getTime() - a.modified.getTime(),
-    );
   }
 
-  async getBackupPath(
+  async downloadBackup(
     filename: string,
-  ): Promise<{ backupPath: string; backupDir: string }> {
+  ): Promise<{ buffer: Buffer; contentType: string }> {
     if (!/^backup-[\d\-TZ]+\.json$/.test(filename)) {
       throw AppErrors.badRequest(AppErrorMessages.BACKUP_INVALID_FILENAME);
     }
 
-    const backupDir = path.join(process.cwd(), 'backups');
-    const backupPath = path.join(backupDir, filename);
-
-    const normalizedBackupPath = path.normalize(backupPath);
-    const normalizedBackupDir = path.normalize(backupDir);
-
-    if (!normalizedBackupPath.startsWith(normalizedBackupDir)) {
-      throw AppErrors.badRequest(AppErrorMessages.BACKUP_INVALID_PATH);
-    }
-
+    const key = `${BACKUP_PREFIX}${filename}`;
     try {
-      await fs.promises.access(normalizedBackupPath, fs.constants.F_OK);
+      const buffer = await this.storageService.getFileBuffer(key);
+      return { buffer, contentType: 'application/json' };
     } catch {
       throw AppErrors.notFound(AppErrorMessages.BACKUP_FILE_NOT_FOUND);
     }
-
-    return {
-      backupPath: normalizedBackupPath,
-      backupDir: normalizedBackupDir,
-    };
   }
 
   // ==================== УТИЛИТЫ ====================

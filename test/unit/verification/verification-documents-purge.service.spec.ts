@@ -2,10 +2,9 @@ jest.mock('fs/promises', () => ({
   unlink: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { unlink } from 'fs/promises';
 import { VerificationDocumentsPurgeService } from '../../../src/modules/verification/services/verification-documents-purge.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
-import type { ConfigService } from '@nestjs/config';
+import type { StorageService } from '../../../src/modules/infrastructure/files/services/storage.service';
 
 describe('VerificationDocumentsPurgeService', () => {
   const masterVerification = {
@@ -22,9 +21,13 @@ describe('VerificationDocumentsPurgeService', () => {
     file,
   } as unknown as PrismaService;
 
-  const configService = {
-    get: jest.fn(),
-  } as unknown as ConfigService;
+  const storageService = {
+    deleteFromStorage: jest.fn().mockResolvedValue(undefined),
+    deleteOrphanedFile: jest.fn().mockResolvedValue(true),
+    getFileHeadBytes: jest.fn().mockResolvedValue(null),
+    usingB2: false,
+    extractKeyFromUrl: jest.fn(),
+  } as unknown as StorageService;
 
   const auditService = {
     log: jest.fn().mockResolvedValue(undefined),
@@ -37,7 +40,7 @@ describe('VerificationDocumentsPurgeService', () => {
     auditService.log.mockResolvedValue(undefined);
     service = new VerificationDocumentsPurgeService(
       prisma,
-      configService,
+      storageService,
       auditService as never,
     );
   });
@@ -64,7 +67,7 @@ describe('VerificationDocumentsPurgeService', () => {
 
       await service.purgeVerificationFilesById('v1');
 
-      expect(unlink).not.toHaveBeenCalled();
+      expect(storageService.deleteFromStorage).not.toHaveBeenCalled();
       expect(masterVerification.update).not.toHaveBeenCalled();
     });
 
@@ -81,7 +84,7 @@ describe('VerificationDocumentsPurgeService', () => {
 
       await service.purgeVerificationFilesById('v1');
 
-      expect(unlink).not.toHaveBeenCalled();
+      expect(storageService.deleteFromStorage).not.toHaveBeenCalled();
     });
 
     it('returns early when there are no file records', async () => {
@@ -99,7 +102,7 @@ describe('VerificationDocumentsPurgeService', () => {
 
       await service.purgeVerificationFilesById('v1');
 
-      expect(unlink).not.toHaveBeenCalled();
+      expect(storageService.deleteFromStorage).not.toHaveBeenCalled();
     });
 
     it('deletes local files, clears FKs, and removes file rows', async () => {
@@ -118,7 +121,9 @@ describe('VerificationDocumentsPurgeService', () => {
 
       await service.purgeVerificationFilesById('v1');
 
-      expect(unlink).toHaveBeenCalledWith('uploads/doc.jpg');
+      expect(storageService.deleteFromStorage).toHaveBeenCalledWith(
+        'uploads/doc.jpg',
+      );
       expect(masterVerification.update).toHaveBeenCalledWith({
         where: { id: 'v1' },
         data: {
@@ -172,7 +177,7 @@ describe('VerificationDocumentsPurgeService', () => {
 
       await service.purgeRemainingApprovedVerificationFiles();
 
-      expect(unlink).toHaveBeenCalledWith('a.jpg');
+      expect(storageService.deleteFromStorage).toHaveBeenCalledWith('a.jpg');
       expect(masterVerification.update).toHaveBeenCalled();
       expect(auditService.log).toHaveBeenCalledWith(
         expect.objectContaining({

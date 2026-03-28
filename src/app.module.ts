@@ -74,19 +74,25 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
       load: [configuration],
     }),
 
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/uploads',
-      serveStaticOptions: {
-        fallthrough: true,
-        setHeaders: (res: Response) => {
-          res.setHeader(
-            'Cache-Control',
-            'public, max-age=86400, stale-while-revalidate=3600',
-          );
-        },
-      },
-    }),
+    // Локальная отдача файлов только в dev/staging (в проде файлы в B2)
+    ...(process.env.NODE_ENV === 'production'
+      ? []
+      : [
+          ServeStaticModule.forRoot({
+            rootPath: join(process.cwd(), 'uploads'),
+            serveRoot: '/uploads',
+            serveStaticOptions: {
+              fallthrough: true,
+              setHeaders: (res: Response) => {
+                res.setHeader(
+                  'Cache-Control',
+                  'public, max-age=86400, stale-while-revalidate=3600',
+                );
+                res.setHeader('X-Content-Type-Options', 'nosniff');
+              },
+            },
+          }),
+        ]),
 
     // Общие модули
     PrismaModule,

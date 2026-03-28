@@ -8,6 +8,7 @@ import { CacheModule } from '../../shared/cache/cache.module';
 import { NotificationsModule } from '../../notifications/notifications/notifications.module';
 import { SearchController } from './search.controller';
 import { AuditModule } from '../../audit/audit.module';
+import { FilesModule } from '../../infrastructure/files/files.module';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersSearchSqlService } from './services/masters-search-sql.service';
 import { MastersProfileService } from './services/masters-profile.service';
@@ -29,6 +30,7 @@ import { MastersLandingStatsService } from './services/masters-landing-stats.ser
     CacheModule,
     NotificationsModule,
     AuditModule,
+    FilesModule,
   ],
   controllers: [MastersController, SearchController, PortfolioController],
   providers: [

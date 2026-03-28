@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '../shared/database/prisma.module';
+import { FilesModule } from '../infrastructure/files/files.module';
 import { ExportService } from './export.service';
 import { ExportQueueService } from './export-queue.service';
 import { ExportController } from './export.controller';
@@ -13,6 +14,7 @@ import { ExportProcessor } from './processor/export.processor';
 @Module({
   imports: [
     PrismaModule,
+    FilesModule,
     BullModule.registerQueueAsync({
       name: 'export',
       imports: [ConfigModule],

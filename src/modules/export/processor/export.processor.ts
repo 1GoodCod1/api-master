@@ -1,8 +1,6 @@
 import { Processor, Process, OnQueueFailed } from '@nestjs/bull';
 import type { Job } from 'bull';
 import { Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import type { UserRole } from '@prisma/client';
 import type {
   ExportJobData,
@@ -10,8 +8,9 @@ import type {
 } from '../../shared/types/export.types';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportService } from '../export.service';
+import { StorageService } from '../../infrastructure/files/services/storage.service';
 
-const EXPORT_DIR = path.join(process.cwd(), 'uploads', 'exports');
+const EXPORT_PREFIX = 'exports/';
 const FILE_MAX_AGE_MS = 15 * 60 * 1000; // 15 минут
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // каждые 10 минут
 
@@ -20,10 +19,12 @@ export class ExportProcessor implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ExportProcessor.name);
   private cleanupTimer: NodeJS.Timeout;
 
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly storageService: StorageService,
+  ) {}
 
-  async onModuleInit() {
-    await fs.mkdir(EXPORT_DIR, { recursive: true });
+  onModuleInit() {
     this.cleanupTimer = setInterval(() => {
       void this.cleanupOldFiles();
     }, CLEANUP_INTERVAL_MS);
@@ -84,14 +85,18 @@ export class ExportProcessor implements OnModuleInit, OnModuleDestroy {
       ext = 'pdf';
     }
 
-    const filePath = path.join(EXPORT_DIR, `${job.id}.${ext}`);
-    await fs.writeFile(filePath, buffer);
-
-    this.logger.log(
-      `Export job ${job.id} завершён: ${filePath} (${buffer.length} bytes)`,
+    const key = `${EXPORT_PREFIX}${String(job.id)}.${ext}`;
+    const storagePath = await this.storageService.uploadBuffer(
+      key,
+      buffer,
+      contentType,
     );
 
-    return { filePath, contentType, filename };
+    this.logger.log(
+      `Export job ${job.id} завершён: ${storagePath} (${buffer.length} bytes)`,
+    );
+
+    return { filePath: storagePath, contentType, filename };
   }
 
   @OnQueueFailed()
@@ -104,15 +109,13 @@ export class ExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   private async cleanupOldFiles(): Promise<void> {
     try {
-      const files = await fs.readdir(EXPORT_DIR);
+      const files = await this.storageService.listFiles(EXPORT_PREFIX);
       const now = Date.now();
       let cleaned = 0;
 
       for (const file of files) {
-        const filePath = path.join(EXPORT_DIR, file);
-        const stat = await fs.stat(filePath);
-        if (now - stat.mtimeMs > FILE_MAX_AGE_MS) {
-          await fs.unlink(filePath);
+        if (now - file.lastModified.getTime() > FILE_MAX_AGE_MS) {
+          await this.storageService.deleteByKey(file.key);
           cleaned++;
         }
       }
@@ -121,7 +124,7 @@ export class ExportProcessor implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Cleanup: removed ${cleaned} stale export file(s)`);
       }
     } catch {
-      // директория может ещё не существовать
+      // хранилище может быть недоступно
     }
   }
 }

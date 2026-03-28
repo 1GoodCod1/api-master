@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  Header,
   Res,
   Req,
 } from '@nestjs/common';
@@ -395,14 +394,16 @@ export class AdminController {
 
   @Get('backups/:filename')
   @ApiOperation({ summary: 'Download backup file' })
-  @Header('Content-Type', 'application/json')
-  @Header('Content-Disposition', 'attachment')
   async downloadBackup(
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {
-    const { backupDir } = await this.adminService.getBackupPath(filename);
-    return res.sendFile(filename, { root: backupDir });
+    const { buffer, contentType } =
+      await this.adminService.downloadBackup(filename);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 
   @Get('settings/referrals')

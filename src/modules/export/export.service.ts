@@ -71,12 +71,4 @@ export class ExportService {
       locale,
     );
   }
-
-  async exportAnalyticsToFile(
-    masterId: string,
-    user: JwtUser,
-    locale: string = 'en',
-  ): Promise<string> {
-    return this.analyticsService.exportAnalyticsToFile(masterId, user, locale);
-  }
 }

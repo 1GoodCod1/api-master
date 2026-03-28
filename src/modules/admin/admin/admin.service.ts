@@ -242,8 +242,8 @@ export class AdminService {
     return this.systemService.listBackups();
   }
 
-  async getBackupPath(filename: string) {
-    return this.systemService.getBackupPath(filename);
+  async downloadBackup(filename: string) {
+    return this.systemService.downloadBackup(filename);
   }
 
   async isReferralsEnabled(): Promise<boolean> {
