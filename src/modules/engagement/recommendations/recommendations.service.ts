@@ -7,11 +7,20 @@ import { RecommendationsHistoryService } from './services/recommendations-histor
 /**
  * RecommendationsService — координатор системы рекомендаций и аналитики активности.
  * Делегирует вычисления и хранение специализированным сервисам.
+ *
+ * Персональный список: кэшируется пул скоров (raw), на каждый запрос — исключение
+ * недавно показанных, фильтр качества и диверсификация в движке.
  */
 @Injectable()
 export class RecommendationsService {
   private readonly logger = new Logger(RecommendationsService.name);
-  private readonly CACHE_TTL = 3600; // 1 час
+  private readonly RAW_CACHE_TTL_SEC = 3600; // 1 час
+  /** Недавно показанные карточки не повторяем ~48 ч */
+  private readonly IMPRESSION_TTL_SEC = 48 * 3600;
+  private readonly RAW_CACHE_PREFIX = 'recommendations:raw:v1:';
+  private readonly IMPRESSION_PREFIX = 'recommendations:impressions:v1:';
+  /** Совместимость: старый ключ полного ответа */
+  private readonly LEGACY_CACHE_PREFIX = 'recommendations:';
 
   constructor(
     private readonly redis: RedisService,
@@ -20,29 +29,128 @@ export class RecommendationsService {
     private readonly historyService: RecommendationsHistoryService,
   ) {}
 
+  private identityKey(userId?: string, sessionId?: string): string {
+    return userId || sessionId || 'anon';
+  }
+
+  /** Учитываем город с клиента (гео/выбор), иначе общий кэш без города. */
+  private rawCacheKey(
+    userId?: string,
+    sessionId?: string,
+    explicitCityId?: string,
+  ): string {
+    const suffix = explicitCityId?.trim() || 'noc';
+    return `${this.RAW_CACHE_PREFIX}${this.identityKey(userId, sessionId)}:${suffix}`;
+  }
+
+  /** Сброс всех вариантов raw-кэша при смене интересов (город в query меняет ключ). */
+  private async deleteAllRawCacheVariants(
+    userId?: string,
+    sessionId?: string,
+  ): Promise<void> {
+    const id = this.identityKey(userId, sessionId);
+    const pattern = `${this.RAW_CACHE_PREFIX}${id}:*`;
+    try {
+      const client = this.redis.getClient();
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          50,
+        );
+        cursor = nextCursor;
+        if (keys.length) await client.del(...keys);
+      } while (cursor !== '0');
+    } catch (e) {
+      this.logger.warn('deleteAllRawCacheVariants failed', e);
+    }
+  }
+
+  private impressionKey(userId?: string, sessionId?: string): string {
+    return `${this.IMPRESSION_PREFIX}${this.identityKey(userId, sessionId)}`;
+  }
+
+  private legacyCacheKey(userId?: string, sessionId?: string): string {
+    return `${this.LEGACY_CACHE_PREFIX}${this.identityKey(userId, sessionId)}`;
+  }
+
+  private async getImpressionIds(
+    userId?: string,
+    sessionId?: string,
+  ): Promise<Set<string>> {
+    try {
+      const key = this.impressionKey(userId, sessionId);
+      const ids = await this.redis.getClient().smembers(key);
+      return new Set(ids);
+    } catch {
+      return new Set();
+    }
+  }
+
+  private async recordShownMasterIds(
+    userId: string | undefined,
+    sessionId: string | undefined,
+    masterIds: string[],
+  ): Promise<void> {
+    if (!masterIds.length) return;
+    try {
+      const key = this.impressionKey(userId, sessionId);
+      const client = this.redis.getClient();
+      await client.sadd(key, ...masterIds);
+      await client.expire(key, this.IMPRESSION_TTL_SEC);
+    } catch (e) {
+      this.logger.warn('recordShownMasterIds failed', e);
+    }
+  }
+
   /**
-   * Получить персональные рекомендации с использованием кэширования
+   * Получить персональные рекомендации: raw-скоры в кэше; показы без повторов 48ч.
    */
   async getPersonalizedRecommendations(
     userId?: string,
     sessionId?: string,
     limit: number = 10,
+    explicitCityId?: string,
   ): Promise<unknown[]> {
-    const cacheKey = `recommendations:${userId || sessionId || 'anon'}`;
-
     try {
-      const cached = await this.redis.getClient().get(cacheKey);
-      if (cached) return JSON.parse(cached) as unknown[];
+      const rawKey = this.rawCacheKey(userId, sessionId, explicitCityId);
+      let rawJson = await this.redis.getClient().get(rawKey);
 
-      const recommendations = await this.engineService.calculateScores(
-        userId,
-        sessionId,
+      if (!rawJson) {
+        const raw = await this.engineService.buildRawScores(
+          userId,
+          sessionId,
+          undefined,
+          explicitCityId,
+        );
+        rawJson = JSON.stringify(raw);
+        await this.redis
+          .getClient()
+          .setex(rawKey, this.RAW_CACHE_TTL_SEC, rawJson);
+      }
+
+      const raw = JSON.parse(rawJson) as {
+        masterId: string;
+        score: number;
+        reasons: string[];
+      }[];
+
+      const excludeRecent = await this.getImpressionIds(userId, sessionId);
+      const recommendations = await this.engineService.materializeFromRawScores(
+        raw,
         limit,
+        excludeRecent,
       );
 
-      await this.redis
-        .getClient()
-        .setex(cacheKey, this.CACHE_TTL, JSON.stringify(recommendations));
+      await this.recordShownMasterIds(
+        userId,
+        sessionId,
+        recommendations.map((m) => m.id),
+      );
+
       return recommendations as unknown[];
     } catch (error) {
       this.logger.error('Ошибка в рекомендациях:', error);
@@ -91,9 +199,9 @@ export class RecommendationsService {
       const { action, ...rest } = data;
       await this.trackerService.trackActivity({ ...rest, action });
 
-      // Сбрасываем кэш, так как интересы пользователя могли измениться
-      const cacheKey = `recommendations:${data.userId || data.sessionId || 'anon'}`;
-      await this.redis.getClient().del(cacheKey);
+      const client = this.redis.getClient();
+      await this.deleteAllRawCacheVariants(data.userId, data.sessionId);
+      await client.del(this.legacyCacheKey(data.userId, data.sessionId));
     } catch (error) {
       this.logger.error('Ошибка трекинга активности:', error);
     }

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import {
+  isMasterPresentationReady,
+  pickDiverseMasters,
+  type MasterWithRecommendationMeta,
+} from './recommendations-presentation.util';
 
 interface RecommendationScore {
   masterId: string;
@@ -8,22 +13,37 @@ interface RecommendationScore {
   reasons: string[];
 }
 
+/** Сырые скоры для кэша и последующей сборки ответа. */
+export interface RawRecommendationScore {
+  masterId: string;
+  score: number;
+  reasons: string[];
+}
+
+const RAW_SCORE_POOL = 200;
+const VIEW_DECAY_BASE = 0.92;
+
 @Injectable()
 export class RecommendationsEngineService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Основной алгоритм расчета скоринга для рекомендаций
-   * @param userId ID пользователя
-   * @param sessionId ID сессии
-   * @param limit Количество рекомендуемых мастеров
+   * Пул кандидатов (без фильтра качества / диверсификации) — для кэша Redis.
+   * @param explicitCityId город с клиента (геолокация / выбор в UI), UUID из таблицы cities
    */
-  async calculateScores(
+  async buildRawScores(
     userId?: string,
     sessionId?: string,
-    limit: number = 10,
-  ) {
+    maxCandidates?: number,
+    explicitCityId?: string,
+  ): Promise<RawRecommendationScore[]> {
+    const pool = maxCandidates ?? RAW_SCORE_POOL;
     const scores: Map<string, RecommendationScore> = new Map();
+    const resolvedExplicit = await this.resolveExplicitCityId(explicitCityId);
+
+    const citySignal = resolvedExplicit
+      ? this.scoreBasedOnExplicitClientCity(scores, resolvedExplicit)
+      : this.scoreBasedOnPreferredCity(scores, userId, sessionId);
 
     const userDependent = userId
       ? Promise.all([
@@ -32,25 +52,46 @@ export class RecommendationsEngineService {
           this.scoreBasedOnFavorites(scores, userId),
           this.scoreBasedOnLeads(scores, userId),
           this.scoreBasedOnCategories(scores, userId, sessionId),
+          citySignal,
         ])
       : Promise.all([
           this.scoreBasedOnViews(scores, userId, sessionId),
           this.scoreBasedOnPopularity(scores),
           this.scoreBasedOnCategories(scores, userId, sessionId),
+          citySignal,
         ]);
 
     await userDependent;
 
-    // Сортировка и выборка топ-N
-    const sortedScores = Array.from(scores.values())
+    return Array.from(scores.values())
       .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+      .slice(0, pool)
+      .map(({ masterId, score, reasons }) => ({
+        masterId,
+        score,
+        reasons: [...new Set(reasons)],
+      }));
+  }
 
-    const masterIds = sortedScores.map((s) => s.masterId);
-    if (!masterIds.length) return [];
+  /**
+   * Сборка финального списка: исключения, качество (фото/аватар), диверсификация по категориям.
+   */
+  async materializeFromRawScores(
+    raw: RawRecommendationScore[],
+    limit: number,
+    excludeIds: Set<string>,
+  ): Promise<MasterWithRecommendationMeta[]> {
+    if (!raw.length || limit <= 0) return [];
+
+    const maxPerCategory = limit <= 6 ? 2 : 3;
+    const masterIds = raw.map((r) => r.masterId);
+    const scoreById = new Map(raw.map((r) => [r.masterId, r]));
 
     const masters = await this.prisma.master.findMany({
-      where: { id: { in: masterIds }, user: { isBanned: false } },
+      where: {
+        id: { in: masterIds },
+        user: { isBanned: false },
+      },
       include: {
         category: true,
         city: true,
@@ -59,25 +100,32 @@ export class RecommendationsEngineService {
       },
     });
 
-    return masterIds
-      .map((id) => {
-        const master = masters.find((m) => m.id === id);
-        const scoreData = scores.get(id);
-        return master
-          ? {
-              ...master,
-              recommendationScore: scoreData?.score,
-              reasons: scoreData?.reasons,
-            }
-          : null;
-      })
-      .filter(Boolean);
+    const byId = new Map(masters.map((m) => [m.id, m]));
+
+    const ordered: MasterWithRecommendationMeta[] = [];
+    for (const id of masterIds) {
+      const m = byId.get(id);
+      if (!m) continue;
+      const r = scoreById.get(id);
+      if (!isMasterPresentationReady(m)) continue;
+      ordered.push({
+        ...m,
+        recommendationScore: r?.score,
+        reasons: r?.reasons,
+      });
+    }
+
+    const picked = pickDiverseMasters(
+      ordered,
+      limit,
+      maxPerCategory,
+      excludeIds,
+    );
+    return picked;
   }
 
   /**
-   * Найти похожих мастеров (в той же категории, с близким рейтингом)
-   * @param masterId ID эталонного мастера
-   * @param limit Максимальное количество похожих мастеров
+   * Похожие мастера: та же категория, близкий рейтинг; только с фото или аватаром.
    */
   async getSimilarMasters(masterId: string, limit: number = 5) {
     const master = await this.prisma.master.findUnique({
@@ -86,12 +134,13 @@ export class RecommendationsEngineService {
     });
     if (!master) return [];
 
-    return this.prisma.master.findMany({
+    const rows = await this.prisma.master.findMany({
       where: {
         id: { not: masterId },
         categoryId: master.categoryId,
         rating: { gte: master.rating - 0.5 },
         user: { isBanned: false },
+        OR: [{ photos: { some: {} } }, { avatarFileId: { not: null } }],
       },
       orderBy: [{ rating: SORT_DESC }, { totalReviews: SORT_DESC }],
       take: limit,
@@ -102,6 +151,72 @@ export class RecommendationsEngineService {
         photos: { take: 1, include: { file: true } },
       },
     });
+
+    return rows;
+  }
+
+  /** Город, переданный с клиента (согласие на город / гео) — сильнее, чем вывод из активности. */
+  private async scoreBasedOnExplicitClientCity(
+    scores: Map<string, RecommendationScore>,
+    cityId: string,
+  ) {
+    const inCity = await this.prisma.master.findMany({
+      where: { cityId, user: { isBanned: false } },
+      orderBy: { rating: SORT_DESC },
+      take: 35,
+      select: { id: true },
+    });
+
+    for (const m of inCity) {
+      const s = this.getScore(scores, m.id);
+      s.score += 16;
+      s.reasons.push('geo_city');
+      scores.set(m.id, s);
+    }
+  }
+
+  private async resolveExplicitCityId(
+    cityId?: string,
+  ): Promise<string | undefined> {
+    const trimmed = cityId?.trim();
+    if (!trimmed) return undefined;
+    const row = await this.prisma.city.findUnique({
+      where: { id: trimmed },
+      select: { id: true },
+    });
+    return row?.id;
+  }
+
+  private async scoreBasedOnPreferredCity(
+    scores: Map<string, RecommendationScore>,
+    userId?: string,
+    sessionId?: string,
+  ) {
+    const or: { userId?: string; sessionId?: string }[] = [];
+    if (userId) or.push({ userId });
+    if (sessionId) or.push({ sessionId });
+    if (!or.length) return;
+
+    const row = await this.prisma.userActivity.findFirst({
+      where: { OR: or, cityId: { not: null } },
+      orderBy: { createdAt: SORT_DESC },
+      select: { cityId: true },
+    });
+    if (!row?.cityId) return;
+
+    const inCity = await this.prisma.master.findMany({
+      where: { cityId: row.cityId, user: { isBanned: false } },
+      orderBy: { rating: SORT_DESC },
+      take: 25,
+      select: { id: true },
+    });
+
+    for (const m of inCity) {
+      const s = this.getScore(scores, m.id);
+      s.score += 6;
+      s.reasons.push('preferred_city');
+      scores.set(m.id, s);
+    }
   }
 
   private async scoreBasedOnViews(
@@ -109,7 +224,7 @@ export class RecommendationsEngineService {
     userId?: string,
     sessionId?: string,
   ) {
-    const or: any[] = [];
+    const or: { userId?: string; sessionId?: string }[] = [];
     if (userId) or.push({ userId });
     if (sessionId) or.push({ sessionId });
     if (!or.length) return;
@@ -124,15 +239,32 @@ export class RecommendationsEngineService {
     const viewedIds = views.map((v) => v.masterId as string);
     const viewedMasters = await this.prisma.master.findMany({
       where: { id: { in: viewedIds } },
-      select: { categoryId: true, cityId: true },
+      select: { id: true, categoryId: true, cityId: true },
     });
+    const vmById = new Map(viewedMasters.map((m) => [m.id, m]));
 
-    const categoryIds = [...new Set(viewedMasters.map((m) => m.categoryId))];
-    const cityIds = [...new Set(viewedMasters.map((m) => m.cityId))];
+    const categoryWeights = new Map<string, number>();
+    const cityWeights = new Map<string, number>();
+    for (let i = 0; i < views.length; i++) {
+      const decay = Math.pow(VIEW_DECAY_BASE, i);
+      const vm = vmById.get(views[i].masterId as string);
+      if (!vm) continue;
+      categoryWeights.set(
+        vm.categoryId,
+        (categoryWeights.get(vm.categoryId) ?? 0) + decay,
+      );
+      cityWeights.set(vm.cityId, (cityWeights.get(vm.cityId) ?? 0) + decay);
+    }
+
+    const maxCat = Math.max(...categoryWeights.values(), 1e-6);
+    const maxCity = Math.max(...cityWeights.values(), 1e-6);
 
     const similar = await this.prisma.master.findMany({
       where: {
-        OR: [{ categoryId: { in: categoryIds } }, { cityId: { in: cityIds } }],
+        OR: [
+          { categoryId: { in: [...categoryWeights.keys()] } },
+          { cityId: { in: [...cityWeights.keys()] } },
+        ],
         id: { notIn: viewedIds },
       },
       take: 30,
@@ -141,12 +273,14 @@ export class RecommendationsEngineService {
 
     for (const m of similar) {
       const s = this.getScore(scores, m.id);
-      if (categoryIds.includes(m.categoryId)) {
-        s.score += 15;
+      const cw = categoryWeights.get(m.categoryId);
+      if (cw != null && cw > 0) {
+        s.score += 15 * (cw / maxCat);
         s.reasons.push('similar_category');
       }
-      if (cityIds.includes(m.cityId)) {
-        s.score += 10;
+      const yw = cityWeights.get(m.cityId);
+      if (yw != null && yw > 0) {
+        s.score += 10 * (yw / maxCity);
         s.reasons.push('your_city');
       }
       scores.set(m.id, s);
@@ -260,7 +394,7 @@ export class RecommendationsEngineService {
     userId?: string,
     sessionId?: string,
   ) {
-    const or: any[] = [];
+    const or: { userId?: string; sessionId?: string }[] = [];
     if (userId) or.push({ userId });
     if (sessionId) or.push({ sessionId });
     if (!or.length) return;

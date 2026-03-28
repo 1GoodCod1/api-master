@@ -25,14 +25,22 @@ export class RecommendationsController {
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get personalized recommendations' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'cityId',
+    required: false,
+    description:
+      'Client city (from geolocation / saved preference) to boost local masters',
+  })
   async getPersonalized(
     @Req() req: RequestWithOptionalUser,
     @Query('limit') limit?: string,
+    @Query('cityId') cityId?: string,
   ): Promise<unknown[]> {
     return this.recommendationsService.getPersonalizedRecommendations(
       req.user?.id,
       this.extractSessionId(req),
       limit ? parseInt(limit) : 10,
+      cityId,
     );
   }
 
