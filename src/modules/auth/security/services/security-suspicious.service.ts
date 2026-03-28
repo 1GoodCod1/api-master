@@ -3,6 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ReportStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class SecuritySuspiciousService {
@@ -121,8 +123,8 @@ export class SecuritySuspiciousService {
 
     await this.auditService.log({
       userId,
-      action: 'SUSPICIOUS_SCORE_INCREASED',
-      entityType: 'User',
+      action: AuditAction.SUSPICIOUS_SCORE_INCREASED,
+      entityType: AuditEntityType.User,
       entityId: userId,
       oldData: { suspiciousScore: user.suspiciousScore },
       newData: { suspiciousScore: newScore, reason },

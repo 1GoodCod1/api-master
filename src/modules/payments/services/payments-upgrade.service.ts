@@ -9,6 +9,8 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { PaymentsMiaService } from './payments-mia.service';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class PaymentsUpgradeService {
@@ -65,8 +67,8 @@ export class PaymentsUpgradeService {
       // Audit log upgrade confirmed
       await this.auditService.log({
         userId: userId,
-        action: 'TARIFF_UPGRADE_CONFIRMED',
-        entityType: 'User',
+        action: AuditAction.TARIFF_UPGRADE_CONFIRMED,
+        entityType: AuditEntityType.User,
         entityId: userId,
         newData: {
           tariffType: master.pendingUpgradeTo,
@@ -102,8 +104,8 @@ export class PaymentsUpgradeService {
       // Audit log upgrade cancelled
       await this.auditService.log({
         userId: userId,
-        action: 'TARIFF_UPGRADE_CANCELLED',
-        entityType: 'User',
+        action: AuditAction.TARIFF_UPGRADE_CANCELLED,
+        entityType: AuditEntityType.User,
         entityId: userId,
       });
 
@@ -149,8 +151,8 @@ export class PaymentsUpgradeService {
       // Audit log subscription cancelled
       await this.auditService.log({
         userId: userId,
-        action: 'SUBSCRIPTION_CANCELLED',
-        entityType: 'Master',
+        action: AuditAction.SUBSCRIPTION_CANCELLED,
+        entityType: AuditEntityType.Master,
         entityId: master.id,
         newData: {
           tariffExpiresAt: master.tariffExpiresAt.toISOString(),

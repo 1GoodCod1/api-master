@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_ASC } from '../../shared/constants/sort-order.constants';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
   getDayInMoldova,
@@ -36,7 +37,7 @@ export class AnalyticsMasterService {
     const [analytics, master] = await Promise.all([
       this.prisma.masterAnalytics.findMany({
         where: { masterId, date: { gte: startDate } },
-        orderBy: { date: 'asc' },
+        orderBy: { date: SORT_ASC },
       }),
       this.prisma.master.findUnique({
         where: { id: masterId },

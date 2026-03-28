@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class SecurityBanService {
@@ -32,8 +34,8 @@ export class SecurityBanService {
 
     await this.auditService.log({
       userId: bannedBy === 'system' ? null : bannedBy,
-      action: 'USER_BANNED',
-      entityType: 'User',
+      action: AuditAction.USER_BANNED,
+      entityType: AuditEntityType.User,
       entityId: userId,
       newData: { reason, bannedBy },
     });
@@ -61,8 +63,8 @@ export class SecurityBanService {
 
     await this.auditService.log({
       userId: unbannedBy,
-      action: 'USER_UNBANNED',
-      entityType: 'User',
+      action: AuditAction.USER_UNBANNED,
+      entityType: AuditEntityType.User,
       entityId: userId,
       newData: { unbannedBy },
     });
@@ -112,8 +114,8 @@ export class SecurityBanService {
 
     await this.auditService.log({
       userId: blockedBy,
-      action: 'IP_BLACKLISTED',
-      entityType: 'IpBlacklist',
+      action: AuditAction.IP_BLACKLISTED,
+      entityType: AuditEntityType.IpBlacklist,
       entityId: ipAddress,
       newData: { reason, blockedBy, expiresAt },
     });

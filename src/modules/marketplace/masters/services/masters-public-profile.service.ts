@@ -7,6 +7,7 @@ import { CacheService } from '../../../shared/cache/cache.service';
 import { decodeId } from '../../../shared/utils/id-encoder';
 import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';
 import { MastersProfileService } from './masters-profile.service';
+import { UserRole } from '@prisma/client';
 
 /**
  * Публичный профиль мастера с трекингом просмотров.
@@ -102,7 +103,7 @@ export class MastersPublicProfileService {
     userRole?: string,
   ) {
     // Мастера не считаем (ни свой профиль, ни чужие)
-    if (userRole === 'MASTER') return;
+    if (userRole === UserRole.MASTER) return;
 
     const todayStart = getStartOfTodayInMoldova();
 

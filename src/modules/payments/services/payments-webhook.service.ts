@@ -6,6 +6,8 @@ import { CacheService } from '../../shared/cache/cache.service';
 import { Prisma, TariffType } from '@prisma/client';
 import { PaymentStatus } from '../../../common/constants';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class PaymentsWebhookService {
@@ -95,8 +97,8 @@ export class PaymentsWebhookService {
       // Audit log webhook success
       await this.auditService.log({
         userId: payment.userId,
-        action: 'PAYMENT_CONFIRMED',
-        entityType: 'Payment',
+        action: AuditAction.PAYMENT_CONFIRMED,
+        entityType: AuditEntityType.Payment,
         entityId: payment.id,
         newData: {
           status: PaymentStatus.SUCCESS,

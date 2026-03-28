@@ -3,7 +3,7 @@ import { NotificationStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { WebsocketService } from '../../../infrastructure/websocket/websocket.service';
 import { WebPushService } from '../../web-push/web-push.service';
-import { NotificationCategory } from '@prisma/client';
+import { NotificationCategory, SenderType, UserRole } from '@prisma/client';
 
 /**
  * Параметры для создания in-app уведомления
@@ -192,7 +192,7 @@ export class InAppNotificationService {
     const clientName = data.clientName || 'клиента';
     await this.notify({
       userId: masterUserId,
-      category: 'NEW_LEAD',
+      category: NotificationCategory.NEW_LEAD,
       title: 'Новая заявка',
       message: `Новая заявка от ${clientName}`,
       messageKey: 'notifications.messages.newLeadFrom',
@@ -202,7 +202,7 @@ export class InAppNotificationService {
     });
 
     await this.notifyAdmins({
-      category: 'ADMIN_NEW_LEAD',
+      category: NotificationCategory.ADMIN_NEW_LEAD,
       title: 'Новая заявка',
       message: `Заявка от ${clientName} для мастера`,
       messageKey: 'notifications.messages.newLeadFrom',
@@ -219,7 +219,7 @@ export class InAppNotificationService {
     const clientName = data.clientName || 'клиента';
     await this.notify({
       userId: masterUserId,
-      category: 'LEAD_STATUS_UPDATED',
+      category: NotificationCategory.LEAD_STATUS_UPDATED,
       title: 'Статус заявки обновлён',
       message: `Заявка от ${clientName} — ${data.status}`,
       messageKey: 'notifications.messages.leadStatusFrom',
@@ -241,7 +241,7 @@ export class InAppNotificationService {
     const authorName = data.authorName || 'Пользователь';
     await this.notify({
       userId: masterUserId,
-      category: 'NEW_REVIEW',
+      category: NotificationCategory.NEW_REVIEW,
       title: 'Новый отзыв',
       message: `${authorName} оставил отзыв с оценкой ${data.rating}/5`,
       metadata: data,
@@ -249,7 +249,7 @@ export class InAppNotificationService {
     });
 
     await this.notifyAdmins({
-      category: 'ADMIN_NEW_REVIEW',
+      category: NotificationCategory.ADMIN_NEW_REVIEW,
       title: 'Новый отзыв',
       message: `Отзыв от ${authorName} — ${data.rating}/5`,
       metadata: data,
@@ -266,11 +266,12 @@ export class InAppNotificationService {
       senderName?: string;
     },
   ) {
-    const senderLabel = data.senderType === 'MASTER' ? 'Мастер' : 'Клиент';
+    const senderLabel =
+      data.senderType === SenderType.MASTER ? 'Мастер' : 'Клиент';
     const displayName = data.senderName?.trim() || senderLabel;
     await this.notify({
       userId: recipientUserId,
-      category: 'NEW_CHAT_MESSAGE',
+      category: NotificationCategory.NEW_CHAT_MESSAGE,
       title: 'Новое сообщение',
       message: displayName,
       metadata: data,
@@ -291,7 +292,7 @@ export class InAppNotificationService {
     const suffix = days === 1 ? 'день' : 'дня';
     await this.notify({
       userId: masterUserId,
-      category: 'SUBSCRIPTION_EXPIRING',
+      category: NotificationCategory.SUBSCRIPTION_EXPIRING,
       title: 'Подписка истекает',
       message: `Ваш тариф ${data.tariffType} истекает через ${days} ${suffix}`,
       metadata: {
@@ -312,7 +313,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId: masterUserId,
-      category: 'SUBSCRIPTION_EXPIRED',
+      category: NotificationCategory.SUBSCRIPTION_EXPIRED,
       title: 'Подписка истекла',
       message: `Ваш тариф ${data.tariffType} истёк. Текущий тариф: BASIC`,
       metadata: data,
@@ -327,14 +328,14 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId,
-      category: 'PAYMENT_SUCCESS',
+      category: NotificationCategory.PAYMENT_SUCCESS,
       title: 'Оплата успешна',
       message: `Оплата тарифа ${data.tariffType} прошла успешно`,
       metadata: data,
     });
 
     await this.notifyAdmins({
-      category: 'ADMIN_NEW_PAYMENT',
+      category: NotificationCategory.ADMIN_NEW_PAYMENT,
       title: 'Новый платёж',
       message: `Оплата тарифа ${data.tariffType}: ${data.amount}`,
       metadata: data,
@@ -348,7 +349,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId,
-      category: 'PAYMENT_FAILED',
+      category: NotificationCategory.PAYMENT_FAILED,
       title: 'Ошибка оплаты',
       message: `Оплата тарифа ${data.tariffType} не прошла`,
       metadata: data,
@@ -364,7 +365,7 @@ export class InAppNotificationService {
     verificationId: string;
   }) {
     await this.notifyAdmins({
-      category: 'ADMIN_NEW_VERIFICATION',
+      category: NotificationCategory.ADMIN_NEW_VERIFICATION,
       title: 'Запрос на верификацию',
       message: `Мастер ${data.masterName || data.masterId.slice(0, 8)} подал заявку на верификацию`,
       metadata: data,
@@ -378,7 +379,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId: masterUserId,
-      category: 'VERIFICATION_APPROVED',
+      category: NotificationCategory.VERIFICATION_APPROVED,
       title: 'Верификация одобрена',
       message: 'Ваш профиль успешно верифицирован! ✅',
       metadata: data,
@@ -393,7 +394,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId: masterUserId,
-      category: 'VERIFICATION_REJECTED',
+      category: NotificationCategory.VERIFICATION_REJECTED,
       title: 'Верификация отклонена',
       message: data.reason
         ? `Верификация отклонена: ${data.reason}`
@@ -411,7 +412,7 @@ export class InAppNotificationService {
     masterId: string;
   }) {
     await this.notifyAdmins({
-      category: 'ADMIN_NEW_REPORT',
+      category: NotificationCategory.ADMIN_NEW_REPORT,
       title: 'Новая жалоба',
       message: `Жалоба: ${data.reason}`,
       metadata: data,
@@ -425,10 +426,12 @@ export class InAppNotificationService {
     name?: string;
   }) {
     const category =
-      data.role === 'MASTER' ? 'ADMIN_NEW_MASTER' : 'ADMIN_NEW_USER';
-    const label = data.role === 'MASTER' ? 'мастер' : 'пользователь';
+      data.role === UserRole.MASTER
+        ? NotificationCategory.ADMIN_NEW_MASTER
+        : NotificationCategory.ADMIN_NEW_USER;
+    const label = data.role === UserRole.MASTER ? 'мастер' : 'пользователь';
     await this.notifyAdmins({
-      category: category as NotificationCategory,
+      category,
       title: `Новый ${label}`,
       message: `Зарегистрирован ${label}: ${data.name || data.userId.slice(0, 8)}`,
       metadata: data,
@@ -442,7 +445,7 @@ export class InAppNotificationService {
     details?: any;
   }) {
     await this.notifyAdmins({
-      category: 'ADMIN_SYSTEM_ALERT',
+      category: NotificationCategory.ADMIN_SYSTEM_ALERT,
       title: 'Системное уведомление',
       message: data.message,
       metadata: data,
@@ -458,7 +461,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId: clientUserId,
-      category: 'LEAD_SENT',
+      category: NotificationCategory.LEAD_SENT,
       title: 'Заявка отправлена',
       message: `Заявка отправлена мастеру ${data.masterName}`,
       metadata: data,
@@ -473,7 +476,7 @@ export class InAppNotificationService {
     const name = data.masterName || 'Мастер';
     await this.notify({
       userId: clientUserId,
-      category: 'MASTER_AVAILABLE',
+      category: NotificationCategory.MASTER_AVAILABLE,
       title: 'Мастер доступен',
       message: `${name} снова принимает заявки. Можете отправить заявку.`,
       metadata: data,
@@ -493,7 +496,7 @@ export class InAppNotificationService {
   ) {
     await this.notify({
       userId: clientUserId,
-      category: 'NEW_PROMOTION',
+      category: NotificationCategory.NEW_PROMOTION,
       title: 'Новая акция! 🔥',
       message: `Мастер ${data.masterName} запустил акцию: -${data.discount}%! Успейте записаться.`,
       metadata: data,
@@ -521,7 +524,7 @@ export class InAppNotificationService {
     // Уведомление мастеру
     await this.notify({
       userId: masterUserId,
-      category: 'BOOKING_CONFIRMED',
+      category: NotificationCategory.BOOKING_CONFIRMED,
       title: 'Новая запись',
       message: `${clientLabel} записался на ${data.startTime}`,
       metadata: data,
@@ -532,7 +535,7 @@ export class InAppNotificationService {
     if (clientUserId) {
       await this.notify({
         userId: clientUserId,
-        category: 'BOOKING_CONFIRMED',
+        category: NotificationCategory.BOOKING_CONFIRMED,
         title: 'Запись подтверждена',
         message: `Вы записаны к ${masterLabel} на ${data.startTime}`,
         metadata: data,
@@ -558,7 +561,7 @@ export class InAppNotificationService {
     // Уведомление мастеру
     await this.notify({
       userId: masterUserId,
-      category: 'BOOKING_CANCELLED',
+      category: NotificationCategory.BOOKING_CANCELLED,
       title: 'Запись отменена',
       message: `Запись с ${clientLabel} на ${data.startTime} отменена`,
       metadata: data,
@@ -568,7 +571,7 @@ export class InAppNotificationService {
     if (clientUserId) {
       await this.notify({
         userId: clientUserId,
-        category: 'BOOKING_CANCELLED',
+        category: NotificationCategory.BOOKING_CANCELLED,
         title: 'Запись отменена',
         message: `Запись к ${masterLabel} на ${data.startTime} отменена`,
         metadata: data,
@@ -591,35 +594,41 @@ export class InAppNotificationService {
     const masterId = m.masterId as string | undefined;
 
     const masterPaths: Partial<Record<NotificationCategory, string>> = {
-      NEW_LEAD: leadId ? `/dashboard/leads/${leadId}` : '/dashboard/leads',
-      LEAD_STATUS_UPDATED: leadId
+      [NotificationCategory.NEW_LEAD]: leadId
         ? `/dashboard/leads/${leadId}`
         : '/dashboard/leads',
-      NEW_REVIEW: '/dashboard/reviews',
-      NEW_CHAT_MESSAGE: conversationId
+      [NotificationCategory.LEAD_STATUS_UPDATED]: leadId
+        ? `/dashboard/leads/${leadId}`
+        : '/dashboard/leads',
+      [NotificationCategory.NEW_REVIEW]: '/dashboard/reviews',
+      [NotificationCategory.NEW_CHAT_MESSAGE]: conversationId
         ? `/dashboard/chat/${conversationId}`
         : '/dashboard/chat',
-      SUBSCRIPTION_EXPIRING: '/dashboard/subscription',
-      SUBSCRIPTION_EXPIRED: '/dashboard/subscription',
-      PAYMENT_SUCCESS: '/dashboard/payments',
-      PAYMENT_FAILED: '/dashboard/payments',
-      VERIFICATION_APPROVED: '/dashboard/profile',
-      VERIFICATION_REJECTED: '/dashboard/verification',
-      BOOKING_CONFIRMED: '/dashboard/bookings',
-      BOOKING_CANCELLED: '/dashboard/bookings',
+      [NotificationCategory.SUBSCRIPTION_EXPIRING]: '/dashboard/subscription',
+      [NotificationCategory.SUBSCRIPTION_EXPIRED]: '/dashboard/subscription',
+      [NotificationCategory.PAYMENT_SUCCESS]: '/dashboard/payments',
+      [NotificationCategory.PAYMENT_FAILED]: '/dashboard/payments',
+      [NotificationCategory.VERIFICATION_APPROVED]: '/dashboard/profile',
+      [NotificationCategory.VERIFICATION_REJECTED]: '/dashboard/verification',
+      [NotificationCategory.BOOKING_CONFIRMED]: '/dashboard/bookings',
+      [NotificationCategory.BOOKING_CANCELLED]: '/dashboard/bookings',
     };
 
     const clientPaths: Partial<Record<NotificationCategory, string>> = {
-      LEAD_SENT: leadId
+      [NotificationCategory.LEAD_SENT]: leadId
         ? `/client-dashboard/leads/${leadId}/book`
         : '/client-dashboard/leads',
-      MASTER_AVAILABLE: masterId ? `/masters/${masterId}` : '/masters',
-      NEW_PROMOTION: masterId ? `/masters/${masterId}` : '/masters',
-      NEW_CHAT_MESSAGE: conversationId
+      [NotificationCategory.MASTER_AVAILABLE]: masterId
+        ? `/masters/${masterId}`
+        : '/masters',
+      [NotificationCategory.NEW_PROMOTION]: masterId
+        ? `/masters/${masterId}`
+        : '/masters',
+      [NotificationCategory.NEW_CHAT_MESSAGE]: conversationId
         ? `/client-dashboard/chat/${conversationId}`
         : '/client-dashboard/chat',
-      BOOKING_CONFIRMED: '/client-dashboard/bookings',
-      BOOKING_CANCELLED: '/client-dashboard/bookings',
+      [NotificationCategory.BOOKING_CONFIRMED]: '/client-dashboard/bookings',
+      [NotificationCategory.BOOKING_CANCELLED]: '/client-dashboard/bookings',
     };
 
     return masterPaths[category] ?? clientPaths[category] ?? '/';
@@ -630,36 +639,36 @@ export class InAppNotificationService {
    * для обратной совместимости с текущим фронтендом
    */
   private categoryToEventType(category: NotificationCategory): string {
-    const map: Record<string, string> = {
-      NEW_LEAD: 'new_lead',
-      LEAD_STATUS_UPDATED: 'lead_status_updated',
-      NEW_REVIEW: 'new_review',
-      NEW_CHAT_MESSAGE: 'new_chat_message',
-      LEAD_SENT: 'lead_sent',
-      SUBSCRIPTION_EXPIRING: 'subscription_expiring',
-      SUBSCRIPTION_EXPIRED: 'subscription_expired',
-      PAYMENT_SUCCESS: 'payment_success',
-      PAYMENT_FAILED: 'payment_failed',
-      VERIFICATION_APPROVED: 'verification_approved',
-      VERIFICATION_REJECTED: 'verification_rejected',
-      ADMIN_NEW_VERIFICATION: 'admin_new_verification',
-      ADMIN_NEW_REPORT: 'admin_new_report',
-      ADMIN_NEW_USER: 'admin_new_user',
-      ADMIN_NEW_MASTER: 'admin_new_master',
-      ADMIN_SYSTEM_ALERT: 'admin_system_alert',
-      ADMIN_NEW_LEAD: 'admin_new_lead',
-      ADMIN_NEW_REVIEW: 'admin_new_review',
-      ADMIN_NEW_PAYMENT: 'admin_new_payment',
-      MASTER_RESPONDED: 'master_responded',
-      MASTER_AVAILABLE: 'master_available',
-      BOOKING_PENDING: 'booking_pending',
-      BOOKING_CONFIRMED: 'booking_confirmed',
-      BOOKING_CANCELLED: 'booking_cancelled',
-      BOOKING_REMINDER: 'booking_reminder',
-      NEW_PROMOTION: 'new_promotion',
-      PROMOTION_STARTED: 'promotion_started',
-      SYSTEM_MAINTENANCE: 'system_maintenance',
-      SYSTEM_UPDATE: 'system_update',
+    const map: Partial<Record<NotificationCategory, string>> = {
+      [NotificationCategory.NEW_LEAD]: 'new_lead',
+      [NotificationCategory.LEAD_STATUS_UPDATED]: 'lead_status_updated',
+      [NotificationCategory.NEW_REVIEW]: 'new_review',
+      [NotificationCategory.NEW_CHAT_MESSAGE]: 'new_chat_message',
+      [NotificationCategory.LEAD_SENT]: 'lead_sent',
+      [NotificationCategory.SUBSCRIPTION_EXPIRING]: 'subscription_expiring',
+      [NotificationCategory.SUBSCRIPTION_EXPIRED]: 'subscription_expired',
+      [NotificationCategory.PAYMENT_SUCCESS]: 'payment_success',
+      [NotificationCategory.PAYMENT_FAILED]: 'payment_failed',
+      [NotificationCategory.VERIFICATION_APPROVED]: 'verification_approved',
+      [NotificationCategory.VERIFICATION_REJECTED]: 'verification_rejected',
+      [NotificationCategory.ADMIN_NEW_VERIFICATION]: 'admin_new_verification',
+      [NotificationCategory.ADMIN_NEW_REPORT]: 'admin_new_report',
+      [NotificationCategory.ADMIN_NEW_USER]: 'admin_new_user',
+      [NotificationCategory.ADMIN_NEW_MASTER]: 'admin_new_master',
+      [NotificationCategory.ADMIN_SYSTEM_ALERT]: 'admin_system_alert',
+      [NotificationCategory.ADMIN_NEW_LEAD]: 'admin_new_lead',
+      [NotificationCategory.ADMIN_NEW_REVIEW]: 'admin_new_review',
+      [NotificationCategory.ADMIN_NEW_PAYMENT]: 'admin_new_payment',
+      [NotificationCategory.MASTER_RESPONDED]: 'master_responded',
+      [NotificationCategory.MASTER_AVAILABLE]: 'master_available',
+      [NotificationCategory.BOOKING_PENDING]: 'booking_pending',
+      [NotificationCategory.BOOKING_CONFIRMED]: 'booking_confirmed',
+      [NotificationCategory.BOOKING_CANCELLED]: 'booking_cancelled',
+      [NotificationCategory.BOOKING_REMINDER]: 'booking_reminder',
+      [NotificationCategory.NEW_PROMOTION]: 'new_promotion',
+      [NotificationCategory.PROMOTION_STARTED]: 'promotion_started',
+      [NotificationCategory.SYSTEM_MAINTENANCE]: 'system_maintenance',
+      [NotificationCategory.SYSTEM_UPDATE]: 'system_update',
     };
     return map[category] ?? category.toLowerCase();
   }

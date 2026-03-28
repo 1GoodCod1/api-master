@@ -7,6 +7,7 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 /**
  * Сервис для управления пользователями в админке
@@ -159,8 +160,8 @@ export class AdminUsersService {
     } satisfies Prisma.UserSelect;
 
     const orderBy: Prisma.UserOrderByWithRelationInput[] = [
-      { createdAt: 'desc' },
-      { id: 'desc' },
+      { createdAt: SORT_DESC },
+      { id: SORT_DESC },
     ];
 
     const [rawUsers, total] = await Promise.all([
@@ -237,7 +238,7 @@ export class AdminUsersService {
         isVerified: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { LeadNotifyChannel } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateNotificationSettingsDto } from '../dto/update-notification-settings.dto';
 
@@ -36,7 +37,7 @@ export class MastersNotificationSettingsService {
     const data: {
       telegramChatId?: string | null;
       whatsappPhone?: string | null;
-      leadNotifyChannel?: string | null;
+      leadNotifyChannel?: LeadNotifyChannel | null;
       notifyTariffSms?: boolean;
       notifyTariffInApp?: boolean;
     } = {};
@@ -47,7 +48,9 @@ export class MastersNotificationSettingsService {
       if (dto.whatsappPhone !== undefined)
         data.whatsappPhone = dto.whatsappPhone;
       if (dto.leadNotifyChannel !== undefined) {
-        data.leadNotifyChannel = dto.leadNotifyChannel;
+        data.leadNotifyChannel = dto.leadNotifyChannel
+          ? (dto.leadNotifyChannel.toUpperCase() as LeadNotifyChannel)
+          : null;
       }
     }
     if (dto.notifyTariffSms !== undefined)

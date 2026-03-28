@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { EmailService } from '../../email/email.service';
 import { EmailTemplateService } from '../../email/email-template.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
@@ -46,7 +47,7 @@ export class DigestService {
       this.prisma.digestSubscription.findMany({
         skip,
         take: limit,
-        orderBy: { subscribedAt: 'desc' },
+        orderBy: { subscribedAt: SORT_DESC },
         include: {
           user: {
             select: {

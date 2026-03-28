@@ -6,6 +6,7 @@ import {
   ReviewStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 /**
  * Сервис для управления контентом: лиды, отзывы, платежи
@@ -50,7 +51,7 @@ export class AdminContentService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         skip,
         take: limit,
       }),
@@ -77,7 +78,7 @@ export class AdminContentService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }
@@ -117,7 +118,7 @@ export class AdminContentService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         skip,
         take: limit,
       }),
@@ -184,7 +185,7 @@ export class AdminContentService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         skip,
         take: limit,
       }),
@@ -217,7 +218,7 @@ export class AdminContentService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }
@@ -234,7 +235,7 @@ export class AdminContentService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }

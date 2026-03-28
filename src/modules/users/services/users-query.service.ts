@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import {
   getStartOfTodayInMoldova,
@@ -68,8 +68,8 @@ export class UsersQueryService {
       activeToday,
     ] = await Promise.all([
       this.prisma.user.count(),
-      this.prisma.user.count({ where: { role: 'MASTER' } }),
-      this.prisma.user.count({ where: { role: 'ADMIN' } }),
+      this.prisma.user.count({ where: { role: UserRole.MASTER } }),
+      this.prisma.user.count({ where: { role: UserRole.ADMIN } }),
       this.prisma.user.count({ where: { isVerified: true } }),
       this.prisma.user.count({ where: { isBanned: true } }),
       this.prisma.user.count({
@@ -132,7 +132,7 @@ export class UsersQueryService {
       select: { id: true, role: true, avatarFileId: true },
     });
 
-    if (user?.role !== 'CLIENT') {
+    if (user?.role !== UserRole.CLIENT) {
       throw new NotFoundException('Профиль клиента не найден');
     }
 

@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -105,7 +106,7 @@ export class MastersController {
 
   @Get('profile/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get master profile (authenticated)' })
   async getProfile(@GetUser() user: JwtUser) {
@@ -114,20 +115,20 @@ export class MastersController {
 
   @Put('profile/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update master profile' })
   async updateProfile(
     @GetUser() user: JwtUser,
     @Body() updateDto: UpdateMasterDto,
   ) {
-    const allowServices = user.role === 'ADMIN' || user.isVerified;
+    const allowServices = user.role === UserRole.ADMIN || user.isVerified;
     return this.mastersService.updateProfile(user.id, updateDto, allowServices);
   }
 
   @Patch('profile/me/services')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update master services only' })
   async updateServices(
@@ -147,7 +148,7 @@ export class MastersController {
 
   @Get('photos/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my photos' })
   async getMyPhotos(@GetUser() user: JwtUser) {
@@ -156,7 +157,7 @@ export class MastersController {
 
   @Delete('photos/:fileId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get by my photo by id' })
   async removeMyPhoto(
@@ -168,7 +169,7 @@ export class MastersController {
 
   @Get('tariff/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current tariff info' })
   async getTariff(@GetUser() user: JwtUser) {
@@ -177,7 +178,7 @@ export class MastersController {
 
   @Post('tariff/claim-free')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Claim free plan (verified masters only, 1-click)',
@@ -188,7 +189,7 @@ export class MastersController {
 
   @Get('stats/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get master statistics' })
   async getStats(@GetUser() user: JwtUser) {
@@ -197,7 +198,7 @@ export class MastersController {
 
   @Get('stats/me/views-history')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get profile views history (past weeks or months)' })
   @ApiQuery({ name: 'period', required: true, enum: ['week', 'month'] })
@@ -217,7 +218,7 @@ export class MastersController {
 
   @Patch('online-status/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update master online status' })
   async updateOnlineStatus(
@@ -229,7 +230,7 @@ export class MastersController {
 
   @Patch('availability-status/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update master availability status and max leads' })
   async updateAvailabilityStatus(
@@ -241,7 +242,7 @@ export class MastersController {
 
   @Get('availability-status/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get master availability status' })
   async getAvailabilityStatus(@GetUser() user: JwtUser) {
@@ -250,7 +251,7 @@ export class MastersController {
 
   @Get('notifications-settings/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get notification settings (Telegram, WhatsApp)' })
   async getNotificationSettings(@GetUser() user: JwtUser) {
@@ -259,7 +260,7 @@ export class MastersController {
 
   @Post('telegram-connect-token/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
@@ -271,7 +272,7 @@ export class MastersController {
 
   @Patch('notifications-settings/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update notification settings (Telegram, WhatsApp). Premium only.',
@@ -285,7 +286,7 @@ export class MastersController {
 
   @Get('schedule-settings/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get schedule settings (working hours, slot duration)',
@@ -296,7 +297,7 @@ export class MastersController {
 
   @Patch('schedule-settings/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update schedule settings (working hours, slot duration)',
@@ -310,7 +311,7 @@ export class MastersController {
 
   @Get('quick-replies/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my quick replies (master)' })
   async getMyQuickReplies(@GetUser() user: JwtUser) {
@@ -319,7 +320,7 @@ export class MastersController {
 
   @Put('quick-replies/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Replace my quick replies list (master)' })
   async replaceMyQuickReplies(
@@ -331,7 +332,7 @@ export class MastersController {
 
   @Get('autoresponder/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my autoresponder settings (master)' })
   async getMyAutoresponderSettings(@GetUser() user: JwtUser) {
@@ -340,7 +341,7 @@ export class MastersController {
 
   @Patch('autoresponder/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update my autoresponder settings (master)' })
   async updateMyAutoresponderSettings(

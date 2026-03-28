@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 interface MasterLeadsFields {
@@ -76,14 +77,14 @@ export class LeadsValidationService {
       }
 
       // Ролевая проверка — только авторизованные клиенты
-      if (authUser?.role !== 'CLIENT') {
+      if (authUser?.role !== UserRole.CLIENT) {
         throw new ForbiddenException(
           'Only authorized clients can create leads. Please register or log in.',
         );
       }
 
       // Проверка верификации телефона
-      if (authUser?.role === 'CLIENT' && !authUser.phoneVerified) {
+      if (authUser?.role === UserRole.CLIENT && !authUser.phoneVerified) {
         throw new ForbiddenException(
           'Phone verification required to create leads. Please verify your phone number first.',
         );
@@ -120,7 +121,7 @@ export class LeadsValidationService {
       }
 
       // Проверка на существующую открытую заявку от этого клиента к этому мастеру
-      const clientId = authUser?.role === 'CLIENT' ? authUser.id : null;
+      const clientId = authUser?.role === UserRole.CLIENT ? authUser.id : null;
       if (clientId) {
         const existingOpenLead = await this.prisma.lead.findFirst({
           where: {

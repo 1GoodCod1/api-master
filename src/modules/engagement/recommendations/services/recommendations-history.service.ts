@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 @Injectable()
 export class RecommendationsHistoryService {
@@ -27,7 +28,7 @@ export class RecommendationsHistoryService {
         action: 'view',
         masterId: { not: null },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit * 2, // Берем с запасом для фильтрации уникальных
       distinct: ['masterId'],
     });

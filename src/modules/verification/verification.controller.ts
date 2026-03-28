@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Post,
@@ -30,7 +31,7 @@ export class VerificationController {
 
   @Post('submit')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Подать заявку на верификацию (Master only)' })
   @ApiResponse({
@@ -46,7 +47,7 @@ export class VerificationController {
 
   @Get('my-status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить текущий статус верификации мастера' })
   @ApiResponse({ status: 200, description: 'Статус верификации получен' })
@@ -56,7 +57,7 @@ export class VerificationController {
 
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Статистика верификаций: одобрено / 100 (Admin only)',
@@ -67,7 +68,7 @@ export class VerificationController {
 
   @Get('pending')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Получить список заявок на верификацию (Admin only)',
@@ -85,7 +86,7 @@ export class VerificationController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Получить детали заявки на верификацию (Admin only)',
@@ -97,7 +98,7 @@ export class VerificationController {
 
   @Post(':id/review')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Рассмотреть заявку на верификацию (Admin only)' })
   @ApiResponse({ status: 200, description: 'Заявка рассмотрена успешно' })

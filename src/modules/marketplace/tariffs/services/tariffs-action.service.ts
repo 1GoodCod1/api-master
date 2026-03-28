@@ -9,6 +9,8 @@ import { CreateTariffDto } from '../dto/create-tariff.dto';
 import { UpdateTariffDto } from '../dto/update-tariff.dto';
 import { Prisma, type Tariff } from '@prisma/client';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class TariffsActionService {
@@ -50,8 +52,8 @@ export class TariffsActionService {
     if (adminId) {
       await this.auditService.log({
         userId: adminId,
-        action: 'TARIFF_CREATED',
-        entityType: 'Tariff',
+        action: AuditAction.TARIFF_CREATED,
+        entityType: AuditEntityType.Tariff,
         entityId: tariff.id,
         newData: TariffsActionService.tariffToAuditJson(tariff),
       });
@@ -100,8 +102,8 @@ export class TariffsActionService {
     if (adminId) {
       await this.auditService.log({
         userId: adminId,
-        action: 'TARIFF_UPDATED',
-        entityType: 'Tariff',
+        action: AuditAction.TARIFF_UPDATED,
+        entityType: AuditEntityType.Tariff,
         entityId: updated.id,
         newData: TariffsActionService.tariffToAuditJson(updated),
       });
@@ -126,8 +128,8 @@ export class TariffsActionService {
     if (adminId) {
       await this.auditService.log({
         userId: adminId,
-        action: 'TARIFF_DELETED',
-        entityType: 'Tariff',
+        action: AuditAction.TARIFF_DELETED,
+        entityType: AuditEntityType.Tariff,
         entityId: id,
       });
     }

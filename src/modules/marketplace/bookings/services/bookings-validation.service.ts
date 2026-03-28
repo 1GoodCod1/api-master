@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { UserRole } from '@prisma/client';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import type { BookingsAuthUser } from '../types/bookings-auth-user.types';
 
@@ -24,7 +25,10 @@ export class BookingsValidationService {
         'Only authorized users can create bookings. Please log in.',
       );
     }
-    if (authUser.role !== 'CLIENT' && authUser.role !== 'MASTER') {
+    if (
+      authUser.role !== UserRole.CLIENT &&
+      authUser.role !== UserRole.MASTER
+    ) {
       throw new ForbiddenException(
         'Only clients or masters can create bookings.',
       );
@@ -43,7 +47,7 @@ export class BookingsValidationService {
     let resolvedClientId: string | null;
     const resolvedLeadId: string | null = leadId ?? null;
 
-    if (authUser.role === 'MASTER') {
+    if (authUser.role === UserRole.MASTER) {
       if (!leadId) {
         throw new BadRequestException(
           'Master can only create bookings from a lead (leadId required).',

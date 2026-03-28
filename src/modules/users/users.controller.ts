@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -33,7 +34,7 @@ export class UsersController {
 
   @Get('stats/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Получить статистику по пользователям (Admin only)',
@@ -102,7 +103,7 @@ export class UsersController {
 
   @Get('me/photos')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить мои фотографии (только для роли CLIENT)' })
   async getMyPhotos(@Req() req: RequestWithUser) {
@@ -111,7 +112,7 @@ export class UsersController {
 
   @Delete('me/photos/:fileId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Удалить фотографию из галереи клиента' })
   async removeMyPhoto(
@@ -123,7 +124,7 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить данные пользователя по ID (Admin only)' })
   async findOne(@Param('id') id: string) {
@@ -132,7 +133,7 @@ export class UsersController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Обновить данные пользователя (Admin only)' })
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
@@ -141,7 +142,7 @@ export class UsersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Удалить пользователя (Admin only)' })
   async remove(@Param('id') id: string) {
@@ -150,7 +151,7 @@ export class UsersController {
 
   @Put(':id/ban')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Заблокировать/разблокировать пользователя (Admin only)',
@@ -161,7 +162,7 @@ export class UsersController {
 
   @Put(':id/verify')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Верифицировать/снять верификацию пользователя (Admin only)',

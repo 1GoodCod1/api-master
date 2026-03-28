@@ -27,7 +27,7 @@ import { PlansGuard } from '../../../common/guards/plans.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Verified } from '../../../common/decorators/verified.decorator';
 import { Plans } from '../../../common/decorators/plans.decorator';
-import { TariffType } from '@prisma/client';
+import { TariffType, UserRole } from '@prisma/client';
 
 @ApiTags('Promotions')
 @Controller('promotions')
@@ -49,7 +49,7 @@ export class PromotionsController {
 
   @Get('my')
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Verified(true)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my promotions' })
@@ -59,7 +59,7 @@ export class PromotionsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Verified(true)
   @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
@@ -70,7 +70,7 @@ export class PromotionsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Verified(true)
   @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
@@ -85,7 +85,7 @@ export class PromotionsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Verified(true)
   @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()

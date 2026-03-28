@@ -77,12 +77,12 @@ enum NotificationCategory {
   SYSTEM_UPDATE
 }
 
-// enum LeadNotifyChannel {
-//   TELEGRAM
-//   WHATSAPP
-//   BOTH 
-//   NONE
-// }
+enum LeadNotifyChannel {
+  TELEGRAM
+  WHATSAPP
+  BOTH 
+  NONE
+}
 
 enum NotificationStatus {
   PENDING
@@ -153,6 +153,7 @@ enum ConsentType {
   PRIVACY_POLICY
   TERMS_OF_SERVICE
   MARKETING
+  AGE_CONFIRMATION
 }
 
 model UserConsent {
@@ -162,7 +163,7 @@ model UserConsent {
   granted     Boolean     @default(true)
   ipAddress   String?
   userAgent   String?
-  version     String      @default("1.0") // policy version at time of consent
+  version     String      @default("1.0")
   revokedAt   DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -199,12 +200,12 @@ model User {
   lastWarningAt     DateTime?
   ipAddress         String?
   deviceFingerprint String?
-  preferredLanguage String?   @default("ro") // en | ru | ro — для email-шаблонов
+  preferredLanguage String?   @default("ro")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   masterProfile                   Master?
-  avatarFile                      File?                            @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
+  avatarFile                      File?  @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
   auditLogs                       AuditLog[]
   notifications                   Notification[]
   refreshToken                    RefreshToken[]
@@ -219,12 +220,12 @@ model User {
   phoneVerifications              PhoneVerification[]
   loginHistory                    LoginHistory[]
   masterAvailabilitySubscriptions MasterAvailabilitySubscription[]
-  conversations                   Conversation[]                   @relation("ClientConversations")
+  conversations                   Conversation[] @relation("ClientConversations")
   reviewVotes                     ReviewVote[]
   pushSubscriptions               PushSubscription[]
   digestSubscription              DigestSubscription?
-  referralCode                    ReferralCode?                    @relation("ReferralOwner")
-  referredBy                      Referral?                        @relation("ReferredBy")
+  referralCode                    ReferralCode? @relation("ReferralOwner")
+  referredBy                      Referral? @relation("ReferredBy")
   emailDripStatuses               EmailDripStatus[]
   consents                        UserConsent[]
 
@@ -272,7 +273,7 @@ model Master {
   currentActiveLeads      Int                @default(0)
   telegramChatId          String?
   whatsappPhone           String?
-  leadNotifyChannel       String?            @default("both") // telegram | whatsapp | both | none
+  leadNotifyChannel       LeadNotifyChannel? @default(BOTH)
   notifyTariffSms         Boolean            @default(true)
   notifyTariffInApp       Boolean            @default(true)
   workStartHour           Int                @default(9)
@@ -286,11 +287,8 @@ model Master {
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
-  // Full-text search vector (populated by migration + trigger)
-  // Run: ALTER TABLE masters ADD COLUMN search_vector tsvector;
-  // Then: CREATE INDEX idx_masters_search_vector ON masters USING GIN(search_vector);
-  search_vector Unsupported("tsvector")?
 
+  search_vector Unsupported("tsvector")?
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarFile   File?               @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
   city         City                @relation(fields: [cityId], references: [id])
@@ -408,7 +406,6 @@ enum VerificationStatus {
 model MasterVerification {
   id                 String             @id @default(uuid())
   masterId           String             @unique
-  master             Master             @relation(fields: [masterId], references: [id], onDelete: Cascade)
   status             VerificationStatus @default(PENDING)
   documentType       String
   documentNumber     String
@@ -421,10 +418,11 @@ model MasterVerification {
   reviewedBy         String?
   reviewedAt         DateTime?
   submittedAt        DateTime           @default(now())
-  documentsDeletedAt DateTime? // GDPR: when document files were purged after approval
+  documentsDeletedAt DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
+  master        Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
   documentFront File? @relation("VerificationDocumentFront", fields: [documentFrontId], references: [id], onDelete: SetNull)
   documentBack  File? @relation("VerificationDocumentBack", fields: [documentBackId], references: [id], onDelete: SetNull)
   selfie        File? @relation("VerificationSelfie", fields: [selfieId], references: [id], onDelete: SetNull)
@@ -488,13 +486,9 @@ model Category {
   name         String   @unique
   slug         String   @unique
   description  String?
-  /// Emoji fallback (legacy) или короткий символ
   icon         String?
-  /// Имя компонента Lucide React, напр. Droplets, Wrench (см. админку)
   iconKey      String?
-  /// Кастомная иконка (URL после загрузки в файлы / CDN)
   iconUrl      String?
-  /// { "ro": { "name": "..." }, "ru": { "name": "..." }, "en": { "name": "..." } }
   translations Json?
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
@@ -510,7 +504,6 @@ model City {
   id           String   @id @default(uuid())
   name         String   @unique
   slug         String   @unique
-  /// { "ro": { "name": "..." }, "ru": { "name": "..." }, "en": { "name": "..." } }
   translations Json?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -524,17 +517,18 @@ model City {
 model Lead {
   id          String     @id
   masterId    String
-  master      Master     @relation(fields: [masterId], references: [id], onDelete: Cascade)
   clientPhone String
   clientName  String?
   clientId    String?
-  client      User?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   message     String
   status      LeadStatus @default(NEW)
   spamScore   Int        @default(0)
   isPremium   Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  master      Master     @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client      User?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   files        LeadFile[]
   bookings     Booking[]
@@ -570,13 +564,10 @@ model LeadFile {
 model Review {
   id             String           @id @default(uuid())
   masterId       String
-  master         Master           @relation(fields: [masterId], references: [id], onDelete: Cascade)
   clientPhone    String
   clientName     String?
   clientId       String?
-  client         User?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
   leadId         String?          @unique
-  lead           Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
   rating         Int
   comment        String?
   status         ReviewStatus     @default(PENDING)
@@ -584,6 +575,11 @@ model Review {
   moderatedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+
+  master         Master           @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client         User?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead           Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   reviewCriteria ReviewCriteria[]
   reviewFiles    ReviewFile[]
   replies        ReviewReply[]
@@ -606,10 +602,11 @@ model Review {
 model ReviewFile {
   id        String   @id @default(uuid())
   reviewId  String
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   fileId    String
-  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, fileId])
   @@index([reviewId])
@@ -620,10 +617,11 @@ model ReviewFile {
 model ReviewCriteria {
   id        String   @id @default(uuid())
   reviewId  String
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  criteria  String // 'quality', 'speed', 'price', 'politeness'
+  criteria  String 
   rating    Int
   createdAt DateTime @default(now())
+
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, criteria])
   @@index([reviewId])
@@ -634,18 +632,19 @@ model ReviewCriteria {
 model Payment {
   id         String        @id @default(uuid())
   masterId   String
-  master     Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
   userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount     Decimal
   currency   String        @default("MDL")
-  tariffType TariffType
-  status     PaymentStatus @default(PENDING)
   metadata   Json?
   paidAt     DateTime?
   expiresAt  DateTime?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
+
+  master     Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tariffType TariffType
+  status     PaymentStatus @default(PENDING)
 
   @@index([masterId])
   @@index([userId])
@@ -659,7 +658,6 @@ model Payment {
 model MasterAnalytics {
   id           String   @id @default(uuid())
   masterId     String
-  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
   date         DateTime @default(now())
   leadsCount   Int      @default(0)
   viewsCount   Int      @default(0)
@@ -667,6 +665,8 @@ model MasterAnalytics {
   rating       Float    @default(0.0)
   revenue      Decimal  @default(0)
   createdAt    DateTime @default(now())
+
+  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
 
   @@unique([masterId, date])
   @@index([masterId])
@@ -678,7 +678,6 @@ model MasterAnalytics {
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action     String
   entityType String?
   entityId   String?
@@ -688,6 +687,8 @@ model AuditLog {
   userAgent  String?
   createdAt  DateTime @default(now())
 
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   @@index([userId])
   @@index([action])
   @@index([createdAt])
@@ -696,18 +697,19 @@ model AuditLog {
 }
 
 model Notification {
-  id        String                @id @default(uuid())
+  id        String  @id @default(uuid())
   userId    String?
-  user      User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      NotificationType
-  category  NotificationCategory?
   title     String?
   message   String
+  type      NotificationType
+  category  NotificationCategory?
   status    NotificationStatus    @default(PENDING)
   sentAt    DateTime?
   readAt    DateTime?
   metadata  Json?
-  createdAt DateTime              @default(now())
+  createdAt DateTime   @default(now())
+
+  user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -744,11 +746,12 @@ model RefreshToken {
   id         String   @id @default(cuid())
   token      String   @unique
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
   rememberMe Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -759,10 +762,11 @@ model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
@@ -807,13 +811,10 @@ model MasterAvailabilitySubscription {
 model Booking {
   id          String        @id @default(uuid())
   masterId    String
-  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
   leadId      String?
-  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
   clientPhone String
   clientName  String?
   clientId    String?
-  client      User?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
   startTime   DateTime
   endTime     DateTime
   status      BookingStatus @default(PENDING)
@@ -821,6 +822,10 @@ model Booking {
   serviceName String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client      User?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   reminders BookingReminder[]
 
@@ -842,10 +847,11 @@ model Booking {
 model BookingReminder {
   id        String    @id @default(uuid())
   bookingId String
-  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  type      String // '24h' or '1h'
+  type      String
   sentAt    DateTime?
   createdAt DateTime  @default(now())
+
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@unique([bookingId, type])
   @@index([bookingId])
@@ -857,11 +863,8 @@ model BookingReminder {
 model Report {
   id          String        @id @default(uuid())
   clientId    String
-  client      User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   masterId    String
-  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
   leadId      String?
-  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
   reason      String
   description String
   evidence    String?
@@ -872,6 +875,10 @@ model Report {
   notes       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  client      User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([masterId])
@@ -884,7 +891,6 @@ model Report {
 model PhoneVerification {
   id         String    @id @default(uuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   phone      String
   code       String
   expiresAt  DateTime
@@ -892,6 +898,8 @@ model PhoneVerification {
   verifiedAt DateTime?
   attempts   Int       @default(0)
   createdAt  DateTime  @default(now())
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([phone])
@@ -903,7 +911,6 @@ model PhoneVerification {
 model LoginHistory {
   id                String   @id @default(uuid())
   userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ipAddress         String?
   userAgent         String?
   deviceFingerprint String?
@@ -911,6 +918,8 @@ model LoginHistory {
   success           Boolean  @default(true)
   failReason        String?
   createdAt         DateTime @default(now())
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([ipAddress])
@@ -988,17 +997,19 @@ enum SenderType {
 model Conversation {
   id            String    @id @default(uuid())
   leadId        String    @unique
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   masterId      String
-  master        Master    @relation(fields: [masterId], references: [id], onDelete: Cascade)
   clientId      String?
-  client        User?     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: SetNull)
   clientPhone   String?
-  messages      Message[]
   lastMessageAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   closedAt      DateTime?
+
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  master        Master    @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client        User?     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: SetNull)
+
+  messages      Message[]
 
   @@index([masterId])
   @@index([clientId])
@@ -1013,14 +1024,15 @@ model Conversation {
 model Message {
   id              String        @id @default(uuid())
   conversationId  String
-  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId        String
   senderType      SenderType
   content         String        @db.VarChar(2000)
   isAutoresponder Boolean       @default(false)
-  files           MessageFile[]
   readAt          DateTime?
   createdAt       DateTime      @default(now())
+
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  files           MessageFile[]
 
   @@index([conversationId])
   @@index([senderId])
@@ -1033,10 +1045,11 @@ model Message {
 model MessageFile {
   id        String   @id @default(uuid())
   messageId String
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   fileId    String
-  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, fileId])
   @@index([messageId])
@@ -1051,16 +1064,17 @@ model MessageFile {
 model Promotion {
   id           String   @id @default(uuid())
   masterId     String
-  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
   title        String
   description  String
-  discount     Int // процент скидки
-  serviceTitle String? // если задано — скидка только на эту услугу мастера (по title из services JSON)
+  discount     Int 
+  serviceTitle String? 
   validFrom    DateTime
   validUntil   DateTime
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
 
   @@index([masterId])
   @@index([isActive])
@@ -1076,11 +1090,12 @@ model Promotion {
 model ReviewReply {
   id        String   @id @default(uuid())
   reviewId  String   @unique
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   masterId  String
   content   String   @db.VarChar(1000)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@index([reviewId])
   @@index([masterId])
@@ -1090,10 +1105,11 @@ model ReviewReply {
 model ReviewVote {
   id        String   @id @default(uuid())
   reviewId  String
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId])
   @@index([reviewId])
@@ -1108,13 +1124,13 @@ model ReviewVote {
 model PushSubscription {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   endpoint  String   @unique
   p256dh    String
   auth      String
   userAgent String?
   createdAt DateTime @default(now())
 
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@map("push_subscriptions")
 }
@@ -1126,9 +1142,9 @@ model PushSubscription {
 model DigestSubscription {
   id           String   @id @default(uuid())
   userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscribedAt DateTime @default(now())
-
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("digest_subscriptions")
 }
 
@@ -1168,11 +1184,12 @@ model EmailTemplateOverride {
 model ReferralCode {
   id         String   @id @default(uuid())
   userId     String   @unique
-  user       User     @relation("ReferralOwner", fields: [userId], references: [id], onDelete: Cascade)
   code       String   @unique
   usageCount Int      @default(0)
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
+
+  user       User     @relation("ReferralOwner", fields: [userId], references: [id], onDelete: Cascade)
 
   referrals Referral[]
 
@@ -1184,13 +1201,14 @@ model ReferralCode {
 model Referral {
   id              String         @id @default(uuid())
   referralCodeId  String
-  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
   referredUserId  String         @unique
-  referredUser    User           @relation("ReferredBy", fields: [referredUserId], references: [id], onDelete: Cascade)
-  status          ReferralStatus @default(PENDING)
   rewardGranted   Boolean        @default(false)
   rewardGrantedAt DateTime?
   createdAt       DateTime       @default(now())
+
+  status          ReferralStatus @default(PENDING)
+  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  referredUser    User           @relation("ReferredBy", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   @@index([referralCodeId])
   @@index([referredUserId])
@@ -1205,7 +1223,6 @@ model Referral {
 model EmailDripStatus {
   id         String    @id @default(uuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   chainType  String
   step       Int       @default(0)
   status     String    @default("ACTIVE")
@@ -1213,6 +1230,8 @@ model EmailDripStatus {
   nextSendAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, chainType])
   @@index([userId])

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 interface RecommendationScore {
   masterId: string;
@@ -92,7 +93,7 @@ export class RecommendationsEngineService {
         rating: { gte: master.rating - 0.5 },
         user: { isBanned: false },
       },
-      orderBy: [{ rating: 'desc' }, { totalReviews: 'desc' }],
+      orderBy: [{ rating: SORT_DESC }, { totalReviews: SORT_DESC }],
       take: limit,
       include: {
         category: true,
@@ -115,7 +116,7 @@ export class RecommendationsEngineService {
 
     const views = await this.prisma.userActivity.findMany({
       where: { OR: or, action: 'view', masterId: { not: null } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: 20,
     });
     if (!views.length) return;
@@ -241,7 +242,7 @@ export class RecommendationsEngineService {
         totalReviews: { gte: 10 },
         user: { isBanned: false },
       },
-      orderBy: [{ rating: 'desc' }, { totalReviews: 'desc' }],
+      orderBy: [{ rating: SORT_DESC }, { totalReviews: SORT_DESC }],
       take: 20,
       select: { id: true, rating: true, totalReviews: true },
     });
@@ -266,7 +267,7 @@ export class RecommendationsEngineService {
 
     const acts = await this.prisma.userActivity.findMany({
       where: { OR: or, categoryId: { not: null } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: 50,
     });
     if (!acts.length) return;
@@ -282,7 +283,7 @@ export class RecommendationsEngineService {
       .map(([id]) => id);
     const masters = await this.prisma.master.findMany({
       where: { categoryId: { in: topCats } },
-      orderBy: { rating: 'desc' },
+      orderBy: { rating: SORT_DESC },
       take: 15,
       select: { id: true },
     });

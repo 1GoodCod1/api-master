@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import {
   buildCursorQuery,
@@ -39,7 +40,7 @@ export class ReviewsQueryService {
       limit: rawLimit = 20,
       cursor,
       page,
-      sortOrder = 'desc',
+      sortOrder = SORT_DESC,
     } = options;
 
     const limit = Math.min(100, Math.max(1, Number(rawLimit) || 20));
@@ -142,7 +143,7 @@ export class ReviewsQueryService {
       limit: rawLimit = 20,
       cursor,
       page,
-      sortOrder = 'desc',
+      sortOrder = SORT_DESC,
     } = options;
 
     const limit = Math.min(100, Math.max(1, Number(rawLimit) || 20));
@@ -310,7 +311,7 @@ export class ReviewsQueryService {
           OR: [{ clientId }, { clientPhone }],
         },
         select: { id: true },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { updatedAt: SORT_DESC },
       }),
     ]);
 

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsString,
+  IsBoolean,
   MinLength,
   MaxLength,
   IsEnum,
@@ -87,4 +88,21 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   referralCode?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'User confirms they are at least 18 years old',
+  })
+  @IsBoolean()
+  @IsNotEmpty({ message: 'Age confirmation is required' })
+  acceptedAge: boolean;
+
+  @ApiProperty({
+    example: true,
+    description:
+      'User accepts Privacy Policy and Terms of Service',
+  })
+  @IsBoolean()
+  @IsNotEmpty({ message: 'Legal consent is required' })
+  acceptedLegal: boolean;
 }

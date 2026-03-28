@@ -5,6 +5,8 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { unlink } from 'fs/promises';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
 /**
  * GDPR: удаление файлов (фото документов, селфи) после одобрения верификации.
@@ -122,8 +124,8 @@ export class VerificationDocumentsPurgeService {
     try {
       await this.auditService.log({
         userId: null,
-        action: 'VERIFICATION_DOCUMENTS_PURGED',
-        entityType: 'MasterVerification',
+        action: AuditAction.VERIFICATION_DOCUMENTS_PURGED,
+        entityType: AuditEntityType.MasterVerification,
         entityId: v.id,
         newData: {
           masterId: v.masterId,

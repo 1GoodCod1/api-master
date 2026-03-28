@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { LeadStatus } from '@prisma/client';
+import { LeadStatus, NotificationCategory, UserRole } from '@prisma/client';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { decodeId } from '../../../shared/utils/id-encoder';
@@ -53,7 +53,7 @@ export class LeadsActionsService {
     updateDto: UpdateLeadStatusDto,
   ) {
     const masterId = authUser.masterProfile?.id;
-    if (!masterId && authUser.role !== 'ADMIN') {
+    if (!masterId && authUser.role !== UserRole.ADMIN) {
       throw new BadRequestException('Master profile not found');
     }
 
@@ -67,7 +67,7 @@ export class LeadsActionsService {
       throw new NotFoundException('Lead not found');
     }
 
-    if (authUser.role !== 'ADMIN' && lead.masterId !== masterId) {
+    if (authUser.role !== UserRole.ADMIN && lead.masterId !== masterId) {
       throw new ForbiddenException('You can only update your own leads');
     }
 
@@ -75,7 +75,7 @@ export class LeadsActionsService {
     const newStatus = updateDto.status;
 
     // Валидация допустимых переходов (только для мастера, не для ADMIN)
-    if (authUser.role !== 'ADMIN') {
+    if (authUser.role !== UserRole.ADMIN) {
       const allowedTransitions = VALID_LEAD_STATUS_TRANSITIONS[oldStatus] ?? [];
       if (!allowedTransitions.includes(newStatus)) {
         const finalStates: LeadStatus[] = ['CLOSED', 'SPAM'];
@@ -153,7 +153,7 @@ export class LeadsActionsService {
         updated.clientId
           ? this.inAppNotifications.notify({
               userId: updated.clientId,
-              category: 'LEAD_STATUS_UPDATED',
+              category: NotificationCategory.LEAD_STATUS_UPDATED,
               title: 'Статус заявки обновлён',
               message: `Ваша заявка — ${updated.status}`,
               messageKey: 'notifications.messages.leadStatusUpdated',

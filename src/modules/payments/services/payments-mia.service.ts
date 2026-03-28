@@ -13,6 +13,8 @@ import { PaymentStatus } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import { PaymentsWebhookService } from './payments-webhook.service';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
 interface MiaAuthResponse {
   ok: boolean;
@@ -211,8 +213,8 @@ export class PaymentsMiaService {
       // Audit log sandbox payment creation
       await this.auditService.log({
         userId: userId,
-        action: 'PAYMENT_CREATED',
-        entityType: 'Payment',
+        action: AuditAction.PAYMENT_CREATED,
+        entityType: AuditEntityType.Payment,
         entityId: payment.id,
         newData: {
           amount,
@@ -320,8 +322,8 @@ export class PaymentsMiaService {
     // Audit log payment creation
     await this.auditService.log({
       userId: userId,
-      action: 'PAYMENT_CREATED',
-      entityType: 'Payment',
+      action: AuditAction.PAYMENT_CREATED,
+      entityType: AuditEntityType.Payment,
       entityId: payment.id,
       newData: {
         amount,

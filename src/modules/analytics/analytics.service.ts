@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import { TariffType, UserRole } from '@prisma/client';
 import { PrismaService } from '../shared/database/prisma.service';
 import { AnalyticsMasterService } from './services/analytics-master.service';
 import { AnalyticsBusinessService } from './services/analytics-business.service';
@@ -10,6 +11,10 @@ import {
   AdvancedAnalyticsResponse,
 } from '../shared/types/analytics.types';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
+import {
+  isPremiumTariff,
+  isVipOrPremiumTariff,
+} from '../shared/constants/tariff.constants';
 
 @Injectable()
 export class AnalyticsService {
@@ -28,7 +33,7 @@ export class AnalyticsService {
     masterId: string,
     requestedDays: number = 7,
   ): Promise<MasterAnalyticsResponse> {
-    if (user.role !== 'ADMIN' && user.masterProfile?.id !== masterId) {
+    if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
       throw new ForbiddenException('You can only view your own analytics');
     }
 
@@ -38,7 +43,7 @@ export class AnalyticsService {
     }
 
     let days = requestedDays;
-    if (user.role !== 'ADMIN') {
+    if (user.role !== UserRole.ADMIN) {
       const isPremium = this.isTariffActive(
         master.tariffType,
         master.tariffExpiresAt,
@@ -71,7 +76,7 @@ export class AnalyticsService {
       master.tariffType,
       master.tariffExpiresAt,
     );
-    const isPremium = isActive && master.tariffType === 'PREMIUM';
+    const isPremium = isActive && isPremiumTariff(master.tariffType);
     const maxDays = isPremium ? 30 : 14;
     const days = requestedDays ? Math.min(requestedDays, maxDays) : maxDays;
 
@@ -122,9 +127,15 @@ export class AnalyticsService {
     });
   }
 
-  private isTariffActive(tariffType: string, expiresAt: Date | null): boolean {
-    const isVipOrPremium = tariffType === 'VIP' || tariffType === 'PREMIUM';
-    return !!(isVipOrPremium && expiresAt && new Date(expiresAt) > new Date());
+  private isTariffActive(
+    tariffType: TariffType,
+    expiresAt: Date | null,
+  ): boolean {
+    return !!(
+      isVipOrPremiumTariff(tariffType) &&
+      expiresAt &&
+      new Date(expiresAt) > new Date()
+    );
   }
 
   // Для обратной совместимости, если где-то вызывается напрямую

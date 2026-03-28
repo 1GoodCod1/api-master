@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { extname } from 'path';
 import { unlinkIfExists } from '../../../shared/utils/file-magic';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import { FilesValidationService } from './files-validation.service';
 
@@ -199,7 +201,7 @@ export class FilesActionService {
 
     const maxOrderRow = await this.prisma.masterPhoto.findFirst({
       where: { masterId: master.id },
-      orderBy: { order: 'desc' },
+      orderBy: { order: SORT_DESC },
       select: { order: true },
     });
     const nextOrder = (maxOrderRow?.order ?? 0) + 1;
@@ -218,7 +220,7 @@ export class FilesActionService {
       where: { id: userId },
       select: { id: true, role: true, avatarFileId: true },
     });
-    if (user?.role !== 'CLIENT') return null;
+    if (user?.role !== UserRole.CLIENT) return null;
 
     const exists = await this.prisma.clientPhoto.findUnique({
       where: { userId_fileId: { userId: user.id, fileId } },
@@ -232,7 +234,7 @@ export class FilesActionService {
 
     const maxOrderRow = await this.prisma.clientPhoto.findFirst({
       where: { userId: user.id },
-      orderBy: { order: 'desc' },
+      orderBy: { order: SORT_DESC },
       select: { order: true },
     });
     const nextOrder = (maxOrderRow?.order ?? 0) + 1;

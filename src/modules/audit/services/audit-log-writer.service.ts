@@ -2,20 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
-
-const SECURITY_EVENTS = [
-  'USER_BANNED',
-  'USER_UNBANNED',
-  'IP_BLACKLISTED',
-  'SUSPICIOUS_SCORE_INCREASED',
-  'LOGIN_FAILED',
-  'PHONE_VERIFIED',
-];
+import { SECURITY_ACTIONS } from '../audit-action.enum';
+import { AuditEntityType } from '../audit-entity-type.enum';
 
 export interface AuditLogData {
   userId?: string | null;
   action: string;
-  entityType?: string;
+  entityType?: AuditEntityType;
   entityId?: string;
   oldData?: Prisma.InputJsonValue;
   newData?: Prisma.InputJsonValue;
@@ -95,7 +88,7 @@ export class AuditLogWriterService {
     data: AuditLogData,
     userId: string | null | undefined,
   ): void {
-    if (SECURITY_EVENTS.includes(data.action)) {
+    if (SECURITY_ACTIONS.includes(data.action as any)) {
       this.logger.warn(`[SECURITY] ${data.action}`, {
         userId,
         entityType: data.entityType,

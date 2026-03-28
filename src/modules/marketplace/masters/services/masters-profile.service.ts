@@ -8,6 +8,10 @@ import type { UpdateMasterDto } from '../dto/update-master.dto';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { sanitizePublicMaster } from '../../../../common/helpers/plans';
 import { resolvePublicMasterAvatarPath } from '../../../../common/helpers/master-public-avatar';
@@ -76,7 +80,7 @@ export class MastersProfileService {
       include: {
         avatarFile: true,
         photos: {
-          orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+          orderBy: [{ order: SORT_ASC }, { createdAt: SORT_DESC }],
           take: 15,
           include: {
             file: {
@@ -95,7 +99,7 @@ export class MastersProfileService {
         city: true,
         reviews: {
           where: { status: ReviewStatus.VISIBLE },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: SORT_DESC },
           take: 10,
         },
         user: {
@@ -125,7 +129,7 @@ export class MastersProfileService {
       include: {
         avatarFile: true,
         photos: {
-          orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+          orderBy: [{ order: SORT_ASC }, { createdAt: SORT_DESC }],
           take: 15,
           include: {
             file: {
@@ -144,7 +148,7 @@ export class MastersProfileService {
         city: true,
         reviews: {
           where: { status: ReviewStatus.VISIBLE },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: SORT_DESC },
           take: 10,
         },
         user: {
@@ -242,11 +246,11 @@ export class MastersProfileService {
         category: true,
         city: true,
         payments: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: SORT_DESC },
           take: 10,
         },
         analytics: {
-          orderBy: { date: 'desc' },
+          orderBy: { date: SORT_DESC },
           take: 7,
         },
       },

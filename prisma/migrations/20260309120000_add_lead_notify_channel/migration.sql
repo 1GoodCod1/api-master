@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "masters" ADD COLUMN "leadNotifyChannel" TEXT DEFAULT 'both';
+ALTER TABLE "masters" ADD COLUMN "leadNotifyChannel" TEXT DEFAULT 'BOTH';

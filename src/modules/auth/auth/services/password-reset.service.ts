@@ -12,6 +12,8 @@ import { EmailService } from '../../../email/email.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class PasswordResetService {
@@ -94,8 +96,8 @@ export class PasswordResetService {
       // Audit log — запрос сброса пароля
       await this.auditService.log({
         userId: user.id,
-        action: 'PASSWORD_RESET_REQUESTED',
-        entityType: 'User',
+        action: AuditAction.PASSWORD_RESET_REQUESTED,
+        entityType: AuditEntityType.User,
         entityId: user.id,
       });
 
@@ -171,8 +173,8 @@ export class PasswordResetService {
       // Audit log — успешный сброс пароля
       await this.auditService.log({
         userId: resetToken.userId,
-        action: 'PASSWORD_RESET_COMPLETED',
-        entityType: 'User',
+        action: AuditAction.PASSWORD_RESET_COMPLETED,
+        entityType: AuditEntityType.User,
         entityId: resetToken.userId,
       });
 

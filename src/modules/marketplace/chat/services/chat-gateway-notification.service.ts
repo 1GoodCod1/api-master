@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { SenderType } from '@prisma/client';
 import type { OutgoingChatMessage } from '../chat.types';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
@@ -24,14 +25,14 @@ export class ChatGatewayNotificationService {
       if (!conversation) return;
 
       const recipientUserId =
-        message.senderType === 'MASTER'
+        message.senderType === SenderType.MASTER
           ? conversation.clientId
           : (conversation.masterUserId ?? null);
 
       if (!recipientUserId) return;
 
       const senderName =
-        message.senderType === 'MASTER'
+        message.senderType === SenderType.MASTER
           ? (conversation.masterName ?? undefined)
           : (conversation.clientName ?? undefined);
 
@@ -48,7 +49,7 @@ export class ChatGatewayNotificationService {
         });
 
       if (
-        message.senderType === 'MASTER' &&
+        message.senderType === SenderType.MASTER &&
         conversation.clientId === recipientUserId &&
         conversation.clientPhone
       ) {

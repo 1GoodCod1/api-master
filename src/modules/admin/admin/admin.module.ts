@@ -17,6 +17,7 @@ import { EmailTemplateOverrideRepository } from './services/email-template-overr
 import { AppSettingsModule } from '../../app-settings/app-settings.module';
 import { DigestModule } from '../../notifications/digest/digest.module';
 import { AuditModule } from '../../audit/audit.module';
+import { ConsentModule } from '../../consent/consent.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuditModule } from '../../audit/audit.module';
     AppSettingsModule,
     DigestModule,
     AuditModule,
+    ConsentModule,
   ],
   controllers: [AdminController],
   providers: [

@@ -5,8 +5,9 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { LeadStatus, type Prisma } from '@prisma/client';
+import { LeadStatus, type Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { decodeId, encodeId } from '../../../shared/utils/id-encoder';
@@ -42,7 +43,7 @@ export class LeadsQueryService {
     } = {},
   ) {
     try {
-      if (authUser.role === 'CLIENT') {
+      if (authUser.role === UserRole.CLIENT) {
         const userId = authUser.id;
         const phone = authUser.phone || '';
         return await this.findAllForClient(userId, phone, options);
@@ -259,14 +260,14 @@ export class LeadsQueryService {
     if (!lead) throw new NotFoundException('Lead not found');
 
     const withEncoded = this.mapLeadsWithMasterEncodedId([lead])[0];
-    if (authUser.role === 'ADMIN') return withEncoded;
-    if (authUser.role === 'CLIENT') {
+    if (authUser.role === UserRole.ADMIN) return withEncoded;
+    if (authUser.role === UserRole.CLIENT) {
       if (lead.clientId !== authUser.id) {
         throw new ForbiddenException('Access denied');
       }
       return withEncoded;
     }
-    if (authUser.role === 'MASTER') {
+    if (authUser.role === UserRole.MASTER) {
       if (!masterId) {
         throw new BadRequestException('Master profile not found');
       }
@@ -330,7 +331,7 @@ export class LeadsQueryService {
         message: true,
         conversation: { select: { id: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
     });
   }
 }

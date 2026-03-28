@@ -5,6 +5,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 
 @Injectable()
 export class MastersPhotosService {
@@ -21,7 +25,7 @@ export class MastersPhotosService {
           id: true,
           avatarFileId: true,
           photos: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: SORT_DESC },
             take: Math.min(15, Math.max(1, Number(limit) || 15)),
             select: {
               file: true,
@@ -37,7 +41,7 @@ export class MastersPhotosService {
           id: true,
           avatarFileId: true,
           photos: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: SORT_DESC },
             take: Math.min(15, Math.max(1, Number(limit) || 15)),
             select: {
               file: true,
@@ -66,7 +70,7 @@ export class MastersPhotosService {
 
       const rows = await this.prisma.masterPhoto.findMany({
         where: { masterId: master.id },
-        orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        orderBy: [{ order: SORT_ASC }, { createdAt: SORT_DESC }],
         take: 15,
         include: { file: true },
       });
@@ -102,7 +106,7 @@ export class MastersPhotosService {
       if (master.avatarFileId === fileId) {
         const remainingPhotos = await this.prisma.masterPhoto.findMany({
           where: { masterId: master.id },
-          orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+          orderBy: [{ order: SORT_ASC }, { createdAt: SORT_DESC }],
           take: 1,
           select: { fileId: true },
         });

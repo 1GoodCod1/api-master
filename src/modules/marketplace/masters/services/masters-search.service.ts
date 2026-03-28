@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { SearchMastersDto } from '../dto/search-masters.dto';
 import { SuggestQueryDto } from '../dto/suggest-query.dto';
@@ -50,7 +54,7 @@ export class MastersSearchService {
       page = 1,
       limit = 20,
       sortBy = 'rating',
-      sortOrder = 'desc',
+      sortOrder = SORT_DESC,
     } = searchDto;
 
     // Резолв slug → id (как при регистрации), чтобы фронт мог слать slug в URL
@@ -309,7 +313,7 @@ export class MastersSearchService {
                 select: { masters: true },
               },
             },
-            orderBy: { sortOrder: 'asc' },
+            orderBy: { sortOrder: SORT_ASC },
           }),
           this.prisma.city.findMany({
             where: { isActive: true },
@@ -318,7 +322,7 @@ export class MastersSearchService {
                 select: { masters: true },
               },
             },
-            orderBy: { name: 'asc' },
+            orderBy: { name: SORT_ASC },
           }),
           this.prisma.master.groupBy({
             by: ['tariffType'],
@@ -470,9 +474,9 @@ export class MastersSearchService {
               },
             },
             orderBy: [
-              { isFeatured: 'desc' },
-              { leadsCount: 'desc' },
-              { rating: 'desc' },
+              { isFeatured: SORT_DESC },
+              { leadsCount: SORT_DESC },
+              { rating: SORT_DESC },
             ],
             take: limit,
             include: {
@@ -552,7 +556,7 @@ export class MastersSearchService {
               category: true,
               city: true,
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: SORT_DESC },
             take: limit,
           });
 

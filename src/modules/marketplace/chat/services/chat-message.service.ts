@@ -6,8 +6,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { RedisService } from '../../../shared/redis/redis.service';
-import { Prisma, SenderType } from '@prisma/client';
+import { Prisma, SenderType, UserRole } from '@prisma/client';
 import type {
   ChatUser,
   ConversationInfo,
@@ -84,7 +85,7 @@ export class ChatMessageService {
       this.prisma.message.findMany({
         where,
         include: MESSAGE_INCLUDE_FILES,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: [{ createdAt: SORT_DESC }, { id: SORT_DESC }],
         ...(cursor ? { take: safeLimit + 1 } : { skip, take: safeLimit }),
       }),
       this.prisma.message.count({ where: { conversationId } }),
@@ -145,9 +146,9 @@ export class ChatMessageService {
     checkConversationAccess(conversation, user);
 
     const senderType: SenderType =
-      user.role === 'MASTER' && conversation.master.userId === user.id
-        ? 'MASTER'
-        : 'CLIENT';
+      user.role === UserRole.MASTER && conversation.master.userId === user.id
+        ? SenderType.MASTER
+        : SenderType.CLIENT;
 
     if (dto.fileIds?.length) {
       const filesCount = await this.prisma.file.count({
@@ -201,7 +202,7 @@ export class ChatMessageService {
     };
 
     if (
-      senderType === 'CLIENT' &&
+      senderType === SenderType.CLIENT &&
       conversation.master.autoresponderEnabled === true &&
       isOutOfHours(
         conversation.master.workStartHour,
@@ -248,9 +249,9 @@ export class ChatMessageService {
     checkConversationAccess(conversation, user);
 
     const senderTypeToMark: SenderType =
-      user.role === 'MASTER' && conversation.master.userId === user.id
-        ? 'CLIENT'
-        : 'MASTER';
+      user.role === UserRole.MASTER && conversation.master.userId === user.id
+        ? SenderType.CLIENT
+        : SenderType.MASTER;
 
     const result = await this.prisma.message.updateMany({
       where: {

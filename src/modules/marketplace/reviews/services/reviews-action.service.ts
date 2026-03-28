@@ -12,7 +12,12 @@ import { InAppNotificationService } from '../../../notifications/notifications/s
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import type { ReviewCriteriaDto } from '../dto/review-criteria.dto';
-import { LeadStatus, ReviewStatus } from '../../../../common/constants';
+import {
+  LeadStatus,
+  NotificationCategory,
+  ReviewStatus,
+} from '../../../../common/constants';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class ReviewsActionService {
@@ -45,7 +50,7 @@ export class ReviewsActionService {
       );
     }
 
-    if (authUser?.role === 'CLIENT' && !authUser.phoneVerified) {
+    if (authUser?.role === UserRole.CLIENT && !authUser.phoneVerified) {
       throw new ForbiddenException(
         'Для написания отзывов необходимо подтвердить номер телефона.',
       );
@@ -254,7 +259,7 @@ export class ReviewsActionService {
       this.inAppNotifications
         .notify({
           userId: master.userId,
-          category: 'NEW_REVIEW',
+          category: NotificationCategory.NEW_REVIEW,
           title: 'Статус отзыва обновлён',
           message: `Отзыв — ${statusMsg}`,
           messageKey: 'notifications.messages.reviewStatusUpdated',

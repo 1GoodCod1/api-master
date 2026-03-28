@@ -5,7 +5,13 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { Prisma, ReferralStatus } from '@prisma/client';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import {
+  NotificationCategory,
+  Prisma,
+  ReferralStatus,
+  UserRole,
+} from '@prisma/client';
 import { MastersService } from '../../marketplace/masters/masters.service';
 import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
@@ -89,7 +95,7 @@ export class ReferralsService {
               select: { firstName: true, lastName: true, createdAt: true },
             },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: SORT_DESC },
         },
       },
     });
@@ -105,7 +111,7 @@ export class ReferralsService {
                 select: { firstName: true, lastName: true, createdAt: true },
               },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: SORT_DESC },
           },
         },
       });
@@ -235,7 +241,7 @@ export class ReferralsService {
     );
 
     try {
-      if (referrer.role === 'MASTER' && referrer.masterProfile) {
+      if (referrer.role === UserRole.MASTER && referrer.masterProfile) {
         await this.mastersService.extendTariffByDays(
           referrer.masterProfile.id,
           REFERRAL_REWARD_DAYS,
@@ -247,9 +253,9 @@ export class ReferralsService {
 
       await this.inAppNotifications.notify({
         userId: referrer.id,
-        category: 'NEW_PROMOTION',
+        category: NotificationCategory.NEW_PROMOTION,
         title: 'Реферальный бонус',
-        message: `Ваш приглашённый друг закрыл сделку! Вам начислен бонус${referrer.role === 'MASTER' ? `: +${REFERRAL_REWARD_DAYS} дней тарифа` : ''}. Спасибо за приглашение!`,
+        message: `Ваш приглашённый друг закрыл сделку! Вам начислен бонус${referrer.role === UserRole.MASTER ? `: +${REFERRAL_REWARD_DAYS} дней тарифа` : ''}. Спасибо за приглашение!`,
         metadata: { type: 'referral_reward', referredUserId },
       });
     } catch (err) {

@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityEvent } from '../../engagement/recommendations/events/activity.events';
 
@@ -35,7 +36,7 @@ export class FavoritesService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
     });
 
     return favorites.map((fav) => ({

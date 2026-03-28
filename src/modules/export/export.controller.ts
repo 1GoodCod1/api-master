@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -28,7 +29,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @ApiTags('Export')
 @Controller('export')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('MASTER', 'ADMIN')
+@Roles(UserRole.MASTER, UserRole.ADMIN)
 @ApiBearerAuth()
 export class ExportController {
   constructor(

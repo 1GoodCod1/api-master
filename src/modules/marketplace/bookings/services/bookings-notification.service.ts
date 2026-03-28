@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationCategory } from '@prisma/client';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 import { formatDateTime } from '../../../shared/utils/format-date.util';
@@ -30,7 +31,7 @@ export class BookingsNotificationService {
       if (clientId) {
         await this.inAppNotifications.notify({
           userId: clientId,
-          category: 'BOOKING_PENDING',
+          category: NotificationCategory.BOOKING_PENDING,
           title: 'Мастер предложил время',
           message: `${masterName || 'Мастер'} предложил встречу на ${formatDateTime(start)}. Подтвердите или отклоните.`,
           metadata: {
@@ -64,7 +65,7 @@ export class BookingsNotificationService {
     try {
       await this.inAppNotifications.notify({
         userId: master.user.id,
-        category: 'BOOKING_PENDING',
+        category: NotificationCategory.BOOKING_PENDING,
         title: 'Новая запись от клиента',
         message: `${clientName || 'Клиент'} хочет записаться на ${formatDateTime(start)}. Подтвердите или отклоните.`,
         metadata: {
@@ -174,7 +175,7 @@ export class BookingsNotificationService {
       );
       await this.inAppNotifications.notify({
         userId: booking.clientId,
-        category: 'LEAD_STATUS_UPDATED',
+        category: NotificationCategory.LEAD_STATUS_UPDATED,
         title: 'Запись выполнена',
         message: masterName
           ? `Услуга у ${masterName} завершена. Можно оставить отзыв.`

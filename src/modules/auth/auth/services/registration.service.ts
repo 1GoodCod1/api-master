@@ -5,7 +5,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import { Prisma, type User, type Master } from '@prisma/client';
+import {
+  Prisma,
+  type User,
+  type Master,
+  type ConsentType,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { RegisterDto } from '../dto/register.dto';
@@ -14,6 +20,9 @@ import { InAppNotificationService } from '../../../notifications/notifications/s
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
+import { ConsentService } from '../../../consent/services/consent.service';
 
 type PrismaTransactionClient = Parameters<
   Parameters<PrismaService['$transaction']>[0]
@@ -31,12 +40,17 @@ export class RegistrationService {
     private readonly emailDripService: EmailDripService,
     private readonly referralsService: ReferralsService,
     private readonly auditService: AuditService,
+    private readonly consentService: ConsentService,
   ) {}
 
   /**
    * Главный метод регистрации (оркестратор)
    */
-  async register(registerDto: RegisterDto) {
+  async register(
+    registerDto: RegisterDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
     // 1. Валидация входных данных
     this.validateInput(registerDto);
 
@@ -49,7 +63,7 @@ export class RegistrationService {
     let user: User;
     let master: Master | undefined;
 
-    if (registerDto.role === 'MASTER') {
+    if (registerDto.role === UserRole.MASTER) {
       // 4. Подготовка данных для мастера (поиск сущностей)
       const { cityId, categoryId } = await this.prepareMasterRequiredData(
         registerDto.city!,
@@ -63,7 +77,7 @@ export class RegistrationService {
             email: registerDto.email,
             phone: registerDto.phone,
             password: hashedPassword,
-            role: 'MASTER',
+            role: UserRole.MASTER,
             isVerified: false,
             firstName: registerDto.firstName!,
             lastName: registerDto.lastName!,
@@ -112,7 +126,7 @@ export class RegistrationService {
           email: registerDto.email,
           phone: registerDto.phone,
           password: hashedPassword,
-          role: 'CLIENT',
+          role: UserRole.CLIENT,
           isVerified: false,
           firstName: registerDto.firstName?.trim() || null,
           lastName: registerDto.lastName?.trim() || null,
@@ -137,7 +151,8 @@ export class RegistrationService {
 
     // Запуск email-цепочки
     try {
-      const chainType = user.role === 'MASTER' ? 'master_welcome' : 'welcome';
+      const chainType =
+        user.role === UserRole.MASTER ? 'master_welcome' : 'welcome';
       await this.emailDripService.startChain(user.id, chainType);
     } catch (err) {
       this.logger.error(
@@ -165,8 +180,8 @@ export class RegistrationService {
     try {
       await this.auditService.log({
         userId: user.id,
-        action: 'USER_REGISTERED',
-        entityType: 'User',
+        action: AuditAction.USER_REGISTERED,
+        entityType: AuditEntityType.User,
         entityId: user.id,
         newData: {
           role: user.role,
@@ -175,6 +190,23 @@ export class RegistrationService {
       });
     } catch (err) {
       this.logger.error('Ошибка audit log при регистрации', err);
+    }
+
+    // 7.7. Сохранение согласий (GDPR audit trail)
+    try {
+      const consentMeta = { ipAddress, userAgent, version: '1.1' };
+      const registrationConsents: readonly ConsentType[] = [
+        'TERMS_OF_SERVICE',
+        'PRIVACY_POLICY',
+        'AGE_CONFIRMATION',
+      ];
+      await Promise.all(
+        registrationConsents.map((consentType) =>
+          this.consentService.grantConsent(user.id, consentType, consentMeta),
+        ),
+      );
+    } catch (err) {
+      this.logger.error(`Failed to save consents for user ${user.id}:`, err);
     }
 
     // 8. Генерация токенов и финальный ответ
@@ -189,17 +221,32 @@ export class RegistrationService {
   // ==================== Вспомогательные методы (Private) ====================
 
   private validateInput(dto: RegisterDto) {
-    const { role = 'CLIENT', city, category, firstName, lastName } = dto;
+    const { role = UserRole.CLIENT, city, category, firstName, lastName } = dto;
 
-    if (role !== 'MASTER' && role !== 'CLIENT') {
+    if (role !== UserRole.MASTER && role !== UserRole.CLIENT) {
       throw new BadRequestException(
         'Only MASTER or CLIENT registration is allowed',
       );
     }
 
-    if (role === 'MASTER' && (!city || !category || !firstName || !lastName)) {
+    if (
+      role === UserRole.MASTER &&
+      (!city || !category || !firstName || !lastName)
+    ) {
       throw new BadRequestException(
         'For MASTER registration: city, category, firstName, and lastName are required',
+      );
+    }
+
+    if (!dto.acceptedAge) {
+      throw new BadRequestException(
+        'You must confirm that you are at least 18 years old',
+      );
+    }
+
+    if (!dto.acceptedLegal) {
+      throw new BadRequestException(
+        'You must accept the Privacy Policy and Terms of Service',
       );
     }
   }
@@ -294,7 +341,7 @@ export class RegistrationService {
     const accessToken = this.tokenService.generateAccessToken(user);
     const refreshToken = await this.tokenService.generateRefreshToken(user.id);
 
-    if (user.role === 'MASTER' && master) {
+    if (user.role === UserRole.MASTER && master) {
       return {
         message: 'Registration successful. Please wait for admin verification.',
         userId: user.id,

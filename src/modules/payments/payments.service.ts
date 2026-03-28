@@ -1,4 +1,5 @@
 import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentsMiaService } from './services/payments-mia.service';
 import { PaymentsWebhookService } from './services/payments-webhook.service';
@@ -124,7 +125,7 @@ export class PaymentsService {
    * Универсальная проверка прав доступа к финансовым данным мастера
    */
   private validateMasterAccess(masterId: string, authUser: JwtUser) {
-    if (authUser.role === 'ADMIN') return;
+    if (authUser.role === UserRole.ADMIN) return;
 
     const ownMasterId = authUser.masterProfile?.id;
     if (!ownMasterId || ownMasterId !== masterId) {

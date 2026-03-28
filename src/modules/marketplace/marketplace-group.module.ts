@@ -10,9 +10,6 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { ChatModule } from './chat/chat.module';
 import { PromotionsModule } from './promotions/promotions.module';
 
-/**
- * Aggregate module for marketplace: masters, categories, cities, tariffs, leads, bookings, reviews, favorites, chat, promotions.
- */
 @Module({
   imports: [
     MastersModule,

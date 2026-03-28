@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { RedisService } from '../../shared/redis/redis.service';
 
 /** Normalize Prisma groupBy `_count` to a number for API consumers / charts. */
@@ -73,7 +74,7 @@ export class AuditLogQueryService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         skip,
         take: limit,
       }),
@@ -206,7 +207,7 @@ export class AuditLogQueryService {
 
   private async getRecentStreamFromDb(limit: number) {
     const logs = await this.prisma.auditLog.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
       include: {
         user: {
@@ -260,14 +261,14 @@ export class AuditLogQueryService {
         by: ['action'],
         _count: true,
         where: { createdAt: { gte: startDate } },
-        orderBy: { _count: { action: 'desc' } },
+        orderBy: { _count: { action: SORT_DESC } },
         take: 10,
       }),
       this.prisma.auditLog.groupBy({
         by: ['userId'],
         _count: true,
         where: { createdAt: { gte: startDate }, userId: { not: null } },
-        orderBy: { _count: { userId: 'desc' } },
+        orderBy: { _count: { userId: SORT_DESC } },
         take: 10,
       }),
     ]);

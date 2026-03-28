@@ -30,7 +30,10 @@ import { AdminUpdateMasterDto } from './dto/update-master.dto';
 import { BroadcastEmailDto } from './dto/broadcast-email.dto';
 import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
 import { AuditService } from '../../audit/audit.service';
-import { Prisma } from '@prisma/client';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { ConsentService } from '../../consent/services/consent.service';
+import { Prisma, UserRole } from '@prisma/client';
 
 /** Query string booleans: only "true"/"false" apply a filter; missing or "" → no filter */
 function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
@@ -61,12 +64,13 @@ function adminUpdateMasterDtoToAuditJson(
 @ApiTags('Admin')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN)
 @ApiBearerAuth()
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly auditService: AuditService,
+    private readonly consentService: ConsentService,
   ) {}
 
   @Get('dashboard')
@@ -130,12 +134,34 @@ export class AdminController {
     const result = await this.adminService.updateUser(id, dto);
     await this.auditService.log({
       userId: req.user.id,
-      action: 'ADMIN_USER_UPDATED',
-      entityType: 'User',
+      action: AuditAction.ADMIN_USER_UPDATED,
+      entityType: AuditEntityType.User,
       entityId: id,
       newData: adminUpdateUserDtoToAuditJson(dto),
     });
     return result;
+  }
+
+  @Get('users/:id/consents')
+  @ApiOperation({ summary: 'Get user consents (GDPR audit)' })
+  async getUserConsents(@Param('id') id: string) {
+    return this.consentService.getUserConsents(id);
+  }
+
+  @Get('users/:id/audit-logs')
+  @ApiOperation({ summary: 'Get user audit log history' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getUserAuditLogs(
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.auditService.getLogsFromQuery({
+      userId: id,
+      page,
+      limit: limit ?? '20',
+    });
   }
 
   @Get('masters/stats')
@@ -193,8 +219,8 @@ export class AdminController {
     const result = await this.adminService.updateMaster(id, dto);
     await this.auditService.log({
       userId: req.user.id,
-      action: 'ADMIN_MASTER_UPDATED',
-      entityType: 'Master',
+      action: AuditAction.ADMIN_MASTER_UPDATED,
+      entityType: AuditEntityType.Master,
       entityId: id,
       newData: adminUpdateMasterDtoToAuditJson(dto),
     });

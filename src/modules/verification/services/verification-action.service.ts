@@ -18,7 +18,9 @@ import {
 } from '../dto/review-verification.dto';
 import { VerificationDocumentsPurgeService } from './verification-documents-purge.service';
 import { AuditService } from '../../audit/audit.service';
-import { Prisma } from '@prisma/client';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
+import { Prisma, UserRole } from '@prisma/client';
 
 @Injectable()
 export class VerificationActionService {
@@ -45,7 +47,7 @@ export class VerificationActionService {
       });
 
       if (!user) throw new NotFoundException('Пользователь не найден');
-      if (user.role !== 'MASTER')
+      if (user.role !== UserRole.MASTER)
         throw new BadRequestException(
           'Только мастера могут подавать заявку на верификацию',
         );
@@ -141,8 +143,8 @@ export class VerificationActionService {
       try {
         await this.auditService.log({
           userId,
-          action: 'VERIFICATION_SUBMITTED',
-          entityType: 'MasterVerification',
+          action: AuditAction.VERIFICATION_SUBMITTED,
+          entityType: AuditEntityType.MasterVerification,
           entityId: verification.id,
           newData: {
             masterId: user.masterProfile.id,
@@ -267,8 +269,8 @@ export class VerificationActionService {
       try {
         await this.auditService.log({
           userId: adminId,
-          action: 'VERIFICATION_REVIEWED',
-          entityType: 'MasterVerification',
+          action: AuditAction.VERIFICATION_REVIEWED,
+          entityType: AuditEntityType.MasterVerification,
           entityId: verificationId,
           newData: {
             decision: dto.decision,

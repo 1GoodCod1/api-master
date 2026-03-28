@@ -1,11 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { EncryptionService } from '../../../shared/utils/encryption.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Twilio } from 'twilio';
 import { PhoneVerificationValidationService } from './phone-verification-validation.service';
+import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 const CODE_LENGTH = 6;
 const CODE_TTL_MS = 10 * 60_000; // 10 minutes
@@ -24,6 +27,7 @@ export class PhoneVerificationActionService {
     private readonly cache: CacheService,
     private readonly configService: ConfigService,
     private readonly validationService: PhoneVerificationValidationService,
+    private readonly auditService: AuditService,
   ) {
     const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
     const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
@@ -76,7 +80,7 @@ export class PhoneVerificationActionService {
     const updateData: Prisma.UserUpdateInput = {
       phoneVerified: true,
       phoneVerifiedAt: new Date(),
-      ...(user.role === 'CLIENT' && { isVerified: true }),
+      ...(user.role === UserRole.CLIENT && { isVerified: true }),
     };
 
     await this.prisma.$transaction([
@@ -95,6 +99,13 @@ export class PhoneVerificationActionService {
 
     await this.cache.del(this.cache.keys.userMasterProfile(userId));
     await this.cache.del(this.cache.keys.userProfile(userId));
+
+    await this.auditService.log({
+      userId,
+      action: AuditAction.PHONE_VERIFIED,
+      entityType: AuditEntityType.User,
+      entityId: userId,
+    });
 
     return { message: 'Phone verified successfully' };
   }

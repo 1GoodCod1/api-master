@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
 import { buildAnalyticsPdf } from '../analytics-pdf-builder';
@@ -146,7 +147,7 @@ export class ExportAnalyticsService {
         }),
         this.prisma.masterAnalytics.findMany({
           where: { masterId },
-          orderBy: { date: 'desc' },
+          orderBy: { date: SORT_DESC },
           take: 30,
         }),
       ]);

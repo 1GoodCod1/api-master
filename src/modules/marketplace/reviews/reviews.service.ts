@@ -78,7 +78,7 @@ export class ReviewsService {
    */
   async getStatsForUser(masterId: string, user: JwtUser) {
     const resolvedMasterId =
-      user.role === 'ADMIN' ? masterId : user.masterProfile?.id;
+      user.role === UserRole.ADMIN ? masterId : user.masterProfile?.id;
     if (!resolvedMasterId) {
       throw new ForbiddenException('Master profile not found');
     }

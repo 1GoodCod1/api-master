@@ -1,4 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import type { ChatUser } from '../chat.types';
 
 export type ConversationForAccessCheck = {
@@ -14,17 +15,17 @@ export function checkConversationAccess(
   conversation: ConversationForAccessCheck,
   user: ChatUser,
 ): void {
-  if (user.role === 'ADMIN') {
+  if (user.role === UserRole.ADMIN) {
     return;
   }
 
   const masterUserId = conversation.master?.userId;
 
-  if (user.role === 'MASTER') {
+  if (user.role === UserRole.MASTER) {
     if (masterUserId !== user.id) {
       throw new ForbiddenException('Access denied to this conversation');
     }
-  } else if (user.role === 'CLIENT') {
+  } else if (user.role === UserRole.CLIENT) {
     if (conversation.clientId !== user.id) {
       throw new ForbiddenException('Access denied to this conversation');
     }

@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { TariffType } from '@prisma/client';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 export class SearchMastersDto {
   @ApiProperty({ required: false })
@@ -135,5 +136,5 @@ export class SearchMastersDto {
   @ApiProperty({ required: false, enum: ['asc', 'desc'] })
   @IsEnum(['asc', 'desc'])
   @IsOptional()
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  sortOrder?: 'asc' | 'desc' = SORT_DESC;
 }

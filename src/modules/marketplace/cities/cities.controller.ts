@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -48,7 +49,7 @@ export class CitiesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create city (admin only)' })
   async create(@Body() createCityDto: CreateCityDto) {
@@ -57,7 +58,7 @@ export class CitiesController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update city (admin only)' })
   async update(@Param('id') id: string, @Body() updateCityDto: UpdateCityDto) {
@@ -66,7 +67,7 @@ export class CitiesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete city (admin only)' })
   async remove(@Param('id') id: string) {
@@ -75,7 +76,7 @@ export class CitiesController {
 
   @Put(':id/toggle')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Toggle city active status (admin only)' })
   async toggleActive(
@@ -87,7 +88,7 @@ export class CitiesController {
 
   @Get('stats/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get cities statistics (admin only)' })
   async getStatistics() {

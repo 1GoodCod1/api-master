@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
@@ -41,7 +42,7 @@ export class LeadsService {
       createLeadDto;
 
     const clientId: string | null =
-      authUser?.id && authUser?.role === 'CLIENT' ? authUser.id : null;
+      authUser?.id && authUser?.role === UserRole.CLIENT ? authUser.id : null;
 
     const { resolvedClientName, resolvedClientPhone } =
       await this.clientDataService.resolveClientData(

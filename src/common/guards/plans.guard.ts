@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { TariffType } from '@prisma/client';
+import { TariffType, UserRole } from '@prisma/client';
 import type { Request } from 'express';
 import { PLANS_KEY } from '../decorators/plans.decorator';
 
@@ -50,7 +50,7 @@ export class PlansGuard implements CanActivate {
     const user = req.user;
 
     // admin — полный доступ
-    if (user?.role === 'ADMIN') return true;
+    if (user?.role === UserRole.ADMIN) return true;
 
     const effective = getEffectivePlan(user);
     const effectiveRank = PLAN_RANK[effective] ?? 1;

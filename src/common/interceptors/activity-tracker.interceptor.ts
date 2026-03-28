@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { PrismaService } from '../../modules/shared/database/prisma.service';
 import { RedisService } from '../../modules/shared/redis/redis.service';
 import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import { UserRole } from '@prisma/client';
 
 /**
  * After JwtAuthGuard runs, updates lastActivityAt for masters with Redis debouncing
@@ -29,7 +30,7 @@ export class ActivityTrackerInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<RequestWithOptionalUser>();
 
-    if (req.user?.role === 'MASTER') {
+    if (req.user?.role === UserRole.MASTER) {
       this.debouncedActivityUpdate(req.user.id).catch(() => {});
     }
 

@@ -4,11 +4,14 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { Payment, Prisma, TariffType } from '@prisma/client';
+import { Payment, Prisma, TariffType, UserRole } from '@prisma/client';
 import { PaymentStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 export type InvalidateMasterCacheFn = (
   masterId: string,
@@ -53,7 +56,7 @@ export class MastersTariffService {
           pendingUpgradeCreatedAt: true,
           payments: {
             where: { status: PaymentStatus.SUCCESS },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: SORT_DESC },
             take: 1,
           },
         },
@@ -232,7 +235,7 @@ export class MastersTariffService {
       include: { masterProfile: true },
     });
     if (!user) throw new NotFoundException('User not found');
-    if (user.role !== 'MASTER')
+    if (user.role !== UserRole.MASTER)
       throw new BadRequestException('Only masters can claim a free plan');
     if (!user.isVerified)
       throw new BadRequestException(
@@ -256,8 +259,8 @@ export class MastersTariffService {
     // Audit log
     await this.auditService.log({
       userId: userId,
-      action: 'FREE_PLAN_CLAIMED',
-      entityType: 'User',
+      action: AuditAction.FREE_PLAN_CLAIMED,
+      entityType: AuditEntityType.User,
       entityId: userId,
       newData: {
         tariffType,

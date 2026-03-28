@@ -4,9 +4,12 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 import type {
   PersonalDataPdfData,
   PersonalDataPdfUser,
@@ -45,7 +48,7 @@ export class UsersGdprService {
         throw new NotFoundException('User not found');
       }
 
-      if (user.role === 'ADMIN') {
+      if (user.role === UserRole.ADMIN) {
         throw new BadRequestException(
           'Admin accounts cannot be self-deleted. Contact another admin.',
         );
@@ -56,8 +59,8 @@ export class UsersGdprService {
 
       await this.auditService.log({
         userId: userId,
-        action: 'USER_SELF_DELETED',
-        entityType: 'User',
+        action: AuditAction.USER_SELF_DELETED,
+        entityType: AuditEntityType.User,
         entityId: userId,
       });
 
@@ -111,7 +114,7 @@ export class UsersGdprService {
     });
 
     const masterId = masterProfile?.id;
-    const isMaster = user.role === 'MASTER' && masterId;
+    const isMaster = user.role === UserRole.MASTER && masterId;
 
     const leadWhere = isMaster ? { masterId } : { clientId: userId };
     const reviewWhere = isMaster ? { masterId } : { clientId: userId };
@@ -236,8 +239,8 @@ export class UsersGdprService {
 
     await this.auditService.log({
       userId: userId,
-      action: 'USER_DATA_EXPORTED',
-      entityType: 'User',
+      action: AuditAction.USER_DATA_EXPORTED,
+      entityType: AuditEntityType.User,
       entityId: userId,
     });
 

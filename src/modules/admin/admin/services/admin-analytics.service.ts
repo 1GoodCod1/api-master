@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import {
   getStartOfDateInMoldova,
   getStartOfTodayInMoldova,
@@ -163,7 +164,7 @@ export class AdminAnalyticsService {
       },
       orderBy: {
         masters: {
-          _count: 'desc',
+          _count: SORT_DESC,
         },
       },
       take: 10,
@@ -185,7 +186,7 @@ export class AdminAnalyticsService {
       },
       orderBy: {
         masters: {
-          _count: 'desc',
+          _count: SORT_DESC,
         },
       },
       take: 10,

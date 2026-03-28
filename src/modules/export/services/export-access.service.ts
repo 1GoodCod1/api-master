@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
@@ -28,7 +29,7 @@ export class ExportAccessService {
         throw new BadRequestException('Master not found');
       }
 
-      if (user.role !== 'ADMIN' && master.userId !== user.id) {
+      if (user.role !== UserRole.ADMIN && master.userId !== user.id) {
         throw new ForbiddenException('You can only export your own data');
       }
 

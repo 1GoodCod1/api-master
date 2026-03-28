@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 
 const BOOKING_INCLUDE_MASTER = {
@@ -37,7 +41,7 @@ export class BookingsQueryService {
 
     return this.prisma.booking.findMany({
       where,
-      orderBy: { startTime: 'asc' },
+      orderBy: { startTime: SORT_ASC },
       include: BOOKING_INCLUDE_MASTER,
     });
   }
@@ -49,7 +53,7 @@ export class BookingsQueryService {
 
     return this.prisma.booking.findMany({
       where,
-      orderBy: { startTime: 'desc' },
+      orderBy: { startTime: SORT_DESC },
       include: {
         master: {
           include: {
@@ -95,7 +99,7 @@ export class BookingsQueryService {
         startTime: { gte: startOfDay, lte: endOfDay },
         status: { in: ['PENDING', 'CONFIRMED'] },
       },
-      orderBy: { startTime: 'asc' },
+      orderBy: { startTime: SORT_ASC },
     });
 
     const availableSlots: { start: Date; end: Date; available: boolean }[] = [];
@@ -160,7 +164,7 @@ export class BookingsQueryService {
     const [bookings, leadsWithoutBooking] = await Promise.all([
       this.prisma.booking.findMany({
         where,
-        orderBy: { startTime: 'asc' },
+        orderBy: { startTime: SORT_ASC },
         include: {
           master: {
             include: {
@@ -178,7 +182,7 @@ export class BookingsQueryService {
           status: { in: ['NEW', 'IN_PROGRESS'] },
           bookings: { none: {} },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         include: {
           master: {
             select: {

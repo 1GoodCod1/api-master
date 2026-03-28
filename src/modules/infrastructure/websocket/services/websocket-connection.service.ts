@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import type { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
@@ -55,7 +55,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
       // Подписываем сокет на комнаты
       await client.join(`user:${userId}`);
 
-      if (payload.role === 'MASTER') {
+      if (payload.role === UserRole.MASTER) {
         await client.join('masters');
         try {
           const master = await this.prisma.master.findUnique({
@@ -73,7 +73,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
           this.logger.warn(`Не удалось подписать мастера на комнату: ${msg}`);
         }
       }
-      if (payload.role === 'ADMIN') {
+      if (payload.role === UserRole.ADMIN) {
         await client.join('admins');
       }
 

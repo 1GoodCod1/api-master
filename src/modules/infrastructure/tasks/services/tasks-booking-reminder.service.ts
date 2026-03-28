@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationCategory } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 
@@ -88,7 +89,7 @@ export class TasksBookingReminderService {
           // Уведомление мастеру
           await this.inAppNotifications.notify({
             userId: booking.master.user.id,
-            category: 'BOOKING_REMINDER',
+            category: NotificationCategory.BOOKING_REMINDER,
             title: 'Напоминание о записи',
             message: `Запись с ${booking.clientName || 'клиентом'} ${timeLabel} (${formattedTime})`,
             metadata: {
@@ -104,7 +105,7 @@ export class TasksBookingReminderService {
           if (booking.clientId) {
             await this.inAppNotifications.notify({
               userId: booking.clientId,
-              category: 'BOOKING_REMINDER',
+              category: NotificationCategory.BOOKING_REMINDER,
               title: 'Напоминание о записи',
               message: `Запись к ${masterName || 'мастеру'} ${timeLabel} (${formattedTime})`,
               metadata: {

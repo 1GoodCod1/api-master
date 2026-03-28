@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -35,7 +36,7 @@ export class PaymentsController {
 
   @Post('create-mia-checkout')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create MIA QR payment for tariff' })
   async createMiaCheckout(
@@ -47,7 +48,7 @@ export class PaymentsController {
 
   @Post('create-checkout')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create MIA QR payment for tariff (alias)' })
   async createCheckout(
@@ -102,7 +103,7 @@ export class PaymentsController {
 
   @Post('mia-sandbox-simulate')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
@@ -123,7 +124,7 @@ export class PaymentsController {
 
   @Get('master/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payments for master' })
   async getPaymentsForMaster(
@@ -131,7 +132,7 @@ export class PaymentsController {
     @GetUser() user: JwtUser,
   ) {
     // Defense-in-depth: IDOR check at controller level (also enforced in service)
-    if (user.role !== 'ADMIN' && user.masterProfile?.id !== masterId) {
+    if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
       throw new ForbiddenException('Access to payment data denied');
     }
     return this.paymentsService.getPaymentsForMaster(masterId, user);
@@ -139,7 +140,7 @@ export class PaymentsController {
 
   @Get('stats/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment statistics' })
   async getPaymentStats(
@@ -147,7 +148,7 @@ export class PaymentsController {
     @GetUser() user: JwtUser,
   ) {
     // Defense-in-depth: IDOR check at controller level (also enforced in service)
-    if (user.role !== 'ADMIN' && user.masterProfile?.id !== masterId) {
+    if (user.role !== UserRole.ADMIN && user.masterProfile?.id !== masterId) {
       throw new ForbiddenException('Access to payment data denied');
     }
     return this.paymentsService.getPaymentStats(masterId, user);
@@ -155,7 +156,7 @@ export class PaymentsController {
 
   @Get('my-payments')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payments for authenticated master' })
   async getMyPayments(@GetUser() user: JwtUser) {
@@ -168,7 +169,7 @@ export class PaymentsController {
 
   @Post('confirm-pending-upgrade')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Confirm pending upgrade' })
   async confirmPendingUpgrade(@GetUser() user: JwtUser) {
@@ -177,7 +178,7 @@ export class PaymentsController {
 
   @Post('cancel-pending-upgrade')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel pending upgrade' })
   async cancelPendingUpgrade(@GetUser() user: JwtUser) {
@@ -186,7 +187,7 @@ export class PaymentsController {
 
   @Post('cancel-tariff-at-period-end')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({
     summary:

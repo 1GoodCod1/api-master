@@ -4,7 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { BookingStatus } from '@prisma/client';
+import { BookingStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { UpdateBookingStatusDto } from '../dto/update-booking-status.dto';
@@ -102,7 +102,7 @@ export class BookingsActionService {
       },
     });
 
-    const isMasterCreating = authUser.role === 'MASTER';
+    const isMasterCreating = authUser.role === UserRole.MASTER;
 
     if (isMasterCreating) {
       // Master proposed time → notify client to confirm/reject

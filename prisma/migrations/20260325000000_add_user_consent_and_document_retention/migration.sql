@@ -1,6 +1,3 @@
--- CreateEnum
-CREATE TYPE "ConsentType" AS ENUM ('VERIFICATION_DATA_PROCESSING', 'PRIVACY_POLICY', 'TERMS_OF_SERVICE', 'MARKETING');
-
 -- CreateTable
 CREATE TABLE "user_consents" (
     "id" TEXT NOT NULL,

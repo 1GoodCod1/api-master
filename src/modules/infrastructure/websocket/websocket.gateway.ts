@@ -20,6 +20,7 @@ import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
 import type { SocketData } from './services/websocket-connection.service';
 import { WsTypingDto } from './dto/typing.dto';
 import { getCorsOrigins } from '../../../config';
+import { UserRole } from '@prisma/client';
 
 @NestWebSocketGateway({
   cors: {
@@ -179,8 +180,9 @@ export class WebsocketGateway
       }
 
       const isMasterOwner =
-        user.role === 'MASTER' && user.masterProfile?.id === sanitizedMasterId;
-      const isAdmin = user.role === 'ADMIN';
+        user.role === UserRole.MASTER &&
+        user.masterProfile?.id === sanitizedMasterId;
+      const isAdmin = user.role === UserRole.ADMIN;
 
       if (!isMasterOwner && !isAdmin) {
         this.logger.warn(

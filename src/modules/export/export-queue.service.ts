@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import * as fs from 'fs';
@@ -136,7 +137,7 @@ export class ExportQueueService {
       throw new NotFoundException('Job not found or expired');
     }
 
-    if (job.data.userId !== userId && userRole !== 'ADMIN') {
+    if (job.data.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new NotFoundException('Job not found');
     }
 

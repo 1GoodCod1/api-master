@@ -1,6 +1,7 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { LoginService } from '../../../src/modules/auth/auth/services/login.service';
+import { AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD } from '../../../src/modules/auth/auth/auth-login.messages';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { TokenService } from '../../../src/modules/auth/auth/services/token.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
@@ -105,7 +106,7 @@ describe('LoginService', () => {
       data: expect.objectContaining({
         userId: 'u1',
         success: false,
-        failReason: 'Invalid password',
+        failReason: AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
       }),
     });
     expect(tokenService.generateAccessToken).not.toHaveBeenCalled();

@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -31,7 +32,7 @@ export class BookingsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT', 'MASTER')
+  @Roles(UserRole.CLIENT, UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
@@ -44,7 +45,7 @@ export class BookingsController {
 
   @Get('master/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get bookings for master' })
   @ApiQuery({ name: 'status', required: false })
@@ -62,7 +63,7 @@ export class BookingsController {
 
   @Get('master/:masterId/calendar')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get calendar data: bookings + leads without booking',
@@ -106,7 +107,7 @@ export class BookingsController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update booking status' })
   async updateStatus(
@@ -119,7 +120,7 @@ export class BookingsController {
 
   @Patch(':id/confirm')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Client confirms a PENDING booking proposed by master',
@@ -131,7 +132,7 @@ export class BookingsController {
 
   @Patch(':id/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Client rejects a PENDING booking proposed by master',

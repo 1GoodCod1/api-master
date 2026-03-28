@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingsQueryService } from './services/bookings-query.service';
@@ -133,7 +134,7 @@ export class BookingsService {
   }
 
   private ensureMasterAccess(masterId: string, user: BookingsAuthUser): void {
-    if (user.role === 'ADMIN') return;
+    if (user.role === UserRole.ADMIN) return;
     const master = user.masterProfile;
     if (master?.id !== masterId) {
       throw new ForbiddenException('You can only access your own data');
@@ -144,7 +145,7 @@ export class BookingsService {
     userId: string;
     phone: string;
   } {
-    if (user.role !== 'CLIENT') {
+    if (user.role !== UserRole.CLIENT) {
       throw new BadRequestException('This endpoint is only for clients');
     }
     return { userId: user.id, phone: user.phone ?? '' };
@@ -162,7 +163,7 @@ export class BookingsService {
     phone: string;
     name: string | undefined;
   } {
-    if (user.role === 'CLIENT') {
+    if (user.role === UserRole.CLIENT) {
       const phone = user.phone ?? '';
       if (!phone) {
         throw new BadRequestException('Client phone is required');

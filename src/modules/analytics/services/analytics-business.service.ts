@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
   BusinessAnalyticsResponse,
@@ -90,7 +91,7 @@ export class AnalyticsBusinessService {
         _count: { select: { masters: true } },
         masters: { select: { rating: true, leadsCount: true } },
       },
-      orderBy: { masters: { _count: 'desc' } },
+      orderBy: { masters: { _count: SORT_DESC } },
       take: 10,
     });
 
@@ -115,7 +116,7 @@ export class AnalyticsBusinessService {
         _count: { select: { masters: true } },
         masters: { select: { rating: true, leadsCount: true } },
       },
-      orderBy: { masters: { _count: 'desc' } },
+      orderBy: { masters: { _count: SORT_DESC } },
       take: 10,
     });
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
 import { TariffType } from '@prisma/client';
@@ -37,7 +38,7 @@ export class TariffsQueryService {
 
         return this.prisma.tariff.findMany({
           where,
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { sortOrder: SORT_ASC },
         });
       },
       this.cache.ttl.tariffs,
@@ -58,7 +59,7 @@ export class TariffsQueryService {
         await this.cache.invalidate(this.cache.patterns.tariffsAll());
         return this.prisma.tariff.findMany({
           where,
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { sortOrder: SORT_ASC },
         });
       }
     }

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ReportStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../shared/constants/sort-order.constants';
 
 export type AdminReportsStats = {
   total: number;
@@ -54,7 +58,7 @@ export class ReportsQueryService {
 
     return this.prisma.report.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       include: this.getIncludes(),
     });
   }
@@ -76,7 +80,7 @@ export class ReportsQueryService {
   async findByClient(clientId: string) {
     return this.prisma.report.findMany({
       where: { clientId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       include: {
         master: {
           include: { user: { select: { id: true, email: true, phone: true } } },
@@ -97,7 +101,7 @@ export class ReportsQueryService {
           lastName: true,
           avatarFile: { select: { path: true } },
           clientPhotos: {
-            orderBy: { order: 'asc' },
+            orderBy: { order: SORT_ASC },
             take: 1,
             select: { file: { select: { path: true } } },
           },

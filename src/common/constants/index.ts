@@ -3,13 +3,21 @@
  * Использовать вместо хардкода строк во всём проекте.
  */
 export {
+  AvailabilityStatus,
+  BookingStatus,
+  ConsentType,
+  FileType,
+  LeadNotifyChannel,
   LeadStatus,
+  NotificationCategory,
+  NotificationStatus,
   PaymentStatus,
+  ReferralStatus,
+  ReportAction,
+  ReportStatus,
   ReviewStatus,
+  SenderType,
   TariffType,
   UserRole,
   VerificationStatus,
-  NotificationStatus,
-  ReportStatus,
-  BookingStatus,
 } from '@prisma/client';

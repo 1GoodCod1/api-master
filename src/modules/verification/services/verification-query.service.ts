@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_ASC } from '../../shared/constants/sort-order.constants';
 import { EncryptionService } from '../../shared/utils/encryption.service';
 
 @Injectable()
@@ -86,7 +87,7 @@ export class VerificationQueryService {
           documentBack: true,
           selfie: true,
         },
-        orderBy: { submittedAt: 'asc' },
+        orderBy: { submittedAt: SORT_ASC },
         skip,
         take: limit,
       }),

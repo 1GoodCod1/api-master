@@ -10,6 +10,7 @@ import { RedisService } from '../../../shared/redis/redis.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 
 export interface SystemStats {
   database: {
@@ -236,7 +237,7 @@ export class AdminSystemService {
       const batch = await this.prisma.user.findMany({
         take,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        orderBy: { id: 'asc' },
+        orderBy: { id: SORT_ASC },
         select: {
           id: true,
           email: true,
@@ -270,7 +271,7 @@ export class AdminSystemService {
       const batch = await this.prisma.master.findMany({
         take,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        orderBy: { id: 'asc' },
+        orderBy: { id: SORT_ASC },
         select: {
           id: true,
           user: { select: { firstName: true, lastName: true } },

@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -30,7 +31,7 @@ export class ReportsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create report (for clients only)' })
   async create(@Body() dto: CreateReportDto, @Req() req: RequestWithUser) {
@@ -39,7 +40,7 @@ export class ReportsController {
 
   @Get('my-reports')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my reports (for clients)' })
   async getMyReports(@Req() req: RequestWithUser) {
@@ -48,7 +49,7 @@ export class ReportsController {
 
   @Get('reports-against-me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get count of reports against master (for self)' })
   async getReportsAgainstMeCount(@Req() req: RequestWithUser) {
@@ -61,7 +62,7 @@ export class ReportsController {
 
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Report counts by status (global totals, admin only)',
@@ -72,7 +73,7 @@ export class ReportsController {
 
   @Get('export')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Export all reports matching optional status (admin only)',
@@ -84,7 +85,7 @@ export class ReportsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all reports (admin only)' })
   @ApiQuery({ name: 'status', required: false })
@@ -94,7 +95,7 @@ export class ReportsController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update report status (admin only)' })
   async updateStatus(

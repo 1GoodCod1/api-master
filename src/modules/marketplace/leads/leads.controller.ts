@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -41,7 +42,7 @@ export class LeadsController {
       'Only authorized clients can create leads. Authentication and CLIENT role required.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiResponse({ status: 201, description: 'Lead created successfully' })
   @ApiResponse({ status: 400, description: 'Spam protection triggered' })
@@ -59,7 +60,7 @@ export class LeadsController {
 
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get lead statistics' })
   async getStats(@GetUser() user: JwtUser) {
@@ -68,7 +69,7 @@ export class LeadsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN', 'CLIENT')
+  @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get leads for authenticated user (cursor-paginated)',
@@ -94,7 +95,7 @@ export class LeadsController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update lead status' })
   async updateStatus(
@@ -107,7 +108,7 @@ export class LeadsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN', 'CLIENT')
+  @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get one lead (master: own; client: own by clientId)',
@@ -118,7 +119,7 @@ export class LeadsController {
 
   @Get('active-to-master/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Check if client has an active lead to a specific master',
@@ -133,7 +134,7 @@ export class LeadsController {
 
   @Get('availability-subscription/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check if subscribed to master availability' })
   @ApiResponse({ status: 200, description: 'Returns subscription status' })
@@ -146,7 +147,7 @@ export class LeadsController {
 
   @Post('subscribe-availability')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Subscribe to master availability notifications' })
   @ApiResponse({ status: 201, description: 'Subscribed successfully' })
@@ -159,7 +160,7 @@ export class LeadsController {
 
   @Post('unsubscribe-availability/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Unsubscribe from master availability notifications',

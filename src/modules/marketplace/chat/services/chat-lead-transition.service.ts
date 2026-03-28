@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
-import { SenderType } from '@prisma/client';
+import { NotificationCategory, SenderType } from '@prisma/client';
 
 @Injectable()
 export class ChatLeadTransitionService {
@@ -96,7 +96,7 @@ export class ChatLeadTransitionService {
         this.inAppNotifications
           .notify({
             userId: clientId,
-            category: 'LEAD_STATUS_UPDATED',
+            category: NotificationCategory.LEAD_STATUS_UPDATED,
             title: 'Статус заявки обновлён',
             message: 'Ваша заявка — IN_PROGRESS',
             messageKey: 'notifications.messages.leadStatusUpdated',

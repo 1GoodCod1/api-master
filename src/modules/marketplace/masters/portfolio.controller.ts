@@ -28,7 +28,7 @@ import { PlansGuard } from '../../../common/guards/plans.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Plans } from '../../../common/decorators/plans.decorator';
 import { GetUser } from '../../../common/decorators/get-user.decorator';
-import { TariffType } from '@prisma/client';
+import { TariffType, UserRole } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
 @ApiTags('Portfolio')
@@ -64,7 +64,7 @@ export class PortfolioController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Plans(TariffType.VIP)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create portfolio item (VIP+ only)' })
@@ -76,7 +76,7 @@ export class PortfolioController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Plans(TariffType.VIP)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update portfolio item (VIP+ only)' })
@@ -92,7 +92,7 @@ export class PortfolioController {
 
   @Patch('reorder')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Plans(TariffType.VIP)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reorder portfolio items (VIP+ only)' })
@@ -104,7 +104,7 @@ export class PortfolioController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Plans(TariffType.VIP)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete portfolio item (VIP+ only)' })

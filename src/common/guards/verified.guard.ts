@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import { UserRole } from '@prisma/client';
 import { VERIFIED_KEY } from '../decorators/verified.decorator';
 
 @Injectable()
@@ -27,7 +28,7 @@ export class VerifiedGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    if (user.role === 'ADMIN') return true;
+    if (user.role === UserRole.ADMIN) return true;
 
     if (!user.isVerified) {
       throw new ForbiddenException('Account verification required');

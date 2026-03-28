@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -14,7 +15,7 @@ import { ComplianceService } from './services/compliance.service';
 @ApiTags('Compliance')
 @Controller('admin/compliance')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN)
 @ApiBearerAuth()
 export class ComplianceController {
   constructor(private readonly complianceService: ComplianceService) {}

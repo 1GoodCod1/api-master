@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
+import {
   CreatePortfolioItemDto,
   UpdatePortfolioItemDto,
   ReorderPortfolioDto,
@@ -30,7 +34,7 @@ export class PortfolioService {
 
       return await this.prisma.portfolioItem.findMany({
         where,
-        orderBy: { order: 'asc' },
+        orderBy: { order: SORT_ASC },
         include: {
           beforeFile: {
             select: { id: true, filename: true, path: true, mimetype: true },
@@ -88,7 +92,7 @@ export class PortfolioService {
       // Получаем следующий порядок
       const maxOrder = await this.prisma.portfolioItem.findFirst({
         where: { masterId },
-        orderBy: { order: 'desc' },
+        orderBy: { order: SORT_DESC },
         select: { order: true },
       });
 

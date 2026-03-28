@@ -205,7 +205,7 @@ const en: DpiaLabels = {
   measureDescription: 'Measure',
   m_encryption: 'Encryption',
   m_encryption_d:
-    'TLS 1.3 in transit; AES-256 encryption for sensitive fields at rest; bcrypt password hashing',
+    'TLS 1.3 in transit; AES-256 encryption for sensitive fields at rest; Argon2 password hashing',
   m_access: 'Access Control',
   m_access_d:
     'Role-based access (ADMIN, MASTER, CLIENT); JWT + refresh token rotation; 2FA available',
@@ -357,7 +357,7 @@ const ru: DpiaLabels = {
   measureDescription: 'Мера',
   m_encryption: 'Шифрование',
   m_encryption_d:
-    'TLS 1.3 при передаче; AES-256 шифрование чувствительных полей; bcrypt-хеширование паролей',
+    'TLS 1.3 при передаче; AES-256 шифрование чувствительных полей; Argon2-хеширование паролей',
   m_access: 'Контроль доступа',
   m_access_d:
     'Ролевой доступ (ADMIN, MASTER, CLIENT); JWT + ротация refresh-токенов; 2FA доступна',
@@ -510,7 +510,7 @@ const ro: DpiaLabels = {
   measureDescription: 'Măsura',
   m_encryption: 'Criptare',
   m_encryption_d:
-    'TLS 1.3 în tranzit; criptare AES-256 câmpuri sensibile; hashing bcrypt parole',
+    'TLS 1.3 în tranzit; criptare AES-256 câmpuri sensibile; hashing Argon2 parole',
   m_access: 'Control acces',
   m_access_d:
     'Acces bazat pe roluri (ADMIN, MASTER, CLIENT); JWT + rotație refresh token; 2FA disponibil',

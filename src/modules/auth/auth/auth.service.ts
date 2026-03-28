@@ -26,8 +26,12 @@ export class AuthService {
 
   // ==================== РЕГИСТРАЦИЯ ====================
 
-  async register(registerDto: RegisterDto) {
-    return this.registrationService.register(registerDto);
+  async register(
+    registerDto: RegisterDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    return this.registrationService.register(registerDto, ipAddress, userAgent);
   }
 
   async getRegistrationOptions() {

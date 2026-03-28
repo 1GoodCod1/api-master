@@ -16,6 +16,7 @@ import {
   sanitizePaymentData,
   sanitizeReviewData,
 } from './utils/websocket-sanitizer.util';
+import { NotificationCategory } from '@prisma/client';
 
 /**
  * WebsocketService — координатор модуля Real-time уведомлений.
@@ -145,7 +146,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
           ? sanitizedLeadData.clientName
           : 'клиента';
       const notification = sanitizeNotificationData({
-        type: 'NEW_LEAD',
+        type: NotificationCategory.NEW_LEAD,
         title: 'Новая заявка',
         message: `Новая заявка от ${clientName}`,
         messageKey: 'notifications.messages.newLeadFrom',
@@ -160,7 +161,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
       }
       this.sendToAdmins('notification', {
         ...(notification as Record<string, unknown>),
-        type: 'ADMIN_NEW_LEAD',
+        type: NotificationCategory.ADMIN_NEW_LEAD,
         masterId,
       });
     } catch (error) {
@@ -175,7 +176,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
   ) {
     try {
       const notification = sanitizeNotificationData({
-        type: 'LEAD_SENT',
+        type: NotificationCategory.LEAD_SENT,
         title: 'Заявка отправлена',
         message: `Заявка отправлена мастеру ${payload.masterName || ''}`.trim(),
         messageKey: 'notifications.messages.leadSentTo',
@@ -202,7 +203,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
           : '';
 
       const notification = sanitizeNotificationData({
-        type: 'PAYMENT_SUCCESS',
+        type: NotificationCategory.PAYMENT_SUCCESS,
         title: 'Платеж успешен',
         message: `Оплата тарифа ${tariffType} прошла успешно`,
         data: sanitizedPaymentData,
@@ -228,7 +229,7 @@ export class WebsocketService implements OnModuleInit, OnModuleDestroy {
           : 5;
 
       const notification = sanitizeNotificationData({
-        type: 'NEW_REVIEW',
+        type: NotificationCategory.NEW_REVIEW,
         title: 'Новый отзыв',
         message: `Пользователь оставил отзыв с оценкой ${rating}/5`,
         data: sanitizedReviewData,

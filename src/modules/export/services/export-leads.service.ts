@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
 import { LEADS_EXPORT_COLUMNS } from '../constants/export.constants';
@@ -103,7 +104,7 @@ export class ExportLeadsService {
     const [leads, master] = await Promise.all([
       this.prisma.lead.findMany({
         where: { masterId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
         include: {
           files: true,
           client: { select: { email: true } },

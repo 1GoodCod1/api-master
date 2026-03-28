@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
 import { Category } from '@prisma/client';
@@ -170,7 +171,11 @@ export class CategoriesQueryService {
             },
           },
         },
-        orderBy: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: [
+          { rating: SORT_DESC },
+          { createdAt: SORT_DESC },
+          { id: SORT_DESC },
+        ],
         take: queryParams.take,
         skip: queryParams.skip,
       }),

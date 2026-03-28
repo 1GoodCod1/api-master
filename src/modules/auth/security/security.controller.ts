@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Post,
@@ -45,7 +46,7 @@ export class SecurityController {
 
   @Post('ban-user/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Заблокировать пользователя (Admin only)' })
   async banUser(
@@ -59,7 +60,7 @@ export class SecurityController {
 
   @Post('unban-user/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Разблокировать пользователя (Admin only)' })
   async unbanUser(
@@ -72,7 +73,7 @@ export class SecurityController {
 
   @Post('blacklist-ip')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Добавить IP в черный список (Admin only)' })
   async blacklistIp(
@@ -90,7 +91,7 @@ export class SecurityController {
 
   @Post('remove-ip-blacklist/:ipAddress')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Удалить IP из черного списка (Admin only)' })
   async removeIpFromBlacklist(@Param('ipAddress') ipAddress: string) {

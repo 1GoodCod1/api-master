@@ -7,6 +7,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 
 export type AdminReviewsStats = {
   total: number;
@@ -48,8 +52,8 @@ export class AdminReviewsService {
       : where;
 
     const orderBy: Prisma.ReviewOrderByWithRelationInput[] = [
-      { createdAt: 'desc' },
-      { id: 'desc' },
+      { createdAt: SORT_DESC },
+      { id: SORT_DESC },
     ];
 
     const [rawReviews, total] = await Promise.all([
@@ -60,7 +64,7 @@ export class AdminReviewsService {
             select: {
               avatarFile: { select: { path: true } },
               clientPhotos: {
-                orderBy: { order: 'asc' },
+                orderBy: { order: SORT_ASC },
                 take: 1,
                 select: { file: { select: { path: true } } },
               },
@@ -158,7 +162,7 @@ export class AdminReviewsService {
           select: {
             avatarFile: { select: { path: true } },
             clientPhotos: {
-              orderBy: { order: 'asc' },
+              orderBy: { order: SORT_ASC },
               take: 1,
               select: { file: { select: { path: true } } },
             },
@@ -191,7 +195,7 @@ export class AdminReviewsService {
           },
         },
       },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: SORT_DESC }, { id: SORT_DESC }],
     });
 
     return { reviews };

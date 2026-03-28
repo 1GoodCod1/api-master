@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AuditEntityType } from './audit-entity-type.enum';
 import { AuditLogWriterService } from './services/audit-log-writer.service';
 import { AuditLogQueryService } from './services/audit-log-query.service';
 
 export interface AuditLogData {
   userId?: string | null;
   action: string;
-  entityType?: string;
+  entityType?: AuditEntityType;
   entityId?: string;
   oldData?: Prisma.InputJsonValue;
   newData?: Prisma.InputJsonValue;

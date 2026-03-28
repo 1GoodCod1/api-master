@@ -25,7 +25,7 @@ import { CreateReviewReplyDto } from './dto/create-review-reply.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { ReviewStatus } from '@prisma/client';
+import { ReviewStatus, UserRole } from '@prisma/client';
 
 @ApiTags('Reviews')
 @Controller('reviews')
@@ -34,7 +34,7 @@ export class ReviewsController {
 
   @Get('can-create/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check if client can create a review' })
   async canCreate(
@@ -47,7 +47,7 @@ export class ReviewsController {
   @Post()
   @Throttle({ default: { limit: 2, ttl: 300000 } }) // 2 reviews per 5 minutes
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new review' })
   async create(
@@ -83,7 +83,7 @@ export class ReviewsController {
 
   @Get('stats/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get review statistics' })
   async getStats(
@@ -95,7 +95,7 @@ export class ReviewsController {
 
   @Put(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update review status (admin only)' })
   async updateStatus(
@@ -112,7 +112,7 @@ export class ReviewsController {
 
   @Get('my-reviews')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'CLIENT')
+  @Roles(UserRole.MASTER, UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
@@ -137,7 +137,7 @@ export class ReviewsController {
   @Post(':id/reply')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 replies per minute
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Reply to a review (master only)' })
   async replyToReview(
@@ -150,7 +150,7 @@ export class ReviewsController {
 
   @Delete(':id/reply')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete reply to a review' })
   async deleteReply(@Param('id') id: string, @Req() req: RequestWithUser) {
@@ -164,7 +164,7 @@ export class ReviewsController {
   @Post(':id/vote')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 votes per minute
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Vote a review as helpful' })
   async voteHelpful(@Param('id') id: string, @Req() req: RequestWithUser) {
@@ -173,7 +173,7 @@ export class ReviewsController {
 
   @Delete(':id/vote')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CLIENT')
+  @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove helpful vote' })
   async removeVote(@Param('id') id: string, @Req() req: RequestWithUser) {

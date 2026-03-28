@@ -8,6 +8,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 
 /**
  * Сервис для управления мастерами в админке
@@ -110,8 +114,8 @@ export class AdminMastersService {
       : where;
 
     const orderBy: Prisma.MasterOrderByWithRelationInput[] = [
-      { createdAt: 'desc' },
-      { id: 'desc' },
+      { createdAt: SORT_DESC },
+      { id: SORT_DESC },
     ];
 
     const [rawMasters, total] = await Promise.all([
@@ -132,7 +136,7 @@ export class AdminMastersService {
           category: true,
           city: true,
           photos: {
-            orderBy: { order: 'asc' },
+            orderBy: { order: SORT_ASC },
             take: 24,
             include: {
               file: { select: { path: true } },
@@ -241,7 +245,7 @@ export class AdminMastersService {
         category: true,
         city: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
     return rows.map((m) => ({

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 
 /**
@@ -21,7 +25,7 @@ export class PromotionsQueryService {
   async findMyPromotions(masterId: string) {
     return this.prisma.promotion.findMany({
       where: { masterId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
     });
   }
 
@@ -55,12 +59,12 @@ export class PromotionsQueryService {
                 photos: {
                   select: { file: { select: { path: true } } },
                   take: 1,
-                  orderBy: { order: 'asc' },
+                  orderBy: { order: SORT_ASC },
                 },
               },
             },
           },
-          orderBy: { discount: 'desc' },
+          orderBy: { discount: SORT_DESC },
           take: limit,
         });
       },
@@ -93,7 +97,7 @@ export class PromotionsQueryService {
             validFrom: { lte: now },
             validUntil: { gte: now },
           },
-          orderBy: { discount: 'desc' },
+          orderBy: { discount: SORT_DESC },
         });
       },
       this.CACHE_TTL,

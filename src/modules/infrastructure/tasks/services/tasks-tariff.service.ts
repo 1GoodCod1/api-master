@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PaymentStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 
@@ -135,7 +136,7 @@ export class TasksTariffService {
     for (const master of expiredPendingUpgrades) {
       const lastPayment = await this.prisma.payment.findFirst({
         where: { masterId: master.id, status: PaymentStatus.SUCCESS },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SORT_DESC },
       });
 
       const newTariffType = lastPayment ? master.tariffType : 'BASIC';

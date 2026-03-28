@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { MastersService } from './masters.service';
+import { SORT_DESC } from '../../shared/constants/sort-order.constants';
 
 @ApiTags('Search')
 @Controller('search')
@@ -27,7 +28,7 @@ export class SearchController {
       page: 1,
       limit: 20,
       sortBy: 'rating' as const,
-      sortOrder: 'desc' as const,
+      sortOrder: SORT_DESC,
     };
 
     return this.mastersService.findAll(searchDto);

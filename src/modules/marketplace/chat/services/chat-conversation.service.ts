@@ -5,7 +5,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { Prisma } from '@prisma/client';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { Prisma, SenderType, UserRole } from '@prisma/client';
 import type { ChatUser } from '../chat.types';
 import { CreateConversationDto } from '../dto';
 import { decodeId } from '../../../shared/utils/id-encoder';
@@ -24,7 +25,7 @@ export class ChatConversationService {
   async getConversations(user: ChatUser) {
     const where: Prisma.ConversationWhereInput = {};
 
-    if (user.role === 'MASTER') {
+    if (user.role === UserRole.MASTER) {
       const master = await this.prisma.master.findUnique({
         where: { userId: user.id },
         select: { id: true },
@@ -33,9 +34,9 @@ export class ChatConversationService {
         throw new NotFoundException('Master profile not found');
       }
       where.masterId = master.id;
-    } else if (user.role === 'CLIENT') {
+    } else if (user.role === UserRole.CLIENT) {
       where.clientId = user.id;
-    } else if (user.role === 'ADMIN') {
+    } else if (user.role === UserRole.ADMIN) {
       // ADMIN видит все диалоги; без дополнительного фильтра
     } else {
       throw new ForbiddenException('Invalid role');
@@ -63,7 +64,7 @@ export class ChatConversationService {
         client: { select: CLIENT_SELECT_BASIC },
         messages: {
           take: 1,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: SORT_DESC },
           select: {
             id: true,
             content: true,
@@ -77,17 +78,17 @@ export class ChatConversationService {
             messages: {
               where: {
                 readAt: null,
-                ...(user.role === 'MASTER'
-                  ? { senderType: 'CLIENT' }
-                  : user.role === 'CLIENT'
-                    ? { senderType: 'MASTER' }
+                ...(user.role === UserRole.MASTER
+                  ? { senderType: SenderType.CLIENT }
+                  : user.role === UserRole.CLIENT
+                    ? { senderType: SenderType.MASTER }
                     : {}),
               },
             },
           },
         },
       },
-      orderBy: { lastMessageAt: 'desc' },
+      orderBy: { lastMessageAt: SORT_DESC },
     });
 
     return conversations.map((conv) => ({
@@ -195,9 +196,10 @@ export class ChatConversationService {
       throw new NotFoundException('Lead not found');
     }
 
-    const isClient = user.role === 'CLIENT' && lead.clientId === user.id;
-    const isMaster = user.role === 'MASTER' && lead.master.userId === user.id;
-    const isAdmin = user.role === 'ADMIN';
+    const isClient = user.role === UserRole.CLIENT && lead.clientId === user.id;
+    const isMaster =
+      user.role === UserRole.MASTER && lead.master.userId === user.id;
+    const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isClient && !isMaster && !isAdmin) {
       throw new ForbiddenException('Access denied to this lead');
@@ -249,8 +251,8 @@ export class ChatConversationService {
     }
 
     const isMaster =
-      user.role === 'MASTER' && conversation.master.userId === user.id;
-    const isAdmin = user.role === 'ADMIN';
+      user.role === UserRole.MASTER && conversation.master.userId === user.id;
+    const isAdmin = user.role === UserRole.ADMIN;
 
     if (!isMaster && !isAdmin) {
       throw new ForbiddenException(
@@ -271,7 +273,7 @@ export class ChatConversationService {
   async getUnreadCount(user: ChatUser) {
     const where: Prisma.MessageWhereInput = { readAt: null };
 
-    if (user.role === 'MASTER') {
+    if (user.role === UserRole.MASTER) {
       const master = await this.prisma.master.findUnique({
         where: { userId: user.id },
         select: { id: true },
@@ -279,10 +281,10 @@ export class ChatConversationService {
       if (!master) return { count: 0 };
 
       where.conversation = { masterId: master.id };
-      where.senderType = 'CLIENT';
-    } else if (user.role === 'CLIENT') {
+      where.senderType = SenderType.CLIENT;
+    } else if (user.role === UserRole.CLIENT) {
       where.conversation = { clientId: user.id };
-      where.senderType = 'MASTER';
+      where.senderType = SenderType.MASTER;
     } else {
       return { count: 0 };
     }

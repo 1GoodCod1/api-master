@@ -1,8 +1,12 @@
 import type { Socket } from 'socket.io';
-import type { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import type { ChatUser, SocketAuthData } from '../chat.types';
 
-const USER_ROLES: UserRole[] = ['ADMIN', 'CLIENT', 'MASTER'];
+const USER_ROLES: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.CLIENT,
+  UserRole.MASTER,
+];
 
 export function parseUserRole(value: string): UserRole | undefined {
   return USER_ROLES.includes(value as UserRole)

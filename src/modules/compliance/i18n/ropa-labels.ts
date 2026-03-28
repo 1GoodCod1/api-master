@@ -158,7 +158,7 @@ const en: RopaLabels = {
   rec_registration: 'Internal platform only',
   ret_registration: 'Until account deletion + 30 days',
   tra_registration: 'None (EU servers)',
-  mea_registration: 'bcrypt hashing, JWT auth, rate limiting',
+  mea_registration: 'Argon2 hashing, JWT auth, rate limiting',
 
   act_masterProfile: 'Master Profile Management',
   sub_masterProfile: 'Masters',
@@ -312,7 +312,7 @@ const ru: RopaLabels = {
   rec_registration: 'Только внутри платформы',
   ret_registration: 'До удаления аккаунта + 30 дней',
   tra_registration: 'Нет (серверы в ЕС)',
-  mea_registration: 'bcrypt-хеширование, JWT, rate-limiting',
+  mea_registration: 'Argon2-хеширование, JWT, rate-limiting',
 
   act_masterProfile: 'Управление профилем мастера',
   sub_masterProfile: 'Мастера',
@@ -464,7 +464,7 @@ const ro: RopaLabels = {
   rec_registration: 'Doar intern platformă',
   ret_registration: 'Până la ștergere cont + 30 zile',
   tra_registration: 'Niciuna (servere UE)',
-  mea_registration: 'hashing bcrypt, JWT, rate-limiting',
+  mea_registration: 'hashing Argon2, JWT, rate-limiting',
 
   act_masterProfile: 'Gestionare profil meșter',
   sub_masterProfile: 'Meșteri',

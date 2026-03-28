@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 
@@ -25,7 +26,7 @@ export class UsersAvatarService {
         where: { id: userId },
         data: { avatarFileId: null },
       });
-      if (user.role === 'MASTER') {
+      if (user.role === UserRole.MASTER) {
         const master = await this.prisma.master.findUnique({
           where: { userId },
           select: { id: true, slug: true },
@@ -57,7 +58,7 @@ export class UsersAvatarService {
       throw new BadRequestException('Аватар должен быть изображением');
     }
 
-    if (user.role === 'CLIENT') {
+    if (user.role === UserRole.CLIENT) {
       await this.saveClientPhoto(user.id, fileId);
     }
 
@@ -66,7 +67,7 @@ export class UsersAvatarService {
       data: { avatarFileId: fileId },
     });
 
-    if (user.role === 'MASTER') {
+    if (user.role === UserRole.MASTER) {
       const master = await this.prisma.master.findUnique({
         where: { userId },
         select: { id: true, slug: true },
@@ -92,7 +93,7 @@ export class UsersAvatarService {
       select: { id: true, role: true, avatarFileId: true },
     });
 
-    if (user?.role !== 'CLIENT') {
+    if (user?.role !== UserRole.CLIENT) {
       throw new NotFoundException('Профиль клиента не найден');
     }
 

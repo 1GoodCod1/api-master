@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Get,
@@ -32,7 +33,7 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get()
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all conversations for authenticated user' })
   @ApiResponse({ status: 200, description: 'List of conversations' })
   async getConversations(@Req() req: RequestWithUser) {
@@ -41,7 +42,7 @@ export class ChatController {
 
   @Get('unread-count')
   @Throttle({ default: { limit: 120, ttl: 60000 } }) // 120 req/min — polling + refetch
-  @Roles('CLIENT', 'MASTER')
+  @Roles(UserRole.CLIENT, UserRole.MASTER)
   @ApiOperation({ summary: 'Get unread messages count' })
   @ApiResponse({ status: 200, description: 'Unread count' })
   async getUnreadCount(@Req() req: RequestWithUser) {
@@ -49,7 +50,7 @@ export class ChatController {
   }
 
   @Get('by-lead/:leadId')
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get conversation by lead ID' })
   @ApiResponse({ status: 200, description: 'Conversation details or null' })
   async getConversationByLeadId(
@@ -60,7 +61,7 @@ export class ChatController {
   }
 
   @Get(':id')
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get conversation details' })
   @ApiResponse({ status: 200, description: 'Conversation details' })
   async getConversation(@Param('id') id: string, @Req() req: RequestWithUser) {
@@ -68,7 +69,7 @@ export class ChatController {
   }
 
   @Get(':id/messages')
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get messages for a conversation' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -97,7 +98,7 @@ export class ChatController {
   }
 
   @Post()
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new conversation' })
   @ApiResponse({ status: 201, description: 'Conversation created' })
   async createConversation(
@@ -108,7 +109,7 @@ export class ChatController {
   }
 
   @Post(':id/messages')
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Send a message in a conversation' })
   @ApiResponse({ status: 201, description: 'Message sent' })
   async sendMessage(
@@ -121,7 +122,7 @@ export class ChatController {
   }
 
   @Patch(':id/read')
-  @Roles('CLIENT', 'MASTER', 'ADMIN')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Mark messages as read' })
   @ApiResponse({ status: 200, description: 'Messages marked as read' })
   async markAsRead(@Param('id') id: string, @Req() req: RequestWithUser) {
@@ -129,7 +130,7 @@ export class ChatController {
   }
 
   @Patch(':id/close')
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Close a conversation' })
   @ApiResponse({ status: 200, description: 'Conversation closed' })
   async closeConversation(

@@ -2,6 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
 import { City } from '@prisma/client';
@@ -39,7 +43,7 @@ export class CitiesQueryService {
   async findAll(filters: Prisma.CityWhereInput = {}): Promise<City[]> {
     return this.prisma.city.findMany({
       where: filters,
-      orderBy: { name: 'asc' },
+      orderBy: { name: SORT_ASC },
     });
   }
 
@@ -84,7 +88,7 @@ export class CitiesQueryService {
             },
           },
         },
-        orderBy: { rating: 'desc' },
+        orderBy: { rating: SORT_DESC },
         take: 50,
       }),
     ]);
@@ -108,7 +112,7 @@ export class CitiesQueryService {
         },
       },
       orderBy: {
-        masters: { _count: 'desc' },
+        masters: { _count: SORT_DESC },
       },
     });
 

@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,7 +15,7 @@ import { UseGuards } from '@nestjs/common';
 @ApiTags('Audit')
 @Controller('audit')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN)
 @ApiBearerAuth()
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

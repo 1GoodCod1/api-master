@@ -1,12 +1,8 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ConsentType } from '@prisma/client';
 
-export enum ConsentType {
-  VERIFICATION_DATA_PROCESSING = 'VERIFICATION_DATA_PROCESSING',
-  PRIVACY_POLICY = 'PRIVACY_POLICY',
-  TERMS_OF_SERVICE = 'TERMS_OF_SERVICE',
-  MARKETING = 'MARKETING',
-}
+export { ConsentType };
 
 export class GrantConsentDto {
   @ApiProperty({

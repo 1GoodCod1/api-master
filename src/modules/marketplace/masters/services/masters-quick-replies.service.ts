@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 import type { UpdateQuickRepliesDto } from '../dto/update-quick-replies.dto';
 import type { UpdateAutoresponderSettingsDto } from '../dto/update-autoresponder-settings.dto';
 
@@ -21,7 +22,7 @@ export class MastersQuickRepliesService {
 
     const items = await this.prisma.quickReply.findMany({
       where: { masterId: master.id },
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ order: SORT_ASC }, { createdAt: SORT_ASC }],
       select: { id: true, text: true, order: true },
     });
 
@@ -57,7 +58,7 @@ export class MastersQuickRepliesService {
 
     const updated = await this.prisma.quickReply.findMany({
       where: { masterId: master.id },
-      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ order: SORT_ASC }, { createdAt: SORT_ASC }],
       select: { id: true, text: true, order: true },
     });
 

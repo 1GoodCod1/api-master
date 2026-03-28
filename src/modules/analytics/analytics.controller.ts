@@ -11,7 +11,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Plans } from '../../common/decorators/plans.decorator';
 import { PlansGuard } from '../../common/guards/plans.guard';
-import { TariffType } from '@prisma/client';
+import { TariffType, UserRole } from '@prisma/client';
 import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
 
 @ApiTags('Analytics')
@@ -21,7 +21,7 @@ export class AnalyticsController {
 
   @Get('master/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER', 'ADMIN')
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get analytics for master' })
   @ApiQuery({
@@ -40,7 +40,7 @@ export class AnalyticsController {
 
   @Get('business')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get business analytics (admin only)' })
   @ApiQuery({
@@ -55,7 +55,7 @@ export class AnalyticsController {
 
   @Get('system')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get system analytics (admin only)' })
   async getSystemAnalytics() {
@@ -64,7 +64,7 @@ export class AnalyticsController {
 
   @Get('my-analytics')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @ApiBearerAuth()
   @ApiOperation({
     summary:
@@ -80,7 +80,7 @@ export class AnalyticsController {
 
   @Get('my-analytics/advanced')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
-  @Roles('MASTER')
+  @Roles(UserRole.MASTER)
   @Plans(TariffType.PREMIUM)
   @ApiBearerAuth()
   @ApiOperation({

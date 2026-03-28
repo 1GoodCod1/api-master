@@ -1,3 +1,4 @@
+import { UserRole } from '@prisma/client';
 import {
   Controller,
   Post,
@@ -30,6 +31,7 @@ import { GetUser } from '../../../common/decorators/get-user.decorator';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { Throttle } from '@nestjs/throttler';
 import { extractRequestContext } from '../../shared/utils/request-context.util';
+import { AUTH_LOGIN_INVALID_CREDENTIALS } from './auth-login.messages';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -47,9 +49,15 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'User already exists' })
   async register(
     @Body() registerDto: RegisterDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.register(registerDto);
+    const { ipAddress, userAgent } = extractRequestContext(req);
+    const result = await this.authService.register(
+      registerDto,
+      ipAddress,
+      userAgent,
+    );
     return this.refreshCookie.handleAuthSuccess(result, res);
   }
 
@@ -72,7 +80,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 401, description: AUTH_LOGIN_INVALID_CREDENTIALS })
   async login(
     @Body() loginDto: LoginDto,
     @Req() req: Request,
@@ -144,7 +152,7 @@ export class AuthController {
 
   @Get('admin')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin endpoint' })
   adminEndpoint() {

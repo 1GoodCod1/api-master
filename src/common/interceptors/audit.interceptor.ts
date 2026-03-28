@@ -10,6 +10,7 @@ import { tap } from 'rxjs/operators';
 import type { Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../modules/audit/audit.service';
+import { AuditEntityType } from '../../modules/audit/audit-entity-type.enum';
 import { stripApiPrefix } from '../utils/api-route.util';
 
 interface RequestWithUser extends Request {
@@ -74,7 +75,7 @@ export class AuditInterceptor implements NestInterceptor {
       await this.auditService.log({
         userId: user?.id,
         action: `${request.method} ${request.path}`,
-        entityType: 'HTTP_REQUEST',
+        entityType: AuditEntityType.HttpRequest,
         oldData: {
           method: request.method,
           path: request.path,

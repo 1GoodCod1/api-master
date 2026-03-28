@@ -97,9 +97,11 @@ export class LeadsCreateNotificationService {
     telegramChatId?: string | null;
     whatsappPhone?: string | null;
   }) {
-    const channel = master.leadNotifyChannel || 'both';
+    const channel = (master.leadNotifyChannel || 'both').toLowerCase();
     const tg = master.telegramChatId;
     const wa = master.whatsappPhone;
+
+    if (channel === 'none') return {};
 
     const options: { telegramChatId?: string; whatsappPhone?: string } = {};
     if (channel === 'telegram' && tg) options.telegramChatId = tg;

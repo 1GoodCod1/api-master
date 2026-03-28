@@ -6,6 +6,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
+import {
+  SORT_ASC,
+  SORT_DESC,
+} from '../../../shared/constants/sort-order.constants';
 
 export type AdminLeadsStats = {
   total: number;
@@ -58,8 +62,8 @@ export class AdminLeadsService {
       : where;
 
     const orderBy: Prisma.LeadOrderByWithRelationInput[] = [
-      { createdAt: 'desc' },
-      { id: 'desc' },
+      { createdAt: SORT_DESC },
+      { id: SORT_DESC },
     ];
 
     const [rawLeads, total] = await Promise.all([
@@ -70,7 +74,7 @@ export class AdminLeadsService {
             select: {
               avatarFile: { select: { path: true } },
               clientPhotos: {
-                orderBy: { order: 'asc' },
+                orderBy: { order: SORT_ASC },
                 take: 1,
                 select: {
                   file: { select: { path: true } },
@@ -169,7 +173,7 @@ export class AdminLeadsService {
           select: {
             avatarFile: { select: { path: true } },
             clientPhotos: {
-              orderBy: { order: 'asc' },
+              orderBy: { order: SORT_ASC },
               take: 1,
               select: {
                 file: { select: { path: true } },
@@ -191,7 +195,7 @@ export class AdminLeadsService {
           },
         },
       },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: SORT_DESC }, { id: SORT_DESC }],
     });
 
     return { leads };
@@ -206,7 +210,7 @@ export class AdminLeadsService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }

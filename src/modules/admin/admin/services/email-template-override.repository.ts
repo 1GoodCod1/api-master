@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 
 export type TemplateOverrideRow = {
   templateId: string;
@@ -21,7 +22,7 @@ export class EmailTemplateOverrideRepository {
 
   async findMany(): Promise<TemplateOverrideRow[]> {
     return this.delegate.findMany({
-      orderBy: [{ templateId: 'asc' }, { lang: 'asc' }],
+      orderBy: [{ templateId: SORT_ASC }, { lang: SORT_ASC }],
       select: { templateId: true, lang: true, subject: true, bodyHtml: true },
     });
   }

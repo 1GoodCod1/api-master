@@ -13,6 +13,7 @@ import { CacheModule } from '../../shared/cache/cache.module';
 import { EmailModule } from '../../email/email.module';
 import { NotificationsModule } from '../../notifications/notifications/notifications.module';
 import { ReferralsModule } from '../../engagement/referrals/referrals.module';
+import { ConsentModule } from '../../consent/consent.module';
 import { TokenService } from './services/token.service';
 import { RegistrationService } from './services/registration.service';
 import { PasswordResetService } from './services/password-reset.service';
@@ -41,6 +42,7 @@ import { AuthLockoutService } from './services/auth-lockout.service';
     EmailModule,
     NotificationsModule,
     ReferralsModule,
+    ConsentModule,
   ],
   controllers: [AuthController],
   providers: [

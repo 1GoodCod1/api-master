@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
 
 /**
  * Специализированный сервис для построения сложных SQL-запросов поиска мастеров.
@@ -296,7 +297,9 @@ export class MastersSearchSqlService {
 
     const sortField = sortMap[sortBy] || sortMap.rating;
     const normalizedOrder =
-      sortOrder?.toLowerCase() === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+      sortOrder?.toLowerCase() === SORT_ASC
+        ? Prisma.sql`ASC`
+        : Prisma.sql`DESC`;
 
     return Prisma.sql`${sortField} ${normalizedOrder}`;
   }

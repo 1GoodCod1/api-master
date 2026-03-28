@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -90,7 +91,7 @@ export class UsersManageService {
       data: { isVerified: newVerified },
     });
 
-    if (newVerified && user.role === 'MASTER' && user.masterProfile) {
+    if (newVerified && user.role === UserRole.MASTER && user.masterProfile) {
       await this.prisma.master.update({
         where: { id: user.masterProfile.id },
         data: { pendingVerification: false },

@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ConsentType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { ConsentType } from '../dto/grant-consent.dto';
 import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit-action.enum';
+import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class ConsentService {
@@ -49,8 +50,8 @@ export class ConsentService {
     // Audit log
     await this.auditService.log({
       userId: userId,
-      action: 'CONSENT_GRANTED',
-      entityType: 'Consent',
+      action: AuditAction.CONSENT_GRANTED,
+      entityType: AuditEntityType.Consent,
       entityId: consentType,
       newData: {
         type: consentType,
@@ -82,8 +83,8 @@ export class ConsentService {
     // Audit log
     await this.auditService.log({
       userId: userId,
-      action: 'CONSENT_REVOKED',
-      entityType: 'Consent',
+      action: AuditAction.CONSENT_REVOKED,
+      entityType: AuditEntityType.Consent,
       entityId: consentType,
       newData: { type: consentType } satisfies Prisma.InputJsonValue,
     });

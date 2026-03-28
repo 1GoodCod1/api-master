@@ -7,6 +7,8 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 
 @Injectable()
 export class SecurityAuthService {
@@ -105,8 +107,8 @@ export class SecurityAuthService {
 
     await this.auditService.log({
       userId,
-      action: 'CHANGE_PASSWORD',
-      entityType: 'User',
+      action: AuditAction.CHANGE_PASSWORD,
+      entityType: AuditEntityType.User,
       entityId: userId,
     });
 

@@ -5,12 +5,22 @@ import {
   Logger,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { LoginDto } from '../dto/login.dto';
 import { TokenService } from './token.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { AuthLockoutService } from './auth-lockout.service';
 import { AuditService } from '../../../audit/audit.service';
+import { AuditAction } from '../../../audit/audit-action.enum';
+import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
+import {
+  AUTH_LOGIN_ACCOUNT_BANNED,
+  AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
+  AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
+  AUTH_LOGIN_INVALID_CREDENTIALS,
+  AUTH_LOGIN_IP_ACCESS_DENIED,
+} from '../auth-login.messages';
 
 @Injectable()
 export class LoginService {
@@ -56,12 +66,23 @@ export class LoginService {
             false,
             ipAddress,
             userAgent,
-            'Invalid password',
+            AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
           );
+          await this.auditService.log({
+            userId: user.id,
+            action: AuditAction.LOGIN_FAILED,
+            entityType: AuditEntityType.User,
+            entityId: user.id,
+            newData: {
+              reason: AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
+            } satisfies Prisma.InputJsonValue,
+            ipAddress,
+            userAgent,
+          });
         } else if (ipAddress) {
           await this.lockout.recordFailed(undefined, ipAddress);
         }
-        throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException(AUTH_LOGIN_INVALID_CREDENTIALS);
       }
 
       // 4. Проверка на блокировку аккаунта
@@ -71,9 +92,20 @@ export class LoginService {
           false,
           ipAddress,
           userAgent,
-          'Account banned',
+          AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
         );
-        throw new UnauthorizedException('Account is banned');
+        await this.auditService.log({
+          userId: user.id,
+          action: AuditAction.LOGIN_FAILED,
+          entityType: AuditEntityType.User,
+          entityId: user.id,
+          newData: {
+            reason: AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
+          } satisfies Prisma.InputJsonValue,
+          ipAddress,
+          userAgent,
+        });
+        throw new UnauthorizedException(AUTH_LOGIN_ACCOUNT_BANNED);
       }
 
       // 4a. Сброс блокировки при успешном входе
@@ -95,8 +127,8 @@ export class LoginService {
       // 7.5. Audit log — успешный вход
       await this.auditService.log({
         userId: user.id,
-        action: 'LOGIN_SUCCESS',
-        entityType: 'User',
+        action: AuditAction.LOGIN_SUCCESS,
+        entityType: AuditEntityType.User,
         entityId: user.id,
         ipAddress: ipAddress,
         userAgent: userAgent,
@@ -141,8 +173,8 @@ export class LoginService {
       if (userId) {
         await this.auditService.log({
           userId,
-          action: 'USER_LOGOUT',
-          entityType: 'User',
+          action: AuditAction.USER_LOGOUT,
+          entityType: AuditEntityType.User,
           entityId: userId,
         });
       }
@@ -164,8 +196,8 @@ export class LoginService {
 
       await this.auditService.log({
         userId,
-        action: 'USER_LOGOUT_ALL',
-        entityType: 'User',
+        action: AuditAction.USER_LOGOUT_ALL,
+        entityType: AuditEntityType.User,
         entityId: userId,
       });
 
@@ -207,7 +239,7 @@ export class LoginService {
     });
 
     if (blacklisted) {
-      throw new ForbiddenException('Access denied from this IP address');
+      throw new ForbiddenException(AUTH_LOGIN_IP_ACCESS_DENIED);
     }
   }
 

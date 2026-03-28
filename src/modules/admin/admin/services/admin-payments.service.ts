@@ -6,6 +6,7 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
+import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
 
 export type AdminPaymentsStats = {
   total: number;
@@ -85,7 +86,7 @@ export class AdminPaymentsService {
     const payments = await this.prisma.payment.findMany({
       where,
       include: this.getPaymentInclude(),
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: SORT_DESC }, { id: SORT_DESC }],
     });
 
     return { payments };
@@ -113,8 +114,8 @@ export class AdminPaymentsService {
       : where;
 
     const orderBy: Prisma.PaymentOrderByWithRelationInput[] = [
-      { createdAt: 'desc' },
-      { id: 'desc' },
+      { createdAt: SORT_DESC },
+      { id: SORT_DESC },
     ];
 
     const [rawPayments, total] = await Promise.all([
@@ -152,7 +153,7 @@ export class AdminPaymentsService {
   async getRecentPayments(limit: number = 10) {
     return this.prisma.payment.findMany({
       include: this.getPaymentInclude(),
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SORT_DESC },
       take: limit,
     });
   }
