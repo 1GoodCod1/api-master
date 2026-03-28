@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import type { RequestHandler } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { requestContext } from './request-context.storage';
+
+interface RequestWithId extends Request {
+  requestId?: string;
+}
 
 const HEADER = 'x-request-id';
 
@@ -22,7 +26,11 @@ function sanitizeIncomingId(raw: unknown): string | undefined {
  * Задаёт `req.requestId`, заголовок ответа `X-Request-Id` и AsyncLocalStorage
  * для Winston и остального кода по цепочке запроса.
  */
-export const requestIdMiddleware: RequestHandler = (req, res, next) => {
+export const requestIdMiddleware = (
+  req: RequestWithId,
+  res: Response,
+  next: NextFunction,
+) => {
   const incoming = sanitizeIncomingId(req.headers[HEADER]);
   const id = incoming ?? randomUUID();
 

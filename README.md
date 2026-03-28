@@ -12,13 +12,15 @@
 
 ## 📖 О проекте
 
-MasterHub — бэкенд-сервис маркетплейса для поиска и управления мастерами (сервисными специалистами). Построен на NestJS с модульной архитектурой, включает 30 бизнес-модулей, реал-тайм чат, систему платежей, уведомления и полный мониторинг.
+MasterHub — бэкенд-сервис маркетплейса для поиска и управления мастерами (сервисными специалистами). Построен на NestJS с модульной архитектурой: REST API, WebSocket, очереди Bull, платежи, уведомления и мониторинг.
+
+Отдельно собирается **worker** (`nest build worker`, `worker.ts`) — фоновые задачи без полного HTTP-стека API.
 
 ---
 
 ## 🛠 Стек технологий
 
-**Ядро:** Node.js 25 · TypeScript 5.9 · NestJS 11 (Express)
+**Ядро:** Node.js ≥ 20 · TypeScript 5.9 · NestJS 11 (Express)
 
 **Данные:** PostgreSQL 18 · Prisma 7 · Redis 7 · Bull Queues
 
@@ -36,7 +38,7 @@ MasterHub — бэкенд-сервис маркетплейса для поис
 
 **Мониторинг:** Prometheus · Grafana · Winston
 
-**Тесты:** Jest · Supertest · Chai
+**Тесты:** Jest · Supertest
 
 **CI/CD:** GitHub Actions (4 workflows) · Dependabot
 
@@ -66,18 +68,16 @@ graph TB
     API --> PROM
     PROM --> GRAF
 
-    subgraph Modules["30 бизнес-модулей"]
+    subgraph Domains["Домены приложения"]
         direction LR
-        M1["Auth"]
-        M2["Masters"]
-        M3["Leads"]
-        M4["Chat"]
-        M5["Payments"]
-        M6["Reviews"]
-        M7["...ещё 24"]
+        M1["Auth · Users"]
+        M2["Marketplace"]
+        M3["Payments · Admin"]
+        M4["Notifications · Tasks"]
+        M5["…"]
     end
 
-    API --> Modules
+    API --> Domains
 ```
 
 ---
@@ -86,7 +86,7 @@ graph TB
 
 ### Требования
 
-- Node.js ≥ 25 и npm ≥ 10
+- Node.js ≥ 20 и npm ≥ 10
 - Docker + Docker Compose (рекомендуется)
 - PostgreSQL 18 и Redis 7 (если без Docker)
 
@@ -220,10 +220,10 @@ npm run docker:seed
 ### Dev-окружение
 
 ```bash
-npm run docker:dev:up        # Поднять
-npm run docker:dev:down      # Остановить
-npm run docker:dev:build     # Пересобрать (без кэша)
-npm run docker:logs          # Логи API
+npm run docker:up          # alias: docker:dev:up — поднять стек
+npm run docker:dev:down    # остановить
+npm run docker:dev:build   # пересобрать образы
+npm run docker:logs        # логи API-контейнера
 ```
 
 | Контейнер | Порт | Назначение |
@@ -239,10 +239,10 @@ npm run docker:logs          # Логи API
 ### Prod-окружение
 
 ```bash
-npm run docker:prod:up       # Поднять
-npm run docker:prod:down     # Остановить
-npm run docker:prod:rebuild  # Пересобрать и обновить
-npm run docker:prod:logs     # Логи
+npm run docker:prod:up       # поднять
+npm run docker:prod:down     # остановить
+npm run docker:prod:rebuild  # пересобрать и обновить
+npm run docker:prod:logs     # логи
 ```
 
 > Prod использует порты: API `4001`, PostgreSQL `5433`, Redis `6380`, Prometheus `9091`, Grafana `3002`.
@@ -260,91 +260,97 @@ npm run docker:prod:logs     # Логи
 
 ## 📜 NPM-скрипты
 
-<details>
-<summary>🔽 Разработка</summary>
+### Разработка и запуск
 
 | Команда | Описание |
 |---|---|
-| `npm run start:dev` | Запуск с hot-reload |
-| `npm run start:debug` | Запуск с дебаггером |
-| `npm run build` | Сборка TypeScript |
-| `npm run start:prod` | Запуск из `dist/` |
-| `npm run lint` | ESLint + автофикс |
-| `npm run format` | Prettier |
+| `npm run start` | Запуск без watch |
+| `npm run start:dev` | API с hot-reload (`nest start --watch`) |
+| `npm run start:debug` | API с отладчиком и watch |
+| `npm run start:prod` | Запуск собранного `dist/main.js` |
+| `npm run build` | Сборка API (`nest build`) |
+| `npm run build:worker` | Сборка worker (`nest build worker`) |
+| `npm run start:worker` | Запуск `dist/worker.js` |
+| `npm run start:worker:dev` | Worker через ts-node (разработка) |
+| `npm run lint` | ESLint с автофиксом |
+| `npm run format` | Prettier для `src/` и `test/` |
+| `npm run prepare` | Husky (git hooks) |
 
-</details>
-
-<details>
-<summary>🔽 Prisma и база данных</summary>
+### Prisma и данные
 
 | Команда | Описание |
 |---|---|
 | `npm run prisma:generate` | Генерация Prisma Client |
-| `npm run prisma:migrate` | Создать + применить миграцию |
-| `npm run prisma:studio` | GUI для базы данных |
+| `npm run prisma:migrate` | `prisma migrate dev` (имя миграции `init` — при необходимости передайте своё имя через CLI) |
 | `npm run prisma:reset` | ⚠️ Полный сброс БД |
-| `npm run seed` | Тестовые данные |
-| `npm run local:recreate:db` | Reset → Migrate → Generate → Seed |
+| `npm run seed` | Сид из `prisma/seed.ts` |
+| `npm run seed:dev` | `prisma/seed-dev.ts` |
+| `npm run seed:prod` | `prisma/seed-prod.ts` |
+| `npm run local:recreate:db` | reset → migrate → generate → seed (локально) |
 
-</details>
+> Prisma Studio в Docker: `npm run docker:studio` (порт 5555). Локально: `npx prisma studio`.
 
-<details>
-<summary>🔽 Docker</summary>
-
-| Команда | Описание |
-|---|---|
-| `npm run docker:dev:up` | Dev-стек вверх |
-| `npm run docker:dev:down` | Dev-стек вниз |
-| `npm run docker:dev:build` | Пересборка |
-| `npm run docker:logs` | Логи API |
-| `npm run docker:migrate` | Миграции (dev) |
-| `npm run docker:migrate:create` | Новая миграция |
-| `npm run docker:migrate:prod` | Миграции (prod) |
-| `npm run docker:seed` | Сид (dev) |
-| `npm run docker:seed:prod` | Сид (prod) |
-| `npm run docker:generate` | Prisma Generate |
-| `npm run docker:studio` | Prisma Studio |
-| `npm run docker:dev:recreate` | Полное пересоздание dev-БД |
-
-</details>
-
-<details>
-<summary>🔽 Redis</summary>
+### Docker (общие и dev)
 
 | Команда | Описание |
 |---|---|
-| `npm run redis:cli` | Redis CLI |
-| `npm run redis:keys` | Показать ключи кэша |
-| `npm run redis:flush` | ⚠️ Очистить Redis |
-| `npm run redis:commander` | Redis Commander GUI |
+| `npm run docker:up` / `docker:dev:up` | Поднять dev-стек |
+| `npm run docker:down` / `docker:dev:down` | Остановить dev-стек |
+| `npm run docker:build` / `docker:dev:build` | Сборка образов dev |
+| `npm run docker:logs` | Логи API в dev |
+| `npm run docker:dev:create` | build → up → reset → migrate → generate → seed (полное пересоздание dev-БД в контейнере) |
+| `npm run docker:migrate` | `prisma migrate deploy` в dev-контейнере |
+| `npm run docker:migrate:dev` | то же, что `docker:migrate` |
+| `npm run docker:migrate:create` | интерактивная новая миграция в dev-контейнере |
+| `npm run docker:migrate:reset` | reset в dev-контейнере |
+| `npm run docker:migrate:prod` | миграции в prod-контейнере |
+| `npm run docker:generate` | `prisma generate` в dev-контейнере |
+| `npm run docker:seed` / `docker:seed:prod` | сиды в dev / prod контейнере |
+| `npm run docker:studio` | поднять сервис Prisma Studio (compose) |
+| `npm run docker:studio:logs` | логи Prisma Studio |
+| `npm run docker:prune` | очистка dev + prod volumes/images |
+| `npm run docker:prune:dev` / `docker:prune:prod` | очистка по окружению |
 
-</details>
-
-<details>
-<summary>🔽 Тестирование</summary>
+### Docker (prod)
 
 | Команда | Описание |
 |---|---|
-| `npm test` | Юнит-тесты |
+| `npm run docker:prod:up` | Поднять prod-стек |
+| `npm run docker:prod:down` | Остановить |
+| `npm run docker:prod:build` | Сборка |
+| `npm run docker:prod:logs` | Логи |
+| `npm run docker:prod:rebuild` | rebuild с пересозданием контейнеров |
+
+### Redis
+
+| Команда | Описание |
+|---|---|
+| `npm run redis:cli` | Redis CLI в контейнере |
+| `npm run redis:ping` | Проверка PING |
+| `npm run redis:keys` | Ключи `cache:*` |
+| `npm run redis:flush` | ⚠️ Очистить текущую БД Redis |
+| `npm run redis:commander` | Поднять Redis Commander |
+
+### Тесты
+
+| Команда | Описание |
+|---|---|
+| `npm test` | Юнит-тесты (`test/jest-unit.json`) |
 | `npm run test:watch` | Watch-режим |
 | `npm run test:cov` | С покрытием |
-| `npm run test:e2e` | E2E тесты |
-| `npm run test:api` | API тесты |
+| `npm run test:e2e` | E2E (`test/jest-e2e.json`) |
+| `npm run test:e2e:debug` | E2E с `detectOpenHandles` |
+| `npm run test:api` | E2E только `test/api` |
 
-</details>
-
-<details>
-<summary>🔽 Утилиты</summary>
+### Утилиты
 
 | Команда | Описание |
 |---|---|
-| `npm run generate:secrets` | Генерация JWT-секретов |
-| `npm run backup` | Бэкап БД |
-| `npm run restore` | Восстановление БД |
-| `npm run update:deps` | Обновить зависимости (npm-check-updates) |
+| `npm run generate:secrets` | Генерация секретов (`scripts/generate-secrets.js`) |
+| `npm run backup` | Бэкап БД (`scripts/backup.sh`, нужен bash) |
+| `npm run restore` | Восстановление (`scripts/restore.sh`) |
+| `npm run update:deps` | Обновить зависимости (npm-check-updates `-u`) |
 | `npm run update:deps:check` | Показать доступные обновления без изменений |
-
-</details>
 
 ---
 
@@ -353,40 +359,33 @@ npm run docker:prod:logs     # Логи
 ```
 api-master/
 │
-├── .github/workflows/       CI/CD пайплайны (4 workflow'а)
-├── docker/                   Конфиги Docker-окружения
-│   ├── grafana/              Дашборды и datasources
-│   ├── prometheus.yml        Конфиг сбора метрик
-│   └── redis.conf            Конфиг Redis
-│
+├── .github/workflows/          CI/CD (backend-ci, docker-build, docker-health, pr-checks)
+├── docker/                     Конфиги Grafana, Prometheus, Redis
 ├── prisma/
-│   ├── migrations/           SQL-миграции
-│   ├── schema.prisma         Схема базы данных
-│   └── seed.ts               Тестовые данные
-│
+│   ├── migrations/             SQL-миграции
+│   ├── seeds/                  Вспомогательные сиды (core, demo, connection)
+│   ├── schema.prisma
+│   ├── seed.ts                 Точка входа сида
+│   ├── seed-dev.ts
+│   └── seed-prod.ts
+├── scripts/                    backup, restore, generate-secrets и др.
 ├── src/
-│   ├── main.ts               Точка входа
-│   ├── app.module.ts         Корневой модуль
-│   ├── config/               Конфигурация (Winston, etc.)
-│   ├── common/               Общие утилиты
-│   │   ├── constants/
-│   │   ├── decorators/       Кастомные декораторы
-│   │   ├── filters/          Exception filters
-│   │   ├── guards/           Auth, Roles guards
-│   │   ├── helpers/
-│   │   ├── interceptors/     Transform, Timeout
-│   │   ├── interfaces/
-│   │   └── pipes/            Validation pipes
+│   ├── main.ts                 Точка входа HTTP API
+│   ├── worker.ts               Точка входа фонового worker
+│   ├── app.module.ts           Корневой модуль приложения
+│   ├── worker.module.ts        Модуль worker (Bull, cron, часть доменов)
+│   ├── app/                    Базовые маршруты приложения (health и т.д.)
+│   ├── config/                 Конфигурация: CORS, Helmet, Bull, Winston, shutdown, валидация
+│   ├── common/                 Декораторы, guards, interceptors, pipes, filters, константы
 │   ├── middleware/
-│   └── modules/              30 бизнес-модулей (см. ниже)
-│
+│   └── modules/                Доменные и инфраструктурные модули (см. ниже)
 ├── test/
-│   ├── api/                  E2E / API тесты
-│   └── unit/                 Юнит-тесты
-│
-├── Dockerfile                Многоступенчатый Docker-образ
-├── docker-compose.dev.yml    Dev-стек
-├── docker-compose.prod.yml   Prod-стек
+│   ├── api/                    API / E2E
+│   └── (jest-unit.json, jest-e2e.json)
+├── nest-cli.json               Проекты `api` и `worker` (SWC)
+├── Dockerfile
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
 └── package.json
 ```
 
@@ -394,39 +393,104 @@ api-master/
 
 ## 🧩 API-модули
 
-30 модулей в `src/modules/`:
+Модули лежат в `src/modules/`. В `app.module.ts` подключаются **функциональные** модули; часть сгруппирована агрегаторами (`*GroupModule`).
 
-| Модуль | Описание |
+### Приложение и настройки
+
+| Путь / модуль | Назначение |
 |---|---|
-| **auth** | JWT аутентификация, OAuth2, refresh-токены |
-| **users** | Управление пользователями |
-| **masters** | Профили мастеров, поиск, фильтрация |
-| **categories** | Категории услуг |
-| **cities** | Справочник городов |
-| **leads** | Заявки клиентов + антиспам |
-| **bookings** | Бронирования |
-| **chat** | Реал-тайм чат (WebSocket) |
-| **reviews** | Отзывы и рейтинги |
-| **payments** | Платежи MIA/MAIB QR |
-| **tariffs** | Тарифные планы (Free / Premium) |
-| **notifications** | Push, SMS, Email уведомления |
-| **favorites** | Избранные мастера |
-| **files** | Загрузка файлов (S3/B2) |
-| **promotions** | Промо-акции |
-| **recommendations** | Рекомендательная система |
-| **reports** | Жалобы |
-| **export** | Экспорт (Excel, PDF) |
-| **analytics** | Аналитика и метрики |
-| **admin** | Админ-панель |
-| **audit** | Логирование действий |
-| **verification** | Верификация мастеров |
-| **phone-verification** | Верификация по телефону |
-| **security** | Rate limiting, brute-force защита |
-| **tasks** | Фоновые задачи (Bull Queues) |
-| **cache-warming** | Прогрев кэша |
-| **email** | Email-сервис |
-| **websocket** | WebSocket Gateway |
-| **shared** | Prisma, Redis и общие сервисы |
+| `app/` | Корневые HTTP-маршруты (в т.ч. health), `AppService` |
+| `app-settings/` | Настройки приложения из БД (фичефлаги и параметры для других модулей) |
+
+### Аутентификация и пользователи (`auth-group`, `users`)
+
+| Модуль | Назначение |
+|---|---|
+| `auth/auth/` | JWT, регистрация/вход, OAuth (Google, Facebook), refresh |
+| `auth/security/` | Безопасность: rate limiting, защита от brute-force |
+| `auth/phone-verification/` | Верификация телефона |
+| `users/` | Профили пользователей, аватары |
+
+### Маркетплейс (`marketplace-group`)
+
+| Модуль | Назначение |
+|---|---|
+| `marketplace/masters/` | Профили мастеров, поиск, портфолио |
+| `marketplace/categories/` | Категории услуг |
+| `marketplace/cities/` | Города |
+| `marketplace/tariffs/` | Тарифы (Free / Premium и т.д.) |
+| `marketplace/leads/` | Заявки клиентов |
+| `marketplace/bookings/` | Бронирования |
+| `marketplace/reviews/` | Отзывы и рейтинги |
+| `marketplace/favorites/` | Избранное |
+| `marketplace/chat/` | Чат (совместно с WebSocket) |
+| `marketplace/promotions/` | Промо-акции |
+
+### Платежи и админка
+
+| Модуль | Назначение |
+|---|---|
+| `payments/` | Платежи MIA / MAIB QR |
+| `admin/admin/` | Админ-панель (роль ADMIN) |
+
+> `analytics`, `export`, `reports` используются не только админом — подключены в корне `app.module.ts` отдельно.
+
+### Уведомления (`notifications-group`)
+
+| Модуль | Назначение |
+|---|---|
+| `notifications/notifications/` | In-app, SMS, Telegram, очереди Bull, связка с WebSocket |
+| `notifications/web-push/` | Web Push |
+| `notifications/digest/` | Дайджесты / подписки |
+
+### Вовлечённость и аналитика
+
+| Модуль | Назначение |
+|---|---|
+| `engagement/recommendations/` | Рекомендации мастеров |
+| `engagement/referrals/` | Реферальная программа |
+| `analytics/` | Аналитика и метрики |
+| `export/` | Экспорт (Excel, PDF), очереди |
+| `reports/` | Жалобы и репорты |
+
+### Соответствие и аудит
+
+| Модуль | Назначение |
+|---|---|
+| `consent/` | Согласия пользователей (GDPR-подобные сценарии) |
+| `compliance/` | Комплаенс |
+| `audit/` | Аудит действий |
+| `verification/` | Верификация мастеров (документы) |
+
+### Инфраструктура
+
+| Модуль | Назначение |
+|---|---|
+| `infrastructure/files/` | Загрузка файлов, S3/B2, Multer |
+| `infrastructure/tasks/` | Планировщик и фоновые задачи (cron / Bull) |
+| `infrastructure/websocket/` | Socket.IO gateway |
+| `infrastructure/cache-warming/` | Прогрев кэша |
+| `infrastructure/web-vitals/` | Сбор Web Vitals с клиента |
+
+### Общие сервисы (`shared/`)
+
+| Модуль | Назначение |
+|---|---|
+| `shared/database/` | PrismaModule |
+| `shared/redis/` | Redis-клиент |
+| `shared/cache/` | Кэширование |
+| `shared/encryption/` | Шифрование (подключается в auth/verification) |
+| `shared/utils/` | Утилиты |
+
+### Прочее
+
+| Модуль | Назначение |
+|---|---|
+| `email/` | Отправка писем (Nodemailer) |
+
+### Worker
+
+`worker.module.ts` подключает подмножество модулей (Bull-процессоры, cron, прогрев кэша, экспорт и зависимости без полного HTTP API). Сборка: `npm run build:worker`, запуск: `npm run start:worker` / `start:worker:dev`.
 
 ---
 

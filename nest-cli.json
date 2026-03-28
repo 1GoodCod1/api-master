@@ -21,7 +21,17 @@
     "worker": {
       "type": "application",
       "root": "src",
-      "entryFile": "worker",
+      "entryFile": "processes/worker/worker",
+      "sourceRoot": "src",
+      "compilerOptions": {
+        "builder": "swc",
+        "typeCheck": true
+      }
+    },
+    "bull-board": {
+      "type": "application",
+      "root": "src",
+      "entryFile": "processes/bull-board/bull-board",
       "sourceRoot": "src",
       "compilerOptions": {
         "builder": "swc",

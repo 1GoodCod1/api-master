@@ -104,6 +104,30 @@ services:
       retries: 3
       start_period: 60s
 
+  bull-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: masterhub-bull-board
+    ports:
+      - "3500:3500"
+    environment:
+      TZ: Europe/Chisinau
+      BULL_BOARD_PORT: 3500
+    env_file:
+      - .env.docker
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - masterhub-network
+    command: npm run start:bull-board:dev
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     container_name: masterhub-prometheus-dev

@@ -253,7 +253,7 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: masterhub-worker-prod
-    command: [ "node", "dist/worker.js" ]
+    command: [ "node", "dist/processes/worker/worker.js" ]
     env_file:
       - .env
     environment:
@@ -284,6 +284,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  # ============================================================
+  # Bull Board — UI для мониторинга Bull-очередей.
+  #
+  # Доступен на порту 3500 (по умолчанию только localhost).
+  # Для доступа снаружи: PORT_BULL_BOARD=3500:3500
+  # ============================================================
+  bull-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: masterhub-bull-board-prod
+    command: [ "node", "dist/processes/bull-board/bull-board.js" ]
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Chisinau
+      - BULL_BOARD_PORT=3500
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "${PORT_BULL_BOARD:-127.0.0.1:3500:3500}"
+    depends_on:
+      redis-sentinel-1:
+        condition: service_healthy
+    networks:
+      - masterhub-prod-network
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
