@@ -99,8 +99,7 @@ export class RegisterDto {
 
   @ApiProperty({
     example: true,
-    description:
-      'User accepts Privacy Policy and Terms of Service',
+    description: 'User accepts Privacy Policy and Terms of Service',
   })
   @IsBoolean()
   @IsNotEmpty({ message: 'Legal consent is required' })

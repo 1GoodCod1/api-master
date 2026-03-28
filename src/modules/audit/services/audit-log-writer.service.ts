@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
-import { SECURITY_ACTIONS } from '../audit-action.enum';
+import { SECURITY_ACTION_SET } from '../audit-action.enum';
 import { AuditEntityType } from '../audit-entity-type.enum';
 
 export interface AuditLogData {
@@ -88,7 +88,7 @@ export class AuditLogWriterService {
     data: AuditLogData,
     userId: string | null | undefined,
   ): void {
-    if (SECURITY_ACTIONS.includes(data.action as any)) {
+    if (SECURITY_ACTION_SET.has(data.action)) {
       this.logger.warn(`[SECURITY] ${data.action}`, {
         userId,
         entityType: data.entityType,

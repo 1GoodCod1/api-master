@@ -57,3 +57,6 @@ export const SECURITY_ACTIONS: readonly AuditAction[] = [
   AuditAction.LOGIN_FAILED,
   AuditAction.PHONE_VERIFIED,
 ];
+
+/** For `string` membership checks without casting (e.g. AuditLogData.action). */
+export const SECURITY_ACTION_SET = new Set<string>(SECURITY_ACTIONS);
