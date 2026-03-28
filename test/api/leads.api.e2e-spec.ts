@@ -6,7 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
-import { uniqueMoldovanPhone } from '../api-helpers';
+import { e2eRegistrationConsent, uniqueMoldovanPhone } from '../api-helpers';
 import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
 import { api } from './e2e-prefix';
 
@@ -29,14 +29,17 @@ describe('Leads API (e2e)', () => {
     applyE2eGlobalPrefix(app);
     await app.init();
 
-    await request(app.getHttpServer()).post(api('/auth/register')).send({
-      email: testEmail,
-      phone: testPhone,
-      password: testPassword,
-      firstName: 'L',
-      lastName: 'T',
-      role: 'CLIENT',
-    });
+    await request(app.getHttpServer())
+      .post(api('/auth/register'))
+      .send({
+        email: testEmail,
+        phone: testPhone,
+        password: testPassword,
+        firstName: 'L',
+        lastName: 'T',
+        role: 'CLIENT',
+        ...e2eRegistrationConsent,
+      });
 
     const loginRes = await request(app.getHttpServer())
       .post(api('/auth/login'))

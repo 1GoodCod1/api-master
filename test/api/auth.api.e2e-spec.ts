@@ -10,6 +10,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { applyE2eGlobalPrefix } from '../helpers/e2e-bootstrap';
+import { e2eRegistrationConsent } from '../api-helpers';
 import { api } from './e2e-prefix';
 
 /** +373 + exactly 8 digits (RegisterDto); unique per call to avoid DB collisions in e2e */
@@ -61,6 +62,7 @@ describe('Auth API (e2e)', () => {
           firstName: 'API',
           lastName: 'Test',
           role: 'CLIENT',
+          ...e2eRegistrationConsent,
         })
         .expect(201)
         .expect((res) => {
@@ -80,6 +82,7 @@ describe('Auth API (e2e)', () => {
           firstName: 'API2',
           lastName: 'Test2',
           role: 'CLIENT',
+          ...e2eRegistrationConsent,
         })
         .expect((res) => {
           expect([400, 409]).toContain(res.status);

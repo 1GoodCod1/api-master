@@ -12,6 +12,12 @@ export function uniqueMoldovanPhone(): string {
   return `+373${String(randomInt(10_000_000, 99_999_999))}`;
 }
 
+/** Required by RegisterDto (age + legal consent) for e2e registration payloads. */
+export const e2eRegistrationConsent = {
+  acceptedAge: true,
+  acceptedLegal: true,
+} as const;
+
 export async function getMasterId(app: INestApplication<App>): Promise<string> {
   const res = await request(app.getHttpServer())
     .get(api('/masters'))
@@ -38,14 +44,17 @@ export async function getClientToken(
   const ts = Date.now();
   const email = `${prefix}-${ts}@test.local`;
   const phone = uniqueMoldovanPhone();
-  await request(app.getHttpServer()).post(api('/auth/register')).send({
-    email,
-    phone,
-    password: 'TestPass1!@#',
-    firstName: 'T',
-    lastName: 'U',
-    role: 'CLIENT',
-  });
+  await request(app.getHttpServer())
+    .post(api('/auth/register'))
+    .send({
+      email,
+      phone,
+      password: 'TestPass1!@#',
+      firstName: 'T',
+      lastName: 'U',
+      role: 'CLIENT',
+      ...e2eRegistrationConsent,
+    });
   const loginRes = await request(app.getHttpServer())
     .post(api('/auth/login'))
     .send({ email, password: 'TestPass1!@#' });
@@ -59,14 +68,17 @@ export async function getAdminToken(
   const ts = Date.now();
   const email = `admin-${ts}@test.local`;
   const phone = uniqueMoldovanPhone();
-  await request(app.getHttpServer()).post(api('/auth/register')).send({
-    email,
-    phone,
-    password: 'TestPass1!@#',
-    firstName: 'A',
-    lastName: 'D',
-    role: 'ADMIN',
-  });
+  await request(app.getHttpServer())
+    .post(api('/auth/register'))
+    .send({
+      email,
+      phone,
+      password: 'TestPass1!@#',
+      firstName: 'A',
+      lastName: 'D',
+      role: 'ADMIN',
+      ...e2eRegistrationConsent,
+    });
   const loginRes = await request(app.getHttpServer())
     .post(api('/auth/login'))
     .send({ email, password: 'TestPass1!@#' });
