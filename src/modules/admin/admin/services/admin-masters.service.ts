@@ -13,10 +13,7 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../../common/constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 
 /**
  * Сервис для управления мастерами в админке

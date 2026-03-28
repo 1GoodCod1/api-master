@@ -7,10 +7,7 @@ import {
   BookingStatus,
 } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../../common/constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 
 const BOOKING_INCLUDE_MASTER = {

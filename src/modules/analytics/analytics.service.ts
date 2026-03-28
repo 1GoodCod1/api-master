@@ -12,10 +12,7 @@ import {
   AdvancedAnalyticsResponse,
 } from '../shared/types/analytics.types';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
-import {
-  isPremiumTariff,
-  isVipOrPremiumTariff,
-} from '../../common/constants';
+import { isPremiumTariff, isVipOrPremiumTariff } from '../../common/constants';
 import { AppErrors, AppErrorMessages } from '../../common/errors';
 
 @Injectable()

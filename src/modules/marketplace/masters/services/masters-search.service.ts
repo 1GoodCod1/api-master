@@ -2,10 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ReviewStatus, TariffType } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../../common/constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { SearchMastersDto } from '../dto/search-masters.dto';
 import { SuggestQueryDto } from '../dto/suggest-query.dto';

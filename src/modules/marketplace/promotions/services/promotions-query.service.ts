@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../../common/constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 
 /**
