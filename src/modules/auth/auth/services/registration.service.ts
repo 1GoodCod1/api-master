@@ -114,10 +114,11 @@ export class RegistrationService {
       master = result.master;
 
       // Инвалидируем кеш новых мастеров — новый мастер сразу появится в секции "Новые мастера"
-      // + кеш категорий — обновится количество мастеров в категории
+      // + список категорий (categoriesAll) и агрегаты GET /masters/filters (searchFilters в Redis)
       await Promise.all([
         this.cache.invalidate(this.cache.patterns.mastersNew()),
         this.cache.invalidate(this.cache.patterns.categoriesAll()),
+        this.cache.del(this.cache.keys.searchFilters()),
       ]);
     } else {
       // Регистрация обычного клиента

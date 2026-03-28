@@ -3,6 +3,11 @@ import { Prisma } from '@prisma/client';
 import { AuditEntityType } from './audit-entity-type.enum';
 import { AuditLogWriterService } from './services/audit-log-writer.service';
 import { AuditLogQueryService } from './services/audit-log-query.service';
+import type { AuditCleanupDto } from './dto/audit-cleanup.dto';
+import {
+  assertCleanupSafety,
+  buildAuditCleanupWhere,
+} from './audit-cleanup.helper';
 
 export interface AuditLogData {
   userId?: string | null;
@@ -111,5 +116,14 @@ export class AuditService {
       ? (timeframe as (typeof valid)[number])
       : 'day';
     return this.query.getStats(tf);
+  }
+
+  /**
+   * Bulk-delete audit log rows (admin). Use dryRun to preview counts.
+   */
+  async cleanupAuditLogs(dto: AuditCleanupDto) {
+    assertCleanupSafety(dto);
+    const where = buildAuditCleanupWhere(dto);
+    return this.query.cleanupAuditLogs(where, !!dto.dryRun);
   }
 }

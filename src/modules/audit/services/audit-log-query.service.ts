@@ -253,7 +253,7 @@ export class AuditLogQueryService {
         break;
     }
 
-    const [totalLogs, byAction, byUser] = await Promise.all([
+    const [totalLogs, byAction, byUserRaw] = await Promise.all([
       this.prisma.auditLog.count({
         where: { createdAt: { gte: startDate } },
       }),
@@ -273,6 +273,31 @@ export class AuditLogQueryService {
       }),
     ]);
 
+    const userIds = [
+      ...new Set(
+        byUserRaw
+          .map((item) => item.userId)
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+      ),
+    ];
+    const users =
+      userIds.length > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              role: true,
+              firstName: true,
+              lastName: true,
+            },
+          })
+        : [];
+    const userById = new Map(users.map((u) => [u.id, u]));
+
     return {
       timeframe,
       totalLogs,
@@ -280,10 +305,41 @@ export class AuditLogQueryService {
         action: item.action,
         count: countFromGroupBy(item),
       })),
-      byUser: byUser.map((item) => ({
-        userId: item.userId ?? 'unknown',
-        count: countFromGroupBy(item),
-      })),
+      byUser: byUserRaw.map((item) => {
+        const uid = item.userId ?? 'unknown';
+        const u =
+          typeof item.userId === 'string'
+            ? userById.get(item.userId)
+            : undefined;
+        return {
+          userId: uid,
+          count: countFromGroupBy(item),
+          user: u
+            ? {
+                email: u.email,
+                phone: u.phone,
+                role: u.role,
+                firstName: u.firstName,
+                lastName: u.lastName,
+              }
+            : null,
+        };
+      }),
     };
+  }
+
+  /**
+   * Delete audit log rows matching `where`. When dryRun, only counts matching rows.
+   */
+  async cleanupAuditLogs(
+    where: Prisma.AuditLogWhereInput,
+    dryRun: boolean,
+  ): Promise<{ deleted: number; wouldDelete: number; dryRun: boolean }> {
+    const wouldDelete = await this.prisma.auditLog.count({ where });
+    if (dryRun) {
+      return { deleted: 0, wouldDelete, dryRun: true };
+    }
+    const result = await this.prisma.auditLog.deleteMany({ where });
+    return { deleted: result.count, wouldDelete: result.count, dryRun: false };
   }
 }

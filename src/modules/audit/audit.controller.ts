@@ -1,5 +1,5 @@
 import { UserRole } from '@prisma/client';
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,6 +7,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
+import { AuditCleanupDto } from './dto/audit-cleanup.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -65,5 +66,15 @@ export class AuditController {
   })
   async getStats(@Query('timeframe') timeframe?: string) {
     return this.auditService.getStatsFromQuery(timeframe);
+  }
+
+  @Post('cleanup')
+  @ApiOperation({
+    summary: 'Bulk-delete audit logs (admin)',
+    description:
+      'Scope: non_consent (all except consent actions), groups (union of preset groups), or actions (explicit list). Prefer olderThan. Use dryRun to preview counts.',
+  })
+  async cleanup(@Body() dto: AuditCleanupDto) {
+    return this.auditService.cleanupAuditLogs(dto);
   }
 }

@@ -33,6 +33,7 @@ export class VerificationDocumentsPurgeService {
         documentFront: true,
         documentBack: true,
         selfie: true,
+        master: { select: { userId: true } },
       },
     });
 
@@ -63,6 +64,7 @@ export class VerificationDocumentsPurgeService {
         documentFront: true,
         documentBack: true,
         selfie: true,
+        master: { select: { userId: true } },
       },
     });
 
@@ -85,6 +87,7 @@ export class VerificationDocumentsPurgeService {
     v: {
       id: string;
       masterId: string;
+      master?: { userId: string } | null;
       documentFront: { id: string; path: string } | null;
       documentBack: { id: string; path: string } | null;
       selfie: { id: string; path: string } | null;
@@ -123,7 +126,7 @@ export class VerificationDocumentsPurgeService {
 
     try {
       await this.auditService.log({
-        userId: null,
+        userId: v.master?.userId ?? null,
         action: AuditAction.VERIFICATION_DOCUMENTS_PURGED,
         entityType: AuditEntityType.MasterVerification,
         entityId: v.id,
