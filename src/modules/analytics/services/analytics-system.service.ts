@@ -4,13 +4,7 @@ import Redis from 'ioredis';
 import { RedisService } from '../../shared/redis/redis.service';
 import * as os from 'os';
 import { SystemAnalyticsResponse } from '../../shared/types/analytics.types';
-
-type QueueStats = {
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-};
+import type { QueueStats } from '../../shared/types/redis.types';
 
 @Injectable()
 export class AnalyticsSystemService {

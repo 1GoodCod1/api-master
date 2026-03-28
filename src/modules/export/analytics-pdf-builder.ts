@@ -1,6 +1,7 @@
 import path from 'path';
 import type PDFDocument from 'pdfkit';
 import { getAnalyticsPdfTranslations } from './analytics-pdf-translations';
+import type { AnalyticsPdfData } from './types';
 
 /** Цветовая палитра PDF */
 const COLORS = {
@@ -14,19 +15,6 @@ const COLORS = {
 } as const;
 
 type Doc = InstanceType<typeof PDFDocument>;
-
-interface AnalyticsPdfData {
-  masterName: string;
-  categoryName: string;
-  cityName: string;
-  rating: number | null;
-  totalReviews: number;
-  totalLeads: number;
-  leadsStats: Array<{ status: string; _count: number }>;
-  reviewsStats: Array<{ status: string; _count: number }>;
-  bookingsStats: Array<{ status: string; _count: number }>;
-  analytics: Array<{ date: Date; leadsCount: number; viewsCount: number }>;
-}
 
 /**
  * Подключить шрифт Roboto для кириллицы.

@@ -16,7 +16,7 @@ import {
 import {
   SORT_ASC,
   SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+} from '../../../../common/constants';
 
 /**
  * Сервис для управления мастерами в админке

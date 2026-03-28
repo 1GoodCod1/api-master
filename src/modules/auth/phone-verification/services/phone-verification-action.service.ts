@@ -10,9 +10,10 @@ import { PhoneVerificationValidationService } from './phone-verification-validat
 import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
-
-const CODE_LENGTH = 6;
-const CODE_TTL_MS = 10 * 60_000; // 10 minutes
+import {
+  PHONE_VERIFICATION_CODE_LENGTH,
+  PHONE_VERIFICATION_CODE_TTL_MS,
+} from '../../../../common/constants';
 
 /**
  * Сервис мутаций верификации телефона.
@@ -42,8 +43,8 @@ export class PhoneVerificationActionService {
   ): Promise<{ message: string; expiresAt: Date }> {
     const user = await this.validationService.assertCanSendCode(userId);
 
-    const code = this.encryption.generateCode(CODE_LENGTH);
-    const expiresAt = new Date(Date.now() + CODE_TTL_MS);
+    const code = this.encryption.generateCode(PHONE_VERIFICATION_CODE_LENGTH);
+    const expiresAt = new Date(Date.now() + PHONE_VERIFICATION_CODE_TTL_MS);
 
     await this.prisma.phoneVerification.create({
       data: {

@@ -5,8 +5,9 @@ import {
   type AnalyticsTimeframe,
 } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import { RedisService } from '../../shared/redis/redis.service';
+import type { GetLogsFilters } from '../types';
 
 /** Normalize Prisma groupBy `_count` to a number for API consumers / charts. */
 function countFromGroupBy(row: {
@@ -20,16 +21,6 @@ function countFromGroupBy(row: {
     if (typeof n === 'number') return n;
   }
   return 0;
-}
-
-export interface GetLogsFilters {
-  userId?: string;
-  action?: string;
-  entityType?: string;
-  startDate?: Date;
-  endDate?: Date;
-  page?: number;
-  limit?: number;
 }
 
 @Injectable()

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { REFERRAL_REWARD_DAYS, SORT_DESC } from '../../../common/constants';
 import {
   NotificationCategory,
   Prisma,
@@ -11,8 +11,6 @@ import {
 import { MastersService } from '../../marketplace/masters/masters.service';
 import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
-
-const REFERRAL_REWARD_DAYS = 7;
 
 @Injectable()
 export class ReferralsService {

@@ -8,10 +8,8 @@ import { UsersAvatarService } from './services/users-avatar.service';
 import { UsersGdprService } from './services/users-gdpr.service';
 import { type AppLocale } from '../../common/constants';
 import { UpdateUserDto } from './dto/update-user.dto';
-import {
-  buildPersonalDataPdf,
-  type PersonalDataPdfData,
-} from './services/personal-data-pdf.builder';
+import { buildPersonalDataPdf } from './services/personal-data-pdf.builder';
+import type { PersonalDataPdfData } from './types';
 
 /**
  * UsersService — координатор модуля пользователей.

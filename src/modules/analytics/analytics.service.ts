@@ -15,7 +15,7 @@ import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import {
   isPremiumTariff,
   isVipOrPremiumTariff,
-} from '../shared/constants/tariff.constants';
+} from '../../common/constants';
 import { AppErrors, AppErrorMessages } from '../../common/errors';
 
 @Injectable()

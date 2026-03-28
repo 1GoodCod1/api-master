@@ -8,7 +8,7 @@ import {
 import { Observable } from 'rxjs';
 import { PrismaService } from '../../modules/shared/database/prisma.service';
 import { RedisService } from '../../modules/shared/redis/redis.service';
-import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../decorators';
 import { UserRole } from '@prisma/client';
 
 /**

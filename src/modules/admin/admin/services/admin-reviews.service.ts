@@ -8,18 +8,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
+import type { AdminReviewsStats } from '../types';
 
-export type AdminReviewsStats = {
-  total: number;
-  pendingCount: number;
-  visibleCount: number;
-  hiddenCount: number;
-  reportedCount: number;
-};
+export type { AdminReviewsStats };
 
 /**
  * Сервис для управления отзывами в админке

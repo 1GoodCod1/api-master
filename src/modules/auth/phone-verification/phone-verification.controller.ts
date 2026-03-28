@@ -7,13 +7,14 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PhoneVerificationService } from './phone-verification.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards';
+import { GetUser } from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { VerifyCodeDto } from './dto/verify-code.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Phone Verification')
-@Controller('phone-verification')
+@Controller(CONTROLLER_PATH.phoneVerification)
 export class PhoneVerificationController {
   constructor(
     private readonly phoneVerificationService: PhoneVerificationService,

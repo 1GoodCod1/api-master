@@ -6,13 +6,7 @@ import type Redis from 'ioredis';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { VerificationDocumentsPurgeService } from '../../../verification/services/verification-documents-purge.service';
-
-interface QueueStats {
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-}
+import type { QueueStats } from '../../../shared/types/redis.types';
 
 @Injectable()
 export class TasksMaintenanceService {

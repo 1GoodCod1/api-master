@@ -1,12 +1,9 @@
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
 import type { ChatUser } from '../chat.types';
+import type { ConversationForAccessCheck } from '../types';
 
-export type ConversationForAccessCheck = {
-  masterId: string;
-  clientId: string | null;
-  master?: { userId: string };
-};
+export type { ConversationForAccessCheck };
 
 /**
  * Check if user has access to conversation. Throws ForbiddenException if not.

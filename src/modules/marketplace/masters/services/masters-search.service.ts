@@ -5,7 +5,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
   SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+} from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { SearchMastersDto } from '../dto/search-masters.dto';
 import { SuggestQueryDto } from '../dto/suggest-query.dto';

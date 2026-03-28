@@ -16,22 +16,26 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import {
+  Plans,
+  Roles,
+  Verified,
+  type RequestWithUser,
+} from '../../../common/decorators';
 import { PromotionsService } from './promotions.service';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { VerifiedGuard } from '../../../common/guards/verified.guard';
-import { PlansGuard } from '../../../common/guards/plans.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { Verified } from '../../../common/decorators/verified.decorator';
-import { Plans } from '../../../common/decorators/plans.decorator';
+import {
+  JwtAuthGuard,
+  PlansGuard,
+  RolesGuard,
+  VerifiedGuard,
+} from '../../../common/guards';
 import { UserRole } from '@prisma/client';
-import { TariffType } from '../../../common/constants';
+import { CONTROLLER_PATH, TariffType } from '../../../common/constants';
 
 @ApiTags('Promotions')
-@Controller('promotions')
+@Controller(CONTROLLER_PATH.promotions)
 export class PromotionsController {
   constructor(private readonly promotionsService: PromotionsService) {}
 

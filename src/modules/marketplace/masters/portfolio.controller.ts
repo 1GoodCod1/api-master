@@ -22,18 +22,14 @@ import {
   UpdatePortfolioItemDto,
   ReorderPortfolioDto,
 } from './dto/portfolio.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { PlansGuard } from '../../../common/guards/plans.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { Plans } from '../../../common/decorators/plans.decorator';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, PlansGuard, RolesGuard } from '../../../common/guards';
+import { GetUser, Plans, Roles } from '../../../common/decorators';
 import { UserRole } from '@prisma/client';
-import { TariffType } from '../../../common/constants';
+import { CONTROLLER_PATH, TariffType } from '../../../common/constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
 @ApiTags('Portfolio')
-@Controller('portfolio')
+@Controller(CONTROLLER_PATH.portfolio)
 export class PortfolioController {
   constructor(private readonly portfolioService: PortfolioService) {}
 

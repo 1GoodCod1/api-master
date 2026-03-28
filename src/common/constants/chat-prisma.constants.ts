@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 
-/** Shared Prisma include for message with files */
+/** Общий Prisma `include` для сообщения с файлами. */
 export const MESSAGE_INCLUDE_FILES = {
   files: {
     include: {
@@ -17,7 +17,7 @@ export const MESSAGE_INCLUDE_FILES = {
   },
 } as const satisfies Prisma.MessageInclude;
 
-/** Shared Prisma select for lead in conversation context */
+/** Базовый Prisma `select` для лида в контексте чата. */
 export const LEAD_SELECT_BASIC = {
   id: true,
   clientName: true,
@@ -26,7 +26,7 @@ export const LEAD_SELECT_BASIC = {
   status: true,
 } as const;
 
-/** Shared Prisma select for client in conversation context */
+/** Базовый Prisma `select` для клиента в контексте чата. */
 export const CLIENT_SELECT_BASIC = {
   id: true,
   email: true,

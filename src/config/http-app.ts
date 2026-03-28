@@ -1,11 +1,11 @@
 import { RequestMethod, type INestApplication } from '@nestjs/common';
 
-/** Public API base path (see `applyGlobalPrefix`). */
+/** Базовый путь публичного API (см. `applyGlobalPrefix`). */
 export const API_GLOBAL_PREFIX = 'api/v1';
 
 /**
- * Routes that must stay at the application root (probes, metrics, static, Swagger).
- * Paths are Nest route paths (no leading slash), except `'/'` for the root handler.
+ * Маршруты, которые остаются в корне приложения (пробы, метрики, статика, Swagger).
+ * Пути — пути Nest (без ведущего слеша), кроме `'/'` для корневого обработчика.
  */
 export const GLOBAL_PREFIX_EXCLUDE: Array<
   string | { path: string; method: RequestMethod }

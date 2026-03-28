@@ -9,15 +9,14 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { Roles, type RequestWithUser } from '../../../common/decorators';
 import { SecurityService } from './security.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Security')
-@Controller('security')
+@Controller(CONTROLLER_PATH.security)
 export class SecurityController {
   constructor(private readonly securityService: SecurityService) {}
 

@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { TariffType } from '../../../../common/constants';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 
 export class SearchMastersDto {
   @ApiProperty({ required: false })

@@ -9,27 +9,9 @@ import {
   addPageNumbers,
 } from './pdf-shared';
 import { ROPA_LABELS, type RopaLabels } from '../i18n/ropa-labels';
+import type { RopaContext, RopaEntry } from '../types';
 
-export interface RopaContext {
-  organizationName: string;
-  organizationAddress: string;
-  dpoName: string;
-  dpoEmail: string;
-  totalUsers: number;
-  totalMasters: number;
-}
-
-interface RopaEntry {
-  activity: string;
-  dataSubjects: string;
-  dataCategories: string;
-  purpose: string;
-  legalBasis: string;
-  recipients: string;
-  retention: string;
-  transfers: string;
-  technicalMeasures: string;
-}
+export type { RopaContext, RopaEntry };
 
 const PROCESSING_KEYS = [
   'registration',

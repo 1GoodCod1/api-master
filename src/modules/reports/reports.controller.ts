@@ -16,16 +16,15 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
+import { Roles, type RequestWithUser } from '../../common/decorators';
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { CONTROLLER_PATH } from '../../common/constants';
 
 @ApiTags('Reports')
-@Controller('reports')
+@Controller(CONTROLLER_PATH.reports)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

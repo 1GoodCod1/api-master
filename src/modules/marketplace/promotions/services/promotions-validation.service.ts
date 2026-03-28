@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
-
-type ServiceItem = { title?: string | null; priceType?: string | null };
+import type { PromotionServiceItem } from '../types';
 
 /**
  * Сервис валидации и проверки правил для акций.
@@ -20,7 +19,7 @@ export class PromotionsValidationService {
       where: { id: masterId },
       select: { services: true },
     });
-    const services = (master?.services as ServiceItem[] | null) ?? [];
+    const services = (master?.services as PromotionServiceItem[] | null) ?? [];
     return services
       .filter(
         (s) =>

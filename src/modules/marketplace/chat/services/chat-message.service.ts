@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { Prisma, SenderType, UserRole } from '@prisma/client';
 import type {
@@ -17,7 +17,7 @@ import { checkConversationAccess } from '../utils/chat-access.util';
 import { isOutOfHours } from '../utils/is-out-of-hours.util';
 import { ChatBroadcastService } from '../chat-broadcast.service';
 import { ChatLeadTransitionService } from './chat-lead-transition.service';
-import { MESSAGE_INCLUDE_FILES } from '../constants/chat-prisma.constants';
+import { MESSAGE_INCLUDE_FILES } from '../../../../common/constants';
 
 @Injectable()
 export class ChatMessageService {

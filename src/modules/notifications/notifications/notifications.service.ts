@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Job } from 'bull';
 import { NotificationsQueryService } from './services/notifications-query.service';
-import {
-  NotificationsActionService,
+import { NotificationsActionService } from './services/notifications-action.service';
+import { NotificationsSenderService } from './services/notifications-sender.service';
+import type {
+  LeadNotificationData,
+  PaymentConfirmationData,
   SaveNotificationParams,
-} from './services/notifications-action.service';
-import {
-  NotificationsSenderService,
-  type LeadNotificationData,
-  type PaymentConfirmationData,
-} from './services/notifications-sender.service';
+} from '../types';
 import {
   SMSJobData,
   TelegramJobData,

@@ -7,27 +7,13 @@ import { randomUUID } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
 import { buildAnalyticsPdf } from '../analytics-pdf-builder';
+import type { AnalyticsPdfData } from '../types';
 
-export interface AnalyticsPdfData {
-  masterName: string;
-  categoryName: string;
-  cityName: string;
-  rating: number | null;
-  totalReviews: number;
-  totalLeads: number;
-  leadsStats: Array<{ status: string; _count: number }>;
-  reviewsStats: Array<{ status: string; _count: number }>;
-  bookingsStats: Array<{ status: string; _count: number }>;
-  analytics: Array<{
-    date: Date;
-    leadsCount: number;
-    viewsCount: number;
-  }>;
-}
+export type { AnalyticsPdfData };
 
 @Injectable()
 export class ExportAnalyticsService {

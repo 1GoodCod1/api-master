@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import {
   buildCursorQuery,

@@ -2,16 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as webpush from 'web-push';
 import { PrismaService } from '../../shared/database/prisma.service';
-
-export interface PushPayload {
-  title: string;
-  body: string;
-  icon?: string;
-  badge?: string;
-  url?: string;
-  tag?: string;
-  data?: Record<string, unknown>;
-}
+import type { PushPayload } from '../types';
 
 @Injectable()
 export class WebPushService {

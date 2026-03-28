@@ -1,12 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Master, User } from '@prisma/client';
 import { NotificationStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-
-interface MasterWithUser extends Master {
-  user: Pick<User, 'id' | 'email' | 'phone'>;
-}
 import { RedisService } from '../../../shared/redis/redis.service';
+import type { MasterWithUser } from '../types';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { EmailDripService } from '../../../email/email-drip.service';
 

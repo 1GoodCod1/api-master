@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { User, PhoneVerification } from '@prisma/client';
-
-const RATE_LIMIT_MS = 60_000; // 1 minute
-const MAX_ATTEMPTS = 3;
+import {
+  PHONE_VERIFICATION_MAX_ATTEMPTS,
+  PHONE_VERIFICATION_RATE_LIMIT_MS,
+} from '../../../../common/constants';
 
 /**
  * Сервис валидации верификации телефона.
@@ -34,7 +35,7 @@ export class PhoneVerificationValidationService {
       where: {
         userId,
         createdAt: {
-          gte: new Date(Date.now() - RATE_LIMIT_MS),
+          gte: new Date(Date.now() - PHONE_VERIFICATION_RATE_LIMIT_MS),
         },
       },
     });
@@ -83,7 +84,7 @@ export class PhoneVerificationValidationService {
       throw AppErrors.badRequest(AppErrorMessages.PHONE_CODE_EXPIRED);
     }
 
-    if (verification.attempts >= MAX_ATTEMPTS) {
+    if (verification.attempts >= PHONE_VERIFICATION_MAX_ATTEMPTS) {
       throw AppErrors.badRequest(AppErrorMessages.PHONE_TOO_MANY_ATTEMPTS);
     }
 

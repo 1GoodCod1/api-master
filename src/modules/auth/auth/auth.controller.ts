@@ -24,17 +24,16 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { GetUser, Roles } from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { Throttle } from '@nestjs/throttler';
 import { extractRequestContext } from '../../shared/utils/request-context.util';
 import { AUTH_LOGIN_INVALID_CREDENTIALS } from './auth-login.messages';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Authentication')
-@Controller('auth')
+@Controller(CONTROLLER_PATH.auth)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,

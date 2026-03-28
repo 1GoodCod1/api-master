@@ -7,18 +7,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
+import type { AdminLeadsStats } from '../types';
 
-export type AdminLeadsStats = {
-  total: number;
-  newCount: number;
-  inProgressCount: number;
-  closedCount: number;
-  premiumCount: number;
-};
+export type { AdminLeadsStats };
 
 /**
  * Сервис для управления лидами в админке

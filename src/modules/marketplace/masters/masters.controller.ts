@@ -1,5 +1,6 @@
 import { UserRole } from '@prisma/client';
 import {
+  CONTROLLER_PATH,
   VIEWS_HISTORY_PERIOD,
   VIEWS_HISTORY_PERIODS,
   type ViewsHistoryPeriod,
@@ -38,16 +39,20 @@ import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
 import { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
 import { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
 import { ClaimFreePlanDto } from './dto/claim-free-plan.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import {
+  JwtAuthGuard,
+  OptionalJwtAuthGuard,
+  RolesGuard,
+} from '../../../common/guards';
+import {
+  GetUser,
+  Roles,
+  type RequestWithOptionalUser,
+} from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
-import type { RequestWithOptionalUser } from '../../../common/decorators/get-user.decorator';
 
 @ApiTags('Masters')
-@Controller('masters')
+@Controller(CONTROLLER_PATH.masters)
 export class MastersController {
   constructor(
     private readonly mastersService: MastersService,

@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../errors';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
-import { getCorsOrigins } from '../../config/cors.config';
+import { getCorsOrigins } from '../../config';
 
 /**
  * When the browser sends the httpOnly refresh cookie, require `Origin` or `Referer`

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityEvent } from '../../engagement/recommendations/events/activity.events';
 

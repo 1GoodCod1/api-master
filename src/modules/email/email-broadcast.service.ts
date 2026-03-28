@@ -6,25 +6,9 @@ import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import type { TemplateContext } from './templates';
 import { UserRole } from '@prisma/client';
+import type { BroadcastResult, BroadcastSegment, UserRecipient } from './types';
 
-type UserRecipient = {
-  id: string;
-  email: string;
-  firstName: string | null;
-  preferredLanguage: string | null;
-};
-
-export type BroadcastSegment =
-  | 'all_masters'
-  | 'new_masters'
-  | 'all_clients'
-  | 'digest_subscribers';
-
-export interface BroadcastResult {
-  total: number;
-  sent: number;
-  failed: number;
-}
+export type { BroadcastResult, BroadcastSegment, UserRecipient };
 
 const userSelect = {
   id: true,

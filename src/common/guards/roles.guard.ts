@@ -2,7 +2,7 @@ import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { AppErrors, AppErrorMessages, AppErrorTemplates } from '../errors';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
-import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../decorators';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

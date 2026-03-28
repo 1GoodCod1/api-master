@@ -11,11 +11,12 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TerminusModule } from '@nestjs/terminus';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import configuration from './config/configuration';
-import { createBullOptions } from './config/bull.config';
-import { ActivityTrackerInterceptor } from './common/interceptors/activity-tracker.interceptor';
-import { AuditInterceptor } from './common/interceptors/audit.interceptor';
-import { CookieOriginGuard } from './common/guards/cookie-origin.guard';
+import configuration, { createBullOptions } from './config';
+import {
+  ActivityTrackerInterceptor,
+  AuditInterceptor,
+} from './common/interceptors';
+import { CookieOriginGuard } from './common/guards';
 
 // Общие модули
 import { PrismaModule } from './modules/shared/database/prisma.module';

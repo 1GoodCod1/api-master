@@ -22,15 +22,17 @@ import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
 import { SubscribeToAvailabilityDto } from './dto/subscribe-to-availability.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import {
+  GetUser,
+  Roles,
+  type RequestWithUser,
+} from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Leads')
-@Controller('leads')
+@Controller(CONTROLLER_PATH.leads)
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 

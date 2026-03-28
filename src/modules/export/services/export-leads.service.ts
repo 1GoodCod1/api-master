@@ -3,10 +3,10 @@ import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { Response } from 'express';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { ExportAccessService } from './export-access.service';
-import { LEADS_EXPORT_COLUMNS } from '../constants/export.constants';
+import { LEADS_EXPORT_COLUMNS } from '../../../common/constants';
 import { csvEscape } from '../utils/csv-escape.util';
 
 type LeadWithClient = Awaited<

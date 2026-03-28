@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { AuditEntityType } from './audit-entity-type.enum';
 import { AuditLogWriterService } from './services/audit-log-writer.service';
 import { AuditLogQueryService } from './services/audit-log-query.service';
 import type { AuditCleanupDto } from './dto/audit-cleanup.dto';
@@ -13,17 +11,9 @@ import {
   ANALYTICS_TIMEFRAMES,
   type AnalyticsTimeframe,
 } from '../../common/constants';
+import type { AuditLogData } from './types';
 
-export interface AuditLogData {
-  userId?: string | null;
-  action: string;
-  entityType?: AuditEntityType;
-  entityId?: string;
-  oldData?: Prisma.InputJsonValue;
-  newData?: Prisma.InputJsonValue;
-  ipAddress?: string;
-  userAgent?: string;
-}
+export type { AuditLogData } from './types';
 
 @Injectable()
 export class AuditService {

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_ASC } from '../../shared/constants/sort-order.constants';
+import { SORT_ASC } from '../../../common/constants';
 import { EncryptionService } from '../../shared/utils/encryption.service';
 
 @Injectable()

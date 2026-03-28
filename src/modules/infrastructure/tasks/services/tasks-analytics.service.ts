@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';

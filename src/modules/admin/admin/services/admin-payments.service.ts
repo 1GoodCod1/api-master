@@ -6,15 +6,10 @@ import {
   decodeCreatedAtIdCursor,
   nextCursorFromLastCreatedAtId,
 } from '../../../shared/pagination/createdAtIdCursor';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
+import type { AdminPaymentsStats } from '../types';
 
-export type AdminPaymentsStats = {
-  total: number;
-  pendingCount: number;
-  paidCount: number;
-  failedCount: number;
-  totalRevenue: number;
-};
+export type { AdminPaymentsStats };
 
 /**
  * Сервис для управления платежами в админке

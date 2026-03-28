@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { parseAppLocale } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import { EmailService } from '../../email/email.service';
 import { EmailTemplateService } from '../../email/email-template.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';

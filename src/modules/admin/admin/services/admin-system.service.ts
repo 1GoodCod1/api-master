@@ -6,41 +6,8 @@ import { RedisService } from '../../../shared/redis/redis.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
-
-export interface SystemStats {
-  database: {
-    totalUsers: number;
-    totalMasters: number;
-    totalLeads: number;
-    totalReviews: number;
-    totalPayments: number;
-  };
-  system: {
-    memory: {
-      total: string;
-      used: string;
-      free: string;
-      usage: string;
-    };
-    cpu: {
-      load: number[];
-      cores: number;
-    };
-    uptime: string;
-    platform: string;
-  };
-  redis: {
-    connectedClients: number;
-    usedMemory: string;
-    totalCommands: number;
-  };
-  daily: {
-    newUsers: number;
-    newLeads: number;
-    newReviews: number;
-  };
-}
+import { SORT_ASC } from '../../../../common/constants';
+import type { SystemStats } from '../types';
 
 /**
  * Сервис для системных операций: бэкапы и мониторинг

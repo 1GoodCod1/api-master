@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from './config/winston.config';
+import { winstonConfig } from './config';
 import { WorkerModule } from './worker.module';
 
 /**

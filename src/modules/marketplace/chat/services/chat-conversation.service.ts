@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { Prisma, SenderType, UserRole } from '@prisma/client';
 import type { ChatUser } from '../chat.types';
 import { CreateConversationDto } from '../dto';
@@ -10,7 +10,7 @@ import { checkConversationAccess } from '../utils/chat-access.util';
 import {
   LEAD_SELECT_BASIC,
   CLIENT_SELECT_BASIC,
-} from '../constants/chat-prisma.constants';
+} from '../../../../common/constants';
 
 @Injectable()
 export class ChatConversationService {

@@ -1,13 +1,12 @@
 import { Controller, Post, Body, Logger, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import {
-  TelegramConnectService,
-  type TelegramWebhookBody,
-} from './services/telegram-connect.service';
-import { TelegramWebhookSecretGuard } from '../../../common/guards/telegram-webhook-secret.guard';
+import { TelegramConnectService } from './services/telegram-connect.service';
+import type { TelegramWebhookBody } from '../types';
+import { TelegramWebhookSecretGuard } from '../../../common/guards';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Webhook')
-@Controller('webhook/telegram')
+@Controller(CONTROLLER_PATH.telegramWebhook)
 @UseGuards(TelegramWebhookSecretGuard)
 export class TelegramWebhookController {
   private readonly logger = new Logger(TelegramWebhookController.name);

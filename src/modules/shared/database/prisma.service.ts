@@ -4,8 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { Pool, PoolClient } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
-
-const STATEMENT_TIMEOUT_MS = 60_000;
+import { PRISMA_STATEMENT_TIMEOUT_MS } from '../../../common/constants';
 
 // function withStatementTimeoutInConnectionString(
 //   connectionString: string,
@@ -13,7 +12,7 @@ const STATEMENT_TIMEOUT_MS = 60_000;
 //   try {
 //     const url = new URL(connectionString);
 //     const existing = url.searchParams.get('options')?.trim();
-//     const flag = `-c statement_timeout=${STATEMENT_TIMEOUT_MS}`;
+//     const flag = `-c statement_timeout=${PRISMA_STATEMENT_TIMEOUT_MS}`;
 //     if (existing?.includes('statement_timeout')) {
 //       return connectionString;
 //     }
@@ -44,7 +43,7 @@ function attachKeepAliveToPool(pool: Pool): void {
     // Ограничение длительности запроса — длинные запросы не должны исчерпать пул
     if (typeof client.query === 'function') {
       void client
-        .query(`SET statement_timeout = '${STATEMENT_TIMEOUT_MS}'`)
+        .query(`SET statement_timeout = '${PRISMA_STATEMENT_TIMEOUT_MS}'`)
         .catch(() => {});
     }
   });

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { LeadNotifyChannel } from '../../../../common/constants';
-import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
+import { isVipOrPremiumTariff } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateNotificationSettingsDto } from '../dto/update-notification-settings.dto';
 

@@ -20,13 +20,12 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { CreateConversationDto, SendMessageDto } from './dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles, type RequestWithUser } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Chat')
-@Controller('conversations')
+@Controller(CONTROLLER_PATH.conversations)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ChatController {

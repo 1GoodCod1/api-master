@@ -20,13 +20,12 @@ import {
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles, type RequestWithUser } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Bookings')
-@Controller('bookings')
+@Controller(CONTROLLER_PATH.bookings)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 

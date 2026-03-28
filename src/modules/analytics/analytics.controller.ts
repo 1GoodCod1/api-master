@@ -6,17 +6,13 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Plans } from '../../common/decorators/plans.decorator';
-import { PlansGuard } from '../../common/guards/plans.guard';
+import { JwtAuthGuard, PlansGuard, RolesGuard } from '../../common/guards';
+import { Plans, Roles, type RequestWithUser } from '../../common/decorators';
 import { UserRole } from '@prisma/client';
-import { TariffType } from '../../common/constants';
-import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
+import { CONTROLLER_PATH, TariffType } from '../../common/constants';
 
 @ApiTags('Analytics')
-@Controller('analytics')
+@Controller(CONTROLLER_PATH.analytics)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

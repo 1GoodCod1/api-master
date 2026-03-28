@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { RequestWithOptionalUser } from '../../../../common/decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../../../../common/decorators';
 import { ActivityEvent } from '../../../engagement/recommendations/events/activity.events';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';

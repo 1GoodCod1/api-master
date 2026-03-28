@@ -1,19 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorTemplates } from '../../../../common/errors';
-import { Prisma } from '@prisma/client';
+import { Prisma, type City } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
-import { City } from '@prisma/client';
+import type { CityWithMastersCount } from '../types';
 
-export type CityWithMastersCount = City & {
-  _count: { masters: number };
-};
+export type { CityWithMastersCount };
 
 @Injectable()
 export class CitiesQueryService {

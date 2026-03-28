@@ -1,3 +1,4 @@
+/** Заголовки колонок CSV экспорта лидов. */
 export const LEADS_EXPORT_COLUMNS = [
   '№',
   'Lead ID',

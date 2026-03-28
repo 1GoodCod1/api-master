@@ -7,11 +7,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TariffType } from '../../../../common/constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import type { UpdateAvailabilityStatusDto } from '../dto/update-availability-status.dto';
+import type { InvalidateMasterCacheFn } from '../types';
 
-export type InvalidateMasterCacheFn = (
-  masterId: string,
-  slug?: string | null,
-) => Promise<void>;
+export type { InvalidateMasterCacheFn };
 
 /**
  * Централизованный сервис для управления доступностью мастеров и счётчиками лидов.

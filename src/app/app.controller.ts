@@ -1,11 +1,12 @@
 import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
+import { CONTROLLER_PATH } from '../common/constants';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AppService } from './app.service';
 import { AppSettingsService } from '../modules/app-settings/app-settings.service';
 
 @ApiTags('App')
-@Controller()
+@Controller(CONTROLLER_PATH.root)
 export class AppController {
   constructor(
     private readonly appService: AppService,

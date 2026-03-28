@@ -1,14 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC } from '../../../../common/constants';
+import type { TemplateOverrideRow } from '../types';
 
-export type TemplateOverrideRow = {
-  templateId: string;
-  lang: string;
-  subject: string | null;
-  bodyHtml: string | null;
-};
+export type { TemplateOverrideRow };
 
 type Delegate = Prisma.EmailTemplateOverrideDelegate;
 

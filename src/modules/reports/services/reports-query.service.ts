@@ -1,18 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, ReportStatus } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../shared/constants/sort-order.constants';
+import { SORT_ASC, SORT_DESC } from '../../../common/constants';
+import type { AdminReportsStats } from '../types';
 
-export type AdminReportsStats = {
-  total: number;
-  pendingCount: number;
-  reviewedCount: number;
-  resolvedCount: number;
-  rejectedCount: number;
-};
+export type { AdminReportsStats };
 
 @Injectable()
 export class ReportsQueryService {

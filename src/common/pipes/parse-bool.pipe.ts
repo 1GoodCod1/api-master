@@ -1,6 +1,7 @@
 import { PipeTransform, Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../errors';
 
+/** Парсит строку query/param в boolean: `true`/`1` → true, `false`/`0` → false. */
 @Injectable()
 export class ParseBoolPipe implements PipeTransform<string, boolean> {
   transform(value: string): boolean {

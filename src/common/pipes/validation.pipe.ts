@@ -4,6 +4,10 @@ import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import type { ClassConstructor } from 'class-transformer';
 
+/**
+ * Валидация DTO через class-validator (class-transformer + validate).
+ * Глобальный пайп в приложении — встроенный `ValidationPipe` из `@nestjs/common` в `main.ts`.
+ */
 @Injectable()
 export class ValidationPipe implements PipeTransform {
   async transform(

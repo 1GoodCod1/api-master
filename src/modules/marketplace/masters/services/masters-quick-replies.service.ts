@@ -1,14 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC } from '../../../../common/constants';
 import type { UpdateQuickRepliesDto } from '../dto/update-quick-replies.dto';
 import type { UpdateAutoresponderSettingsDto } from '../dto/update-autoresponder-settings.dto';
+import type { InvalidateMasterCacheFn } from '../types';
 
-export type InvalidateMasterCacheFn = (
-  masterId: string,
-  slug?: string | null,
-) => Promise<void>;
+export type { InvalidateMasterCacheFn };
 
 @Injectable()
 export class MastersQuickRepliesService {

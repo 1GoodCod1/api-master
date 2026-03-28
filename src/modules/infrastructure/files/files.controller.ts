@@ -18,16 +18,19 @@ import {
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
-import { RequireAuthWhenNotForLeadGuard } from '../../../common/guards/require-auth-when-not-for-lead.guard';
+import {
+  JwtAuthGuard,
+  OptionalJwtAuthGuard,
+  RequireAuthWhenNotForLeadGuard,
+} from '../../../common/guards';
 import type {
   RequestWithOptionalUser,
   RequestWithUser,
-} from '../../../common/decorators/get-user.decorator';
+} from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Files')
-@Controller('files')
+@Controller(CONTROLLER_PATH.files)
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 

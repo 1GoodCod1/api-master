@@ -1,13 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ConfigService } from '@nestjs/config';
-
-interface RecaptchaVerifyResponse {
-  success: boolean;
-  score?: number;
-  action?: string;
-  'error-codes'?: string[];
-}
+import type { RecaptchaVerifyResponse } from '../types';
 
 @Injectable()
 export class RecaptchaService {

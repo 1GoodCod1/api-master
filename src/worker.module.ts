@@ -3,8 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
-import configuration from './config/configuration';
-import { createBullOptions } from './config/bull.config';
+import configuration, { createBullOptions } from './config';
 
 // Общая инфраструктура
 import { PrismaModule } from './modules/shared/database/prisma.module';

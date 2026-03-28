@@ -1,7 +1,5 @@
-import {
-  SUBSCRIPTION_TARIFF_TYPES,
-  TariffType,
-} from '../../../common/constants';
+import { TariffType } from '@prisma/client';
+import { SUBSCRIPTION_TARIFF_TYPES } from './subscription-tariff.constants';
 
 /** VIP или PREMIUM — платные тарифы с датой окончания подписки. */
 export function isVipOrPremiumTariff(

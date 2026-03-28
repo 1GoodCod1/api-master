@@ -10,29 +10,11 @@ import {
   TelegramJobData,
 } from '../../../shared/types/notification.types';
 import { NotificationsActionService } from './notifications-action.service';
-
-interface SMSProviderConfig {
-  enabled: boolean;
-  provider: 'twilio' | 'http' | 'log';
-  httpProvider?: {
-    url?: string;
-    apiKey?: string;
-    apiId?: string;
-  };
-}
-
-export interface LeadNotificationData {
-  message?: string;
-  clientName?: string;
-  clientPhone?: string;
-  leadId?: string;
-  isPremium?: boolean;
-}
-
-export interface PaymentConfirmationData {
-  tariffType: string;
-  amount: number | string;
-}
+import type {
+  LeadNotificationData,
+  PaymentConfirmationData,
+  SMSProviderConfig,
+} from '../../types';
 
 @Injectable()
 export class NotificationsSenderService {

@@ -9,7 +9,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import {
   SORT_ASC,
   SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+} from '../../../../common/constants';
 
 @Injectable()
 export class MastersPhotosService {

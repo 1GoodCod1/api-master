@@ -4,32 +4,10 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { WebsocketService } from '../../../infrastructure/websocket/websocket.service';
 import { WebPushService } from '../../web-push/web-push.service';
 import { NotificationCategory, SenderType, UserRole } from '@prisma/client';
-
-/**
- * Параметры для создания in-app уведомления
- */
-export interface CreateInAppNotificationParams {
-  userId: string;
-  category: NotificationCategory;
-  title: string;
-  message: string;
-  messageKey?: string;
-  messageParams?: Record<string, string | number>;
-  metadata?: Record<string, any>;
-  priority?: 'low' | 'normal' | 'high';
-}
-
-/**
- * Параметры для отправки уведомления админам
- */
-export interface CreateAdminNotificationParams {
-  category: NotificationCategory;
-  title: string;
-  message: string;
-  messageKey?: string;
-  messageParams?: Record<string, string | number>;
-  metadata?: Record<string, any>;
-}
+import type {
+  CreateAdminNotificationParams,
+  CreateInAppNotificationParams,
+} from '../../types';
 
 /**
  * InAppNotificationService — единый сервис для создания и доставки in-app уведомлений.

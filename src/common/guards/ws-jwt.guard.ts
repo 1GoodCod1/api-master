@@ -3,11 +3,7 @@ import { AppErrors, AppErrorMessages } from '../errors';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
-
-interface JwtPayload {
-  sub: string;
-  role?: string;
-}
+import type { WsJwtGuardPayload } from '../../modules/infrastructure/websocket/types';
 
 @Injectable()
 export class WsJwtGuard implements CanActivate {
@@ -25,9 +21,12 @@ export class WsJwtGuard implements CanActivate {
         throw AppErrors.ws(AppErrorMessages.WS_UNAUTHORIZED);
       }
 
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: this.configService.get('jwt.accessSecret'),
-      });
+      const payload = await this.jwtService.verifyAsync<WsJwtGuardPayload>(
+        token,
+        {
+          secret: this.configService.get('jwt.accessSecret'),
+        },
+      );
 
       const data = client.data as { userId?: string; userRole?: string };
       data.userId = payload.sub;

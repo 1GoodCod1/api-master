@@ -19,12 +19,12 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Categories')
-@Controller('categories')
+@Controller(CONTROLLER_PATH.categories)
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 

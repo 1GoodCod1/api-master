@@ -1,11 +1,12 @@
 import { Controller, Post, Get, Delete, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards';
+import type { RequestWithUser } from '../../../common/decorators';
 import { DigestService } from './digest.service';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Digest')
-@Controller('digest')
+@Controller(CONTROLLER_PATH.digest)
 export class DigestController {
   constructor(private readonly digestService: DigestService) {}
 

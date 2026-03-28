@@ -1,9 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../errors';
 import { Reflector } from '@nestjs/core';
-import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import { VERIFIED_KEY, type RequestWithOptionalUser } from '../decorators';
 import { UserRole } from '@prisma/client';
-import { VERIFIED_KEY } from '../decorators/verified.decorator';
 
 @Injectable()
 export class VerifiedGuard implements CanActivate {

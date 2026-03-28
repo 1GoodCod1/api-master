@@ -9,13 +9,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards';
+import type { RequestWithUser } from '../../../common/decorators';
 import { ReferralsService } from './referrals.service';
 import { ApplyReferralCodeDto } from './dto/apply-referral-code.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Referrals')
-@Controller('referrals')
+@Controller(CONTROLLER_PATH.referrals)
 export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
 

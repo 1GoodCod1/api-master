@@ -9,18 +9,12 @@ import { ReviewsActionService } from './services/reviews-action.service';
 import { ReviewsQueryService } from './services/reviews-query.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewStatus, UserRole } from '@prisma/client';
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
-
-export interface FindReviewsOptions {
-  status?: string;
-  statusIn?: ReviewStatus[];
-  limit?: string;
-  cursor?: string;
-  page?: string;
-  sortOrder?: 'asc' | 'desc';
-}
+import {
+  REVIEWS_LIST_DEFAULT_LIMIT,
+  REVIEWS_LIST_MAX_LIMIT,
+} from '../../../common/constants';
+import type { FindReviewsOptions } from './types';
+export type { FindReviewsOptions } from './types';
 
 /**
  * ReviewsService — координатор модуля отзывов.
@@ -168,9 +162,9 @@ export class ReviewsService {
   // ============================================
 
   private parseLimit(limit?: string): number {
-    if (!limit) return DEFAULT_LIMIT;
-    const num = Number(limit) || DEFAULT_LIMIT;
-    return Math.min(MAX_LIMIT, Math.max(1, num));
+    if (!limit) return REVIEWS_LIST_DEFAULT_LIMIT;
+    const num = Number(limit) || REVIEWS_LIST_DEFAULT_LIMIT;
+    return Math.min(REVIEWS_LIST_MAX_LIMIT, Math.max(1, num));
   }
 
   private parsePage(page?: string): number | undefined {

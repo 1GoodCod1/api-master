@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
 import { TariffType } from '../constants';
 import type { Request } from 'express';
-import { PLANS_KEY } from '../decorators/plans.decorator';
+import { PLANS_KEY } from '../decorators';
 
 interface RequestUserWithProfile {
   role?: string;

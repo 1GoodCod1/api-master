@@ -14,11 +14,12 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FavoritesService } from './favorites.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards';
+import type { RequestWithUser } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Favorites')
-@Controller('favorites')
+@Controller(CONTROLLER_PATH.favorites)
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class FavoritesController {

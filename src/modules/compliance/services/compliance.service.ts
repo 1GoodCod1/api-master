@@ -4,8 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { buildDpiaPdf, type DpiaContext } from './dpia-pdf.builder';
-import { buildRopaPdf, type RopaContext } from './ropa-pdf.builder';
+import { buildDpiaPdf } from './dpia-pdf.builder';
+import { buildRopaPdf } from './ropa-pdf.builder';
+import type { DpiaContext, RopaContext } from '../types';
 
 type PdfBuilder<T> = (
   doc: InstanceType<typeof PDFDocument>,

@@ -14,14 +14,14 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { GetUser } from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import type { NotificationCategory, NotificationType } from '@prisma/client';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Notifications')
-@Controller('notifications')
+@Controller(CONTROLLER_PATH.notifications)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class NotificationsController {

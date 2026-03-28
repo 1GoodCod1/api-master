@@ -9,8 +9,7 @@ import {
   validateLeadImageMagic,
   unlinkIfExists,
 } from '../../../shared/utils/file-magic';
-
-const MAX_FILES_PER_BATCH = 10;
+import { FILES_MAX_FILES_PER_BATCH } from '../../../../common/constants';
 
 /**
  * Сервис валидации файлов.
@@ -48,7 +47,7 @@ export class FilesValidationService {
    * Проверить, что массив файлов не превышает лимит.
    */
   assertMaxFiles(files: Express.Multer.File[]): void {
-    if (files.length > MAX_FILES_PER_BATCH) {
+    if (files.length > FILES_MAX_FILES_PER_BATCH) {
       throw AppErrors.badRequest(AppErrorMessages.FILES_MAX_10);
     }
   }

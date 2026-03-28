@@ -1,17 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { NotificationType, NotificationStatus } from '@prisma/client';
-
-export interface SaveNotificationParams {
-  type: NotificationType;
-  recipient: string;
-  message: string;
-  status: NotificationStatus;
-  metadata?: Record<string, any>;
-  title?: string;
-  userId?: string;
-}
+import { NotificationStatus } from '@prisma/client';
+import type { SaveNotificationParams } from '../../types';
 
 @Injectable()
 export class NotificationsActionService {

@@ -9,14 +9,15 @@ import {
 } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards';
+import type { RequestWithUser } from '../../../common/decorators';
 import { WebPushService } from './web-push.service';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
 import { UnsubscribePushDto } from './dto/unsubscribe-push.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Web Push')
-@Controller('web-push')
+@Controller(CONTROLLER_PATH.webPush)
 export class WebPushController {
   constructor(private readonly webPushService: WebPushService) {}
 

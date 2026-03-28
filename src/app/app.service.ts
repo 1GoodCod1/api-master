@@ -2,24 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../modules/shared/database/prisma.service';
 import { RedisService } from '../modules/shared/redis/redis.service';
-
-interface ServiceStatus {
-  name: string;
-  status: 'up' | 'down' | 'degraded';
-  responseTime?: number;
-  message?: string;
-}
-
-interface AppStatus {
-  success: boolean;
-  code: number;
-  message: string;
-  timestamp: string;
-  version: string;
-  environment: string;
-  uptime: number;
-  services: ServiceStatus[];
-}
+import type { AppStatus, ServiceStatus } from './types';
 
 @Injectable()
 export class AppService {

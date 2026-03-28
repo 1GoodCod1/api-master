@@ -10,7 +10,7 @@ import { TokenService } from './services/token.service';
 import { RegistrationService } from './services/registration.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { LoginService } from './services/login.service';
-import { USER_PROFILE_SELECT } from './constants/profile-select.constant';
+import { USER_PROFILE_SELECT } from '../../../common/constants';
 
 @Injectable()
 export class AuthService {

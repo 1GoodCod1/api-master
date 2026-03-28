@@ -13,12 +13,12 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { CacheWarmingService } from './cache-warming.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Cache Warming')
-@Controller('cache-warming')
+@Controller(CONTROLLER_PATH.cacheWarming)
 export class CacheWarmingController {
   constructor(private readonly cacheWarmingService: CacheWarmingService) {}
 

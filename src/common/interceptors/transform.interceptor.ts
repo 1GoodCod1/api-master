@@ -7,7 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import type { Request } from 'express';
-import { getRequestId } from '../request-context/request-context.storage';
+import { getRequestId } from '../request-context';
 
 export interface Response<T> {
   success: boolean;

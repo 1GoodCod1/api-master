@@ -2,28 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
+import {
+  isVipOrPremiumTariff,
+  TELEGRAM_CONNECT_START_PREFIX,
+  TELEGRAM_CONNECT_TOKEN_TTL_MINUTES,
+} from '../../../../common/constants';
 import { randomBytes } from 'crypto';
 import axios from 'axios';
-
-const TOKEN_TTL_MINUTES = 15;
-const CONNECT_PREFIX = 'connect_';
-
-export interface TelegramConnectLink {
-  link: string;
-  expiresAt: string;
-}
-
-export interface TelegramWebhookBody {
-  update_id?: number;
-  message?: {
-    message_id?: number;
-    from?: { id: number; username?: string; first_name?: string };
-    chat?: { id: number; type?: string };
-    text?: string;
-    date?: number;
-  };
-}
+import type { TelegramConnectLink, TelegramWebhookBody } from '../../types';
 
 @Injectable()
 export class TelegramConnectService {
@@ -57,13 +43,15 @@ export class TelegramConnectService {
     }
 
     const token = randomBytes(16).toString('hex');
-    const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000);
+    const expiresAt = new Date(
+      Date.now() + TELEGRAM_CONNECT_TOKEN_TTL_MINUTES * 60 * 1000,
+    );
 
     await this.prisma.telegramConnectToken.create({
       data: { token, masterId: master.id, expiresAt },
     });
 
-    const link = `https://t.me/${botUsername.replace('@', '')}?start=${CONNECT_PREFIX}${token}`;
+    const link = `https://t.me/${botUsername.replace('@', '')}?start=${TELEGRAM_CONNECT_START_PREFIX}${token}`;
 
     return {
       link,
@@ -82,7 +70,7 @@ export class TelegramConnectService {
     const text = message.text.trim();
     const chatId = String(message.chat.id);
 
-    if (!text.startsWith(`/start ${CONNECT_PREFIX}`)) {
+    if (!text.startsWith(`/start ${TELEGRAM_CONNECT_START_PREFIX}`)) {
       void this.sendTelegramReply(
         chatId,
         'Привет! Нажмите «Подключить Telegram» в настройках уведомлений на сайте, затем перейдите по полученной ссылке.',
@@ -90,7 +78,9 @@ export class TelegramConnectService {
       return;
     }
 
-    const tokenValue = text.slice(`/start ${CONNECT_PREFIX}`.length).trim();
+    const tokenValue = text
+      .slice(`/start ${TELEGRAM_CONNECT_START_PREFIX}`.length)
+      .trim();
     if (!tokenValue) return;
 
     const record = await this.prisma.telegramConnectToken.findUnique({

@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { SendMessageOutcome } from './chat.types';
+import {
+  CHAT_BROADCAST_EVENT,
+  type ChatBroadcastPayload,
+  type SendMessageOutcome,
+} from './chat.types';
 
-export const CHAT_BROADCAST_EVENT = 'chat.broadcast';
-
-export interface ChatBroadcastPayload {
-  conversationId: string;
-  outcome: SendMessageOutcome;
-}
+export type { ChatBroadcastPayload };
+export { CHAT_BROADCAST_EVENT };
 
 /**
  * Отвечает за рассылку сообщений в реальном времени (WebSocket) и уведомления.

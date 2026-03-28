@@ -6,7 +6,7 @@ import {
 } from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
 import { TariffType } from '../../../../common/constants';

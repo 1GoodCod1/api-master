@@ -7,7 +7,7 @@ import { TelegramProcessor } from './processor/telegram.processor';
 import { NotificationsController } from './notifications.controller';
 import { TelegramWebhookController } from './telegram-webhook.controller';
 import { TelegramConnectService } from './services/telegram-connect.service';
-import { TelegramWebhookSecretGuard } from '../../../common/guards/telegram-webhook-secret.guard';
+import { TelegramWebhookSecretGuard } from '../../../common/guards';
 import { PrismaModule } from '../../shared/database/prisma.module';
 import { RedisModule } from '../../shared/redis/redis.module';
 import { NotificationsQueryService } from './services/notifications-query.service';

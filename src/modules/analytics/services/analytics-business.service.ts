@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SORT_DESC } from '../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../common/constants';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
   BusinessAnalyticsResponse,

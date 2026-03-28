@@ -12,13 +12,13 @@ import {
 import { Logger, UseGuards } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { WsException } from '@nestjs/websockets';
-import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
+import { WsJwtGuard } from '../../../common/guards';
 import { WebsocketService } from './websocket.service';
 import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { sanitizeMasterId } from './utils/websocket-sanitizer.util';
-import type { SocketData } from './services/websocket-connection.service';
+import type { SocketData } from './types';
 import { WsTypingDto } from './dto/typing.dto';
 import { getCorsOrigins } from '../../../config';
 import { UserRole } from '@prisma/client';

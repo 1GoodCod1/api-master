@@ -6,32 +6,16 @@ import {
   SUBSCRIPTION_TARIFF_TYPES,
   TariffType,
 } from '../../../../common/constants';
-import { isVipOrPremiumTariff } from '../../../shared/constants/tariff.constants';
+import { isVipOrPremiumTariff } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
+import type { GetTariffResult, InvalidateMasterCacheFn } from '../types';
 
-export type InvalidateMasterCacheFn = (
-  masterId: string,
-  slug?: string | null,
-) => Promise<void>;
-
-export type GetTariffResult = {
-  tariffType: TariffType;
-  tariffExpiresAt: Date | null;
-  tariffCancelAtPeriodEnd: boolean;
-  isExpired: boolean;
-  pendingUpgrade: {
-    to: TariffType;
-    createdAt: Date;
-    expiresAt: Date;
-    hoursRemaining: number;
-  } | null;
-  lastPayment: Payment | null;
-};
+export type { GetTariffResult, InvalidateMasterCacheFn };
 
 @Injectable()
 export class MastersTariffService {

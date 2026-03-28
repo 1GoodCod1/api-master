@@ -8,20 +8,11 @@ import type { UpdateMasterDto } from '../dto/update-master.dto';
 import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import {
-  SORT_ASC,
-  SORT_DESC,
-} from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { sanitizePublicMaster } from '../../../../common/helpers/plans';
 import { resolvePublicMasterAvatarPath } from '../../../../common/helpers/master-public-avatar';
-
-interface CachedMaster {
-  id: string;
-  categoryId: string | null;
-  cityId: string | null;
-  [key: string]: unknown;
-}
+import type { CachedMaster } from '../types';
 
 @Injectable()
 export class MastersProfileService {

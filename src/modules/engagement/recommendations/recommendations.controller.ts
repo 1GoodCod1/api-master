@@ -9,13 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import type { RequestWithOptionalUser } from '../../../common/decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../../../common/decorators';
 import { RecommendationsService } from './recommendations.service';
-import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../../common/guards';
 import { TrackActivityDto } from './dto/track-activity.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Recommendations')
-@Controller('recommendations')
+@Controller(CONTROLLER_PATH.recommendations)
 export class RecommendationsController {
   constructor(
     private readonly recommendationsService: RecommendationsService,

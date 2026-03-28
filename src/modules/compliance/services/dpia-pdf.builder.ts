@@ -15,24 +15,9 @@ import {
   addPageNumbers,
 } from './pdf-shared';
 import { DPIA_LABELS, type DpiaLabels } from '../i18n/dpia-labels';
+import type { DpiaContext } from '../types';
 
-export interface DpiaContext {
-  organizationName: string;
-  dpoName: string;
-  dpoEmail: string;
-  totalUsers: number;
-  totalMasters: number;
-  totalLeads: number;
-  totalBookings: number;
-  totalReviews: number;
-  verifiedDocumentsCount: number;
-  consentsCount: number;
-  encryptionEnabled: boolean;
-  backupEnabled: boolean;
-  auditLogEnabled: boolean;
-  rateLimitEnabled: boolean;
-  twoFactorAvailable: boolean;
-}
+export type { DpiaContext };
 
 export function buildDpiaPdf(
   doc: Doc,

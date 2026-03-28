@@ -14,11 +14,7 @@ import { UserRole } from '@prisma/client';
 import { ACTIVE_LEAD_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
-interface MasterLeadsFields {
-  id: string;
-  leadsResetAt: Date | null;
-  leadsReceivedToday: number;
-}
+import type { MasterLeadsFields } from '../types';
 
 @Injectable()
 export class LeadsValidationService {

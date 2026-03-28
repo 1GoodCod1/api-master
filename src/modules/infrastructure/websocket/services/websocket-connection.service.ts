@@ -5,15 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import type { SocketData, WebsocketJwtPayload } from '../types';
 
-interface JwtPayload {
-  sub: string;
-  role: UserRole;
-}
-
-export interface SocketData {
-  userId?: string;
-}
+export type { SocketData };
 
 @Injectable()
 export class WebsocketConnectionService implements OnModuleDestroy {
@@ -40,7 +34,7 @@ export class WebsocketConnectionService implements OnModuleDestroy {
         return null;
       }
 
-      const payload = this.jwtService.verify<JwtPayload>(token, {
+      const payload = this.jwtService.verify<WebsocketJwtPayload>(token, {
         secret: this.configService.get<string>('jwt.accessSecret'),
       });
 

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TariffType } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_ASC } from '../../../shared/constants/sort-order.constants';
+import { SORT_ASC } from '../../../../common/constants';
 
 /**
  * Специализированный сервис для построения сложных SQL-запросов поиска мастеров.

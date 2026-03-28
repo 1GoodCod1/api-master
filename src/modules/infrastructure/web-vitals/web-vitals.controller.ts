@@ -8,8 +8,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { WebVitalDto } from './web-vitals.dto';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
-@Controller('web-vitals')
+@Controller(CONTROLLER_PATH.webVitals)
 export class WebVitalsController {
   private readonly logger = new Logger(WebVitalsController.name);
 

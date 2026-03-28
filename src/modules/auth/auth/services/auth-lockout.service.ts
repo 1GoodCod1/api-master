@@ -1,11 +1,11 @@
 import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorTemplates } from '../../../../common/errors';
+import {
+  AUTH_LOCKOUT_THRESHOLD,
+  AUTH_LOCKOUT_TTL_SEC,
+  AUTH_LOCKOUT_WINDOW_TTL_SEC,
+} from '../../../../common/constants';
 import { RedisService } from '../../../shared/redis/redis.service';
-
-/** Account lockout after 5 failed attempts for 15 minutes */
-const LOCKOUT_THRESHOLD = 5;
-const LOCKOUT_TTL_SEC = 15 * 60; // 15 minutes
-const WINDOW_TTL_SEC = 15 * 60; // окно для подсчёта неудачных попыток
 
 @Injectable()
 export class AuthLockoutService {
@@ -33,10 +33,12 @@ export class AuthLockoutService {
       const emailKey = this.keyEmail(email);
       const raw = await this.redis.getClient().get(emailKey);
       const count = raw !== null ? parseInt(raw, 10) || 0 : 0;
-      if (count >= LOCKOUT_THRESHOLD) {
+      if (count >= AUTH_LOCKOUT_THRESHOLD) {
         this.logger.warn(`Login locked for email (${count} failed attempts)`);
         throw AppErrors.forbidden(
-          AppErrorTemplates.authLockoutEmail(Math.ceil(LOCKOUT_TTL_SEC / 60)),
+          AppErrorTemplates.authLockoutEmail(
+            Math.ceil(AUTH_LOCKOUT_TTL_SEC / 60),
+          ),
         );
       }
 
@@ -44,10 +46,12 @@ export class AuthLockoutService {
         const ipKey = this.keyIp(ipAddress);
         const ipRaw = await this.redis.getClient().get(ipKey);
         const ipCount = ipRaw !== null ? parseInt(ipRaw, 10) || 0 : 0;
-        if (ipCount >= LOCKOUT_THRESHOLD * 2) {
+        if (ipCount >= AUTH_LOCKOUT_THRESHOLD * 2) {
           this.logger.warn(`Login locked for IP (${ipCount} failed attempts)`);
           throw AppErrors.forbidden(
-            AppErrorTemplates.authLockoutIp(Math.ceil(LOCKOUT_TTL_SEC / 60)),
+            AppErrorTemplates.authLockoutIp(
+              Math.ceil(AUTH_LOCKOUT_TTL_SEC / 60),
+            ),
           );
         }
       }
@@ -76,10 +80,10 @@ export class AuthLockoutService {
         const emailKey = this.keyEmail(email);
         const count = await client.incr(emailKey);
         if (count === 1) {
-          await this.redis.expire(emailKey, WINDOW_TTL_SEC);
+          await this.redis.expire(emailKey, AUTH_LOCKOUT_WINDOW_TTL_SEC);
         }
         this.logger.debug(
-          `Failed login attempt ${count}/${LOCKOUT_THRESHOLD} for ${email}`,
+          `Failed login attempt ${count}/${AUTH_LOCKOUT_THRESHOLD} for ${email}`,
         );
       }
 
@@ -87,7 +91,7 @@ export class AuthLockoutService {
         const ipKey = this.keyIp(ipAddress);
         const ipCount = await client.incr(ipKey);
         if (ipCount === 1) {
-          await this.redis.expire(ipKey, WINDOW_TTL_SEC);
+          await this.redis.expire(ipKey, AUTH_LOCKOUT_WINDOW_TTL_SEC);
         }
       }
     } catch (err) {

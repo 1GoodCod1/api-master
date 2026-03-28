@@ -23,29 +23,22 @@ import {
 import {
   ANALYTICS_TIMEFRAME,
   ANALYTICS_TIMEFRAMES,
+  CONTROLLER_PATH,
   type AnalyticsTimeframe,
 } from '../../../common/constants';
 import { AdminService } from './admin.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { SystemStats } from './services/admin-system.service';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles, type RequestWithUser } from '../../../common/decorators';
+import type { SystemStats } from './types';
 import { AdminUpdateUserDto } from './dto/update-user.dto';
 import { AdminUpdateMasterDto } from './dto/update-master.dto';
 import { BroadcastEmailDto } from './dto/broadcast-email.dto';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
 import { AuditService } from '../../audit/audit.service';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { ConsentService } from '../../consent/services/consent.service';
 import { Prisma, UserRole } from '@prisma/client';
-
-/** Query string booleans: only "true"/"false" apply a filter; missing or "" → no filter */
-function parseOptionalQueryBool(v: string | undefined): boolean | undefined {
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  return undefined;
-}
+import { OptionalQueryBoolPipe } from '../../../common/pipes';
 
 function adminUpdateUserDtoToAuditJson(
   dto: AdminUpdateUserDto,
@@ -67,7 +60,7 @@ function adminUpdateMasterDtoToAuditJson(
 }
 
 @ApiTags('Admin')
-@Controller('admin')
+@Controller(CONTROLLER_PATH.admin)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @ApiBearerAuth()
@@ -93,13 +86,13 @@ export class AdminController {
   @ApiQuery({ name: 'banned', required: false, type: Boolean })
   async getUsersStats(
     @Query('role') role?: string,
-    @Query('verified') verified?: string,
-    @Query('banned') banned?: string,
+    @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
+    @Query('banned', OptionalQueryBoolPipe) banned?: boolean,
   ) {
     return this.adminService.getUsersStats({
       role,
-      verified: parseOptionalQueryBool(verified),
-      banned: parseOptionalQueryBool(banned),
+      verified,
+      banned,
     });
   }
 
@@ -113,16 +106,16 @@ export class AdminController {
   @ApiQuery({ name: 'cursor', required: false, type: String })
   async getUsers(
     @Query('role') role?: string,
-    @Query('verified') verified?: string,
-    @Query('banned') banned?: string,
+    @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
+    @Query('banned', OptionalQueryBoolPipe) banned?: boolean,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('cursor') cursor?: string,
   ) {
     return this.adminService.getUsers({
       role,
-      verified: parseOptionalQueryBool(verified),
-      banned: parseOptionalQueryBool(banned),
+      verified,
+      banned,
       page: Number(page),
       limit: Number(limit),
       cursor,
@@ -177,13 +170,13 @@ export class AdminController {
   @ApiQuery({ name: 'featured', required: false, type: Boolean })
   @ApiQuery({ name: 'tariff', required: false })
   async getMastersStats(
-    @Query('verified') verified?: string,
-    @Query('featured') featured?: string,
+    @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
+    @Query('featured', OptionalQueryBoolPipe) featured?: boolean,
     @Query('tariff') tariff?: string,
   ) {
     return this.adminService.getMastersStats({
-      verified: parseOptionalQueryBool(verified),
-      featured: parseOptionalQueryBool(featured),
+      verified,
+      featured,
       tariff,
     });
   }
@@ -197,16 +190,16 @@ export class AdminController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'cursor', required: false, type: String })
   async getMasters(
-    @Query('verified') verified?: string,
-    @Query('featured') featured?: string,
+    @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
+    @Query('featured', OptionalQueryBoolPipe) featured?: boolean,
     @Query('tariff') tariff?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('cursor') cursor?: string,
   ) {
     return this.adminService.getMasters({
-      verified: parseOptionalQueryBool(verified),
-      featured: parseOptionalQueryBool(featured),
+      verified,
+      featured,
       tariff,
       page: Number(page),
       limit: Number(limit),

@@ -6,14 +6,15 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { GetUser } from '../../common/decorators/get-user.decorator';
+import { GetUser } from '../../common/decorators';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards';
 import { ConsentService } from './services/consent.service';
 import { GrantConsentDto } from './dto/grant-consent.dto';
+import { CONTROLLER_PATH } from '../../common/constants';
 
 @ApiTags('Consent')
-@Controller('consent')
+@Controller(CONTROLLER_PATH.consent)
 export class ConsentController {
   constructor(private readonly consentService: ConsentService) {}
 

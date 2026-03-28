@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../errors';
 import { Request } from 'express';
-import type { RequestWithOptionalUser } from '../decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../decorators';
 
 /**
  * Use AFTER OptionalJwtAuthGuard.

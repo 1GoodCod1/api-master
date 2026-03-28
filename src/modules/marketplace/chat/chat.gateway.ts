@@ -13,18 +13,16 @@ import { Logger, UseGuards, OnModuleDestroy } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
+import { WsJwtGuard } from '../../../common/guards';
 import { ChatService } from './chat.service';
 import {
   CHAT_BROADCAST_EVENT,
   type ChatBroadcastPayload,
-} from './chat-broadcast.service';
-import { SendMessageWsDto, ChatTypingDto } from './dto';
-import type {
-  JwtPayload,
-  OutgoingChatMessage,
-  SocketAuthData,
+  type JwtPayload,
+  type OutgoingChatMessage,
+  type SocketAuthData,
 } from './chat.types';
+import { SendMessageWsDto, ChatTypingDto } from './dto';
 import { getChatUserFromSocket } from './utils/chat-gateway.utils';
 import { ChatGatewayNotificationService } from './services/chat-gateway-notification.service';
 import { getCorsOrigins } from '../../../config';

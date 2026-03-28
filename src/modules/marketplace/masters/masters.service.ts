@@ -3,7 +3,7 @@ import type {
   SubscriptionTariffType,
   ViewsHistoryPeriod,
 } from '../../../common/constants';
-import type { RequestWithOptionalUser } from '../../../common/decorators/get-user.decorator';
+import type { RequestWithOptionalUser } from '../../../common/decorators';
 import { decodeId, encodeId } from '../../shared/utils/id-encoder';
 import { SearchMastersDto } from './dto/search-masters.dto';
 import { SuggestQueryDto } from './dto/suggest-query.dto';
@@ -24,12 +24,7 @@ import { MastersScheduleService } from './services/masters-schedule.service';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersStatsService } from './services/masters-stats.service';
 import { MastersTariffService } from './services/masters-tariff.service';
-
-/** Тип callback для инвалидации кеша при обновлении мастера */
-type InvalidateCacheFn = (
-  masterId: string,
-  slug?: string | null,
-) => Promise<void>;
+import type { InvalidateMasterCacheFn } from './types';
 
 /**
  * Центральный координатор мастеров. Делегирует вызовы специализированным сервисам.
@@ -59,7 +54,7 @@ export class MastersService {
   ) {}
 
   /** Callback для инвалидации кеша — используется методами, обновляющими данные мастера */
-  private get onInvalidate(): InvalidateCacheFn {
+  private get onInvalidate(): InvalidateMasterCacheFn {
     return (masterId, slug) => this.invalidateMasterCache(masterId, slug);
   }
 

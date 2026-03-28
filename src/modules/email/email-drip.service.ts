@@ -5,6 +5,7 @@ import { PrismaService } from '../shared/database/prisma.service';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import type { TemplateContext } from './templates';
+import type { ChainStep } from './types';
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return v != null && typeof v === 'object' && !Array.isArray(v);
@@ -25,14 +26,6 @@ function toTemplateContext(metadata: Record<string, unknown>): TemplateContext {
     }
   }
   return ctx;
-}
-
-/**
- * Drip chain definitions: [step] → { template, delayMs }
- */
-interface ChainStep {
-  template: string;
-  delayMs: number; // задержка от старта цепочки, мс
 }
 
 const CHAINS: Record<string, ChainStep[]> = {

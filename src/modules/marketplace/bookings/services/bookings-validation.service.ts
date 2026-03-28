@@ -9,14 +9,9 @@ import { UserRole } from '@prisma/client';
 import { ACTIVE_BOOKING_STATUSES } from '../../../../common/constants';
 import { FINAL_LEAD_STATUSES } from '../../../../common/constants';
 import { CreateBookingDto } from '../dto/create-booking.dto';
-import type { BookingsAuthUser } from '../types/bookings-auth-user.types';
+import type { BookingsAuthUser, ResolvedClientData } from '../types';
 
-export type ResolvedClientData = {
-  resolvedPhone: string;
-  resolvedName: string | undefined;
-  resolvedClientId: string | null;
-  resolvedLeadId: string | null;
-};
+export type { ResolvedClientData };
 
 @Injectable()
 export class BookingsValidationService {

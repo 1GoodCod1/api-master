@@ -9,19 +9,21 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
-import { winstonConfig } from './config/winston.config';
 import {
-  getCorsOrigins,
-  validateProductionSecrets,
-  getHelmetConfig,
+  applyGlobalPrefix,
   createShutdownHandler,
+  getCorsOrigins,
+  getHelmetConfig,
+  validateProductionSecrets,
+  winstonConfig,
 } from './config';
-import { applyGlobalPrefix } from './config/http-app';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
-import { CacheControlInterceptor } from './common/interceptors/cache-control.interceptor';
-import { requestIdMiddleware } from './common/request-context/request-id.middleware';
+import {
+  CacheControlInterceptor,
+  TimeoutInterceptor,
+  TransformInterceptor,
+} from './common/interceptors';
+import { requestIdMiddleware } from './common/request-context';
 
 const isShuttingDownRef = { current: false };
 

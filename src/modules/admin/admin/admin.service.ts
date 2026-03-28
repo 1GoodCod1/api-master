@@ -1,32 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AdminUsersService } from './services/admin-users.service';
 import { AdminMastersService } from './services/admin-masters.service';
-import {
-  AdminLeadsService,
-  type AdminLeadsStats,
-} from './services/admin-leads.service';
-import {
-  AdminReviewsService,
-  type AdminReviewsStats,
-} from './services/admin-reviews.service';
-import {
-  AdminPaymentsService,
-  type AdminPaymentsStats,
-} from './services/admin-payments.service';
+import { AdminLeadsService } from './services/admin-leads.service';
+import { AdminReviewsService } from './services/admin-reviews.service';
+import { AdminPaymentsService } from './services/admin-payments.service';
+import type {
+  AdminLeadsStats,
+  AdminReviewsStats,
+  AdminPaymentsStats,
+} from './types';
 import { AdminAuditService } from './services/admin-audit.service';
 import { AdminAnalyticsService } from './services/admin-analytics.service';
-import {
-  AdminSystemService,
-  SystemStats,
-} from './services/admin-system.service';
+import { AdminSystemService } from './services/admin-system.service';
+import type { SystemStats } from './types';
 import { TasksActivityService } from '../../infrastructure/tasks/services/tasks-activity.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
-import {
-  EmailBroadcastService,
-  type BroadcastResult,
-  type BroadcastSegment,
-} from '../../email/email-broadcast.service';
+import { EmailBroadcastService } from '../../email/email-broadcast.service';
+import type { BroadcastResult, BroadcastSegment } from '../../email/types';
 import { EmailTemplateService } from '../../email/email-template.service';
 import { DigestService } from '../../notifications/digest/digest.service';
 import { PrismaService } from '../../shared/database/prisma.service';

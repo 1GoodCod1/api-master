@@ -17,26 +17,14 @@ import type {
   ExportJobData,
   ExportJobResult,
 } from '../shared/types/export.types';
+import type {
+  ExportJobStatus,
+  ExportJobStatusDto,
+  EnqueueResultDto,
+} from './types';
 
 export type { ExportJobType };
-
-export type ExportJobStatus = 'queued' | 'processing' | 'done' | 'error';
-
-export interface ExportJobStatusDto {
-  jobId: string;
-  status: ExportJobStatus;
-  error: string | null;
-  queuedAt: Date;
-  startedAt: Date | null;
-  completedAt: Date | null;
-  filename: string | null;
-}
-
-export interface EnqueueResultDto {
-  jobId: string;
-  status: ExportJobStatus;
-  message: string;
-}
+export type { ExportJobStatus, ExportJobStatusDto, EnqueueResultDto };
 
 const VALID_EXPORT_TYPES: ExportJobType[] = ['csv', 'excel', 'pdf'];
 

@@ -1,4 +1,4 @@
-import { API_GLOBAL_PREFIX } from '../../config/http-app';
+import { API_GLOBAL_PREFIX } from '../../config';
 
 const PREFIX_PATH = `/${API_GLOBAL_PREFIX}`;
 

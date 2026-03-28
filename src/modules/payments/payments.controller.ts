@@ -15,14 +15,13 @@ import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { GetUser } from '../../common/decorators/get-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { GetUser, Roles } from '../../common/decorators';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
+import { CONTROLLER_PATH } from '../../common/constants';
 
 @ApiTags('Payments')
-@Controller('payments')
+@Controller(CONTROLLER_PATH.payments)
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 

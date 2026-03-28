@@ -1,20 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { RedisService } from '../../shared/redis/redis.service';
 import { SECURITY_ACTION_SET } from '../audit-action.enum';
-import { AuditEntityType } from '../audit-entity-type.enum';
-
-export interface AuditLogData {
-  userId?: string | null;
-  action: string;
-  entityType?: AuditEntityType;
-  entityId?: string;
-  oldData?: Prisma.InputJsonValue;
-  newData?: Prisma.InputJsonValue;
-  ipAddress?: string;
-  userAgent?: string;
-}
+import type { AuditLogData } from '../types';
 
 @Injectable()
 export class AuditLogWriterService {

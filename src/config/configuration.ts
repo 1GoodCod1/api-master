@@ -97,7 +97,7 @@ export default () => ({
       'whatsapp:+14155238886',
   },
 
-  /** Backblaze B2 (S3-compatible). Production storage when B2_APPLICATION_KEY_ID is set. */
+  /** Backblaze B2 (совместим с S3). Продакшн-хранилище, если задан B2_APPLICATION_KEY_ID. */
   b2: {
     applicationKeyId: process.env.B2_APPLICATION_KEY_ID || '',
     applicationKey: process.env.B2_APPLICATION_KEY || '',
@@ -145,8 +145,8 @@ export default () => ({
     ttl: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10),
     limit: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     /**
-     * Shared throttler state across API replicas (Redis).
-     * Default: production = on, development = in-memory unless RATE_LIMIT_REDIS_STORAGE=true.
+     * Общее состояние throttler между репликами API (Redis).
+     * По умолчанию: production = вкл., development = в памяти, если не RATE_LIMIT_REDIS_STORAGE=true.
      */
     useRedisStorage:
       process.env.RATE_LIMIT_REDIS_STORAGE === 'true'
@@ -157,8 +157,8 @@ export default () => ({
   },
 
   /**
-   * When httpOnly refresh cookie is present, require Origin/Referer to match CORS (CSRF mitigation).
-   * Default: enabled in production only. Dev: set COOKIE_ORIGIN_CHECK=true to enforce.
+   * При наличии httpOnly cookie обновления требовать совпадение Origin/Referer с CORS (смягчение CSRF).
+   * По умолчанию: только в production. Dev: COOKIE_ORIGIN_CHECK=true для принудительной проверки.
    */
   security: {
     cookieOriginCheckEnabled:
@@ -167,7 +167,7 @@ export default () => ({
         : process.env.COOKIE_ORIGIN_CHECK === 'true',
   },
 
-  /** Persist full HTTP request/response audit (off by default — high volume & PII risk). */
+  /** Полный аудит HTTP запрос/ответ (по умолчанию выкл. — большой объём и риск PII). */
   audit: {
     httpEnabled: process.env.AUDIT_HTTP_ENABLED === 'true',
   },

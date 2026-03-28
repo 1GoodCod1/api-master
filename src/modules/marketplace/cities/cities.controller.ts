@@ -19,12 +19,12 @@ import {
 import { CitiesService } from './cities.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
+import { Roles } from '../../../common/decorators';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Cities')
-@Controller('cities')
+@Controller(CONTROLLER_PATH.cities)
 export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
 

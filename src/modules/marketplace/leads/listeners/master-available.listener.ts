@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { LeadsActionsService } from '../services/leads-actions.service';
+import type { MasterAvailablePayload } from '../types';
 
-export interface MasterAvailablePayload {
-  masterId: string;
-}
+export type { MasterAvailablePayload };
 
 /**
  * Слушатель события «мастер снова доступен».

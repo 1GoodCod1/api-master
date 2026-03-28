@@ -6,16 +6,15 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ANALYTICS_TIMEFRAMES } from '../../common/constants';
+import { ANALYTICS_TIMEFRAMES, CONTROLLER_PATH } from '../../common/constants';
 import { AuditService } from './audit.service';
 import { AuditCleanupDto } from './dto/audit-cleanup.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { Roles } from '../../common/decorators';
 import { UseGuards } from '@nestjs/common';
 
 @ApiTags('Audit')
-@Controller('audit')
+@Controller(CONTROLLER_PATH.audit)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @ApiBearerAuth()

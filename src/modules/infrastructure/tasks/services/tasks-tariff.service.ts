@@ -5,7 +5,7 @@ import {
   TariffType,
 } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { NotificationsService } from '../../../notifications/notifications/notifications.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 

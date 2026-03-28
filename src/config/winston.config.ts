@@ -1,7 +1,7 @@
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
-import { requestContext } from '../common/request-context/request-context.storage';
+import { requestContext } from '../common/request-context';
 
 const PII_PATTERNS: Array<{ regex: RegExp; replacement: string }> = [
   { regex: /\b[\w.-]+@[\w.-]+\.\w{2,}\b/g, replacement: '***@***.***' },

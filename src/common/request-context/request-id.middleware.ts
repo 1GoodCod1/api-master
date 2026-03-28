@@ -4,7 +4,7 @@ import { requestContext } from './request-context.storage';
 
 const HEADER = 'x-request-id';
 
-/** Safe subset for inbound correlation ids (W3C trace context allows similar) */
+/** Безопасное подмножество для входящих correlation id (в духе W3C trace context). */
 const INCOMING_ID = /^[a-zA-Z0-9._-]{1,128}$/;
 
 function sanitizeIncomingId(raw: unknown): string | undefined {
@@ -19,8 +19,8 @@ function sanitizeIncomingId(raw: unknown): string | undefined {
 }
 
 /**
- * Sets `req.requestId`, `X-Request-Id` response header, and AsyncLocalStorage
- * for Winston and downstream code.
+ * Задаёт `req.requestId`, заголовок ответа `X-Request-Id` и AsyncLocalStorage
+ * для Winston и остального кода по цепочке запроса.
  */
 export const requestIdMiddleware: RequestHandler = (req, res, next) => {
   const incoming = sanitizeIncomingId(req.headers[HEADER]);

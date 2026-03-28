@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import { getRequestId } from '../request-context/request-context.storage';
+import { getRequestId } from '../request-context';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {

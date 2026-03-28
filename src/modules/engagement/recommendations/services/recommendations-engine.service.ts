@@ -1,27 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import {
+  RECOMMENDATIONS_RAW_SCORE_POOL,
+  RECOMMENDATIONS_VIEW_DECAY_BASE,
+  SORT_DESC,
+} from '../../../../common/constants';
 import {
   isMasterPresentationReady,
   pickDiverseMasters,
-  type MasterWithRecommendationMeta,
 } from './recommendations-presentation.util';
-
-interface RecommendationScore {
-  masterId: string;
-  score: number;
-  reasons: string[];
-}
-
-/** Сырые скоры для кэша и последующей сборки ответа. */
-export interface RawRecommendationScore {
-  masterId: string;
-  score: number;
-  reasons: string[];
-}
-
-const RAW_SCORE_POOL = 200;
-const VIEW_DECAY_BASE = 0.92;
+import type {
+  MasterWithRecommendationMeta,
+  RawRecommendationScore,
+  RecommendationScore,
+} from '../types';
 
 @Injectable()
 export class RecommendationsEngineService {
@@ -37,7 +29,7 @@ export class RecommendationsEngineService {
     maxCandidates?: number,
     explicitCityId?: string,
   ): Promise<RawRecommendationScore[]> {
-    const pool = maxCandidates ?? RAW_SCORE_POOL;
+    const pool = maxCandidates ?? RECOMMENDATIONS_RAW_SCORE_POOL;
     const scores: Map<string, RecommendationScore> = new Map();
     const resolvedExplicit = await this.resolveExplicitCityId(explicitCityId);
 
@@ -246,7 +238,7 @@ export class RecommendationsEngineService {
     const categoryWeights = new Map<string, number>();
     const cityWeights = new Map<string, number>();
     for (let i = 0; i < views.length; i++) {
-      const decay = Math.pow(VIEW_DECAY_BASE, i);
+      const decay = Math.pow(RECOMMENDATIONS_VIEW_DECAY_BASE, i);
       const vm = vmById.get(views[i].masterId as string);
       if (!vm) continue;
       categoryWeights.set(

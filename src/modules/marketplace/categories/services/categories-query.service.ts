@@ -1,20 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorTemplates } from '../../../../common/errors';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Category } from '@prisma/client';
 import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
-import { Category } from '@prisma/client';
 import {
   buildCursorQuery,
   buildPaginatedResponse,
 } from '../../../shared/pagination/cursor-pagination';
+import type { CategoryWithMastersCount } from '../types';
 
-export type CategoryWithMastersCount = Category & {
-  _count: { masters: number };
-};
+export type { CategoryWithMastersCount };
 
 @Injectable()
 export class CategoriesQueryService {

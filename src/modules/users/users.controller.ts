@@ -14,21 +14,20 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import type { RequestWithUser } from '../../common/decorators/get-user.decorator';
+import { Roles, type RequestWithUser } from '../../common/decorators';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SetUserAvatarDto } from './dto/set-avatar.dto';
 import { PreferredLanguageDto } from './dto/preferred-language.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { CONTROLLER_PATH } from '../../common/constants';
 
 /**
  * Static paths (`me`, `stats/...`) MUST be declared before `:id` routes.
  * Otherwise `DELETE /users/me` matches `DELETE :id` with id=me and requires ADMIN.
  */
 @ApiTags('Users')
-@Controller('users')
+@Controller(CONTROLLER_PATH.users)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

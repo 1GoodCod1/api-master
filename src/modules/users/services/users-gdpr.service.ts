@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
+import { GDPR_PAGE_SIZE } from '../../../common/constants';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
@@ -21,9 +22,7 @@ import type {
   PersonalDataPdfLoginEntry,
   PersonalDataPdfNotification,
   PersonalDataPdfConsent,
-} from './personal-data-pdf.builder';
-
-const GDPR_PAGE_SIZE = 500;
+} from '../types';
 
 @Injectable()
 export class UsersGdprService {

@@ -17,18 +17,17 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import type { RequestWithUser } from '../../../common/decorators/get-user.decorator';
+import { Roles, type RequestWithUser } from '../../../common/decorators';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewStatusDto } from './dto/update-review-status.dto';
 import { CreateReviewReplyDto } from './dto/create-review-reply.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { Roles } from '../../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { ReviewStatus, UserRole } from '@prisma/client';
+import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Reviews')
-@Controller('reviews')
+@Controller(CONTROLLER_PATH.reviews)
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 

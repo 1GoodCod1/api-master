@@ -1,20 +1,6 @@
-import type {
-  Master,
-  Category,
-  City,
-  User,
-  MasterPhoto,
-  File,
-} from '@prisma/client';
+import type { MasterWithRecommendationMeta } from '../types';
 
-export type MasterWithRecommendationMeta = Master & {
-  category: Category;
-  city: City;
-  user: Pick<User, 'id' | 'isVerified'>;
-  photos: (MasterPhoto & { file: File })[];
-  recommendationScore?: number;
-  reasons?: string[];
-};
+export type { MasterWithRecommendationMeta };
 
 const dedupeReasons = (reasons: string[]): string[] => [...new Set(reasons)];
 

@@ -1,10 +1,10 @@
 import type { ConfigService } from '@nestjs/config';
 
-/** Minimum length for JWT secrets (HS256 requires at least 32 bytes) */
+/** Минимальная длина секретов JWT (HS256 требует не менее 32 байт) */
 const MIN_JWT_SECRET_LENGTH = 32;
 
 /**
- * Validates required production secrets. Exits process if any are missing or weak.
+ * Проверяет обязательные секреты для production. Завершает процесс, если что-то отсутствует или слабо.
  */
 export function validateProductionSecrets(config: ConfigService): void {
   if (config.get<string>('nodeEnv', 'development') !== 'production') return;

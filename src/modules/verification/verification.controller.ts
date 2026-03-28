@@ -15,17 +15,16 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { GetUser } from '../../common/decorators/get-user.decorator';
+import { GetUser, Roles } from '../../common/decorators';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { VerificationService } from './verification.service';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
 import { ReviewVerificationDto } from './dto/review-verification.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { CONTROLLER_PATH } from '../../common/constants';
 
 @ApiTags('Verification')
-@Controller('verification')
+@Controller(CONTROLLER_PATH.verification)
 export class VerificationController {
   constructor(private readonly verificationService: VerificationService) {}
 

@@ -1,6 +1,6 @@
 /**
- * CORS origins and CSP imgSrc for app bootstrap.
- * Dev: allows localhost. Prod: requires FRONTEND_URL.
+ * Источники CORS и CSP imgSrc при старте приложения.
+ * Dev: разрешён localhost. Prod: обязателен FRONTEND_URL.
  */
 export function getCorsOrigins(): string | string[] {
   const isProd = process.env.NODE_ENV === 'production';
@@ -19,15 +19,15 @@ export function getCorsOrigins(): string | string[] {
   }
   const list = [
     process.env.FRONTEND_URL,
-    'http://localhost:3000', // vite dev
-    'http://localhost:4173', // vite preview
+    'http://localhost:3000',
+    'http://localhost:4173',
   ].filter(Boolean) as string[];
   return list.length
     ? list
     : ['http://localhost:3000', 'http://localhost:4173'];
 }
 
-/** CSP imgSrc: only self, data, blob, and allowed app origins (no blanket https:). */
+/** CSP imgSrc: только self, data, blob и разрешённые origins приложения (без общего https:). */
 export function getCspImgSrc(): string[] {
   const base = ["'self'", 'data:', 'blob:'];
   const isProd = process.env.NODE_ENV === 'production';

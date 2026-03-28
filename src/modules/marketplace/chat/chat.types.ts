@@ -41,6 +41,13 @@ export type SendMessageOutcome = {
   autoReply?: OutgoingChatMessage;
 };
 
+export interface ChatBroadcastPayload {
+  conversationId: string;
+  outcome: SendMessageOutcome;
+}
+
+export const CHAT_BROADCAST_EVENT = 'chat.broadcast';
+
 /** Shape of client.data set by WsJwtGuard */
 export interface SocketAuthData {
   userId?: string;

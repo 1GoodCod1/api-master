@@ -5,24 +5,17 @@ import {
   AppErrorTemplates,
 } from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
-import { TariffType } from '../../../../common/constants';
+import {
+  FILES_CLIENT_PHOTO_LIMIT,
+  TariffType,
+} from '../../../../common/constants';
 import { extname } from 'path';
 import { unlinkIfExists } from '../../../shared/utils/file-magic';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../shared/constants/sort-order.constants';
+import { SORT_DESC } from '../../../../common/constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import { FilesValidationService } from './files-validation.service';
-
-const CLIENT_PHOTO_LIMIT = 10;
-
-type UploadedDto = {
-  id: string;
-  path: string;
-  url: string;
-  filename: string;
-  size: number;
-  mimetype: string;
-};
+import type { UploadedFileDto } from '../types';
 
 /**
  * Сервис мутаций файлов.
@@ -39,7 +32,7 @@ export class FilesActionService {
     file: Express.Multer.File,
     userId?: string,
     options?: { skipClientGallery?: boolean; leadAttachmentOnly?: boolean },
-  ): Promise<UploadedDto> {
+  ): Promise<UploadedFileDto> {
     this.validationService.assertFilePresent(file);
     if (options?.leadAttachmentOnly) {
       try {
@@ -110,13 +103,13 @@ export class FilesActionService {
     files: Express.Multer.File[],
     userId: string | null,
     options?: { skipClientGallery?: boolean; leadAttachmentOnly?: boolean },
-  ): Promise<{ items: UploadedDto[] }> {
+  ): Promise<{ items: UploadedFileDto[] }> {
     if (!Array.isArray(files) || files.length === 0) {
       return { items: [] };
     }
     this.validationService.assertMaxFiles(files);
 
-    const items: UploadedDto[] = [];
+    const items: UploadedFileDto[] = [];
     for (const f of files) {
       const saved = await this.uploadFile(f, userId ?? undefined, {
         skipClientGallery: options?.skipClientGallery,
@@ -232,7 +225,7 @@ export class FilesActionService {
     const count = await this.prisma.clientPhoto.count({
       where: { userId: user.id },
     });
-    if (count >= CLIENT_PHOTO_LIMIT) return user;
+    if (count >= FILES_CLIENT_PHOTO_LIMIT) return user;
 
     const maxOrderRow = await this.prisma.clientPhoto.findFirst({
       where: { userId: user.id },

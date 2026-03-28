@@ -9,18 +9,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
-
-interface CachedUserProfile {
-  id: string;
-  email: string;
-  phone: string | null;
-  firstName?: string | null;
-  role: string;
-  phoneVerified?: boolean;
-  isVerified?: boolean;
-  masterProfile: unknown;
-  isBanned: boolean;
-}
+import type { CachedUserProfile } from '../../types';
 
 /**
  * Стратегия аутентификации на основе JWT токенов.

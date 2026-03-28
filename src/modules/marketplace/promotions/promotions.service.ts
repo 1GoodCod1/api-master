@@ -5,9 +5,10 @@ import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { PromotionsActionService } from './services/promotions-action.service';
 import { PromotionsQueryService } from './services/promotions-query.service';
-
-const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
+import {
+  PROMOTIONS_LIST_DEFAULT_LIMIT,
+  PROMOTIONS_LIST_MAX_LIMIT,
+} from '../../../common/constants';
 
 /**
  * PromotionsService — фасад модуля акций.
@@ -58,10 +59,11 @@ export class PromotionsService {
   }
 
   private parseLimit(limit?: string | number): number {
-    if (limit === undefined || limit === null) return DEFAULT_LIMIT;
+    if (limit === undefined || limit === null)
+      return PROMOTIONS_LIST_DEFAULT_LIMIT;
     const num = typeof limit === 'number' ? limit : parseInt(limit, 10);
     return Number.isNaN(num)
-      ? DEFAULT_LIMIT
-      : Math.min(MAX_LIMIT, Math.max(1, num));
+      ? PROMOTIONS_LIST_DEFAULT_LIMIT
+      : Math.min(PROMOTIONS_LIST_MAX_LIMIT, Math.max(1, num));
   }
 }

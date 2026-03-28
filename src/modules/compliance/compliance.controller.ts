@@ -7,14 +7,17 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { APP_LOCALE, APP_LOCALES } from '../../common/constants';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
+import { Roles } from '../../common/decorators';
+import {
+  APP_LOCALE,
+  APP_LOCALES,
+  CONTROLLER_PATH,
+} from '../../common/constants';
 import { ComplianceService } from './services/compliance.service';
 
 @ApiTags('Compliance')
-@Controller('admin/compliance')
+@Controller(CONTROLLER_PATH.adminCompliance)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @ApiBearerAuth()

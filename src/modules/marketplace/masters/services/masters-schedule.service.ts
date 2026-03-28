@@ -2,11 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateScheduleSettingsDto } from '../dto/update-schedule-settings.dto';
+import type { InvalidateMasterCacheFn } from '../types';
 
-export type InvalidateMasterCacheFn = (
-  masterId: string,
-  slug?: string | null,
-) => Promise<void>;
+export type { InvalidateMasterCacheFn };
 
 @Injectable()
 export class MastersScheduleService {
