@@ -152,6 +152,10 @@ export class LeadsService {
     return this.queryService.getActiveLeadToMaster(clientId, masterId);
   }
 
+  async getCompletedLeadToMaster(clientId: string, masterId: string) {
+    return this.queryService.getCompletedLeadToMaster(clientId, masterId);
+  }
+
   async checkAvailabilitySubscription(clientId: string, masterId: string) {
     return this.subscriptionService.checkSubscription(clientId, masterId);
   }

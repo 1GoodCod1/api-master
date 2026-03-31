@@ -155,7 +155,29 @@ export class NotificationsSenderService {
     const clientName = leadData.clientName || 'Клиент';
     const msg = (leadData.message ?? '').toString();
     const text = `Новая заявка от ${clientName}! Телефон: ${leadData.clientPhone}. Сообщение: ${msg.substring(0, 100)}${msg.length > 100 ? '...' : ''}`;
-    const fullMessage = `📞 Новая заявка от ${clientName}\nТелефон: ${leadData.clientPhone}\nСообщение: ${msg.substring(0, 200)}${msg.length > 200 ? '...' : ''}`;
+
+    const frontendUrl = this.configService.get<string>('frontendUrl', '');
+    const leadUrl = frontendUrl
+      ? `${frontendUrl}/dashboard/leads/${leadData.leadId}`
+      : '';
+
+    const telegramMessage = [
+      `📞 Новая заявка от ${clientName}`,
+      `Телефон: ${leadData.clientPhone}`,
+      `Сообщение: ${msg.substring(0, 200)}${msg.length > 200 ? '...' : ''}`,
+      leadUrl ? `\n<a href="${leadUrl}">Открыть заявку →</a>` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const whatsappMessage = [
+      `📞 Новая заявка от ${clientName}`,
+      `Телефон: ${leadData.clientPhone}`,
+      `Сообщение: ${msg.substring(0, 200)}${msg.length > 200 ? '...' : ''}`,
+      leadUrl ? `\nОткрыть заявку: ${leadUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     await this.sendSMS(to, text);
 
@@ -165,11 +187,11 @@ export class NotificationsSenderService {
     if (options?.telegramChatId) telegramChatIds.add(options.telegramChatId);
     if (globalChatId) telegramChatIds.add(globalChatId);
     for (const chatId of telegramChatIds) {
-      await this.sendTelegram(fullMessage, { chatId });
+      await this.sendTelegram(telegramMessage, { chatId });
     }
 
     if (options?.whatsappPhone) {
-      await this.sendWhatsApp(options.whatsappPhone, fullMessage);
+      await this.sendWhatsApp(options.whatsappPhone, whatsappMessage);
     }
   }
 

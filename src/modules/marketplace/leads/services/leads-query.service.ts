@@ -330,4 +330,27 @@ export class LeadsQueryService {
       orderBy: { createdAt: SORT_DESC },
     });
   }
+
+  /**
+   * Проверка наличия успешно закрытой заявки от клиента к мастеру
+   * (для показа кнопки «Обратиться снова»)
+   */
+  async getCompletedLeadToMaster(clientId: string, masterId: string) {
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        clientId,
+        masterId,
+        status: LeadStatus.CLOSED,
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        message: true,
+      },
+      orderBy: { createdAt: SORT_DESC },
+    });
+
+    return { hasCompletedLead: !!lead, lastLead: lead };
+  }
 }

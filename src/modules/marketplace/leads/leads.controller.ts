@@ -134,6 +134,25 @@ export class LeadsController {
     return this.leadsService.getActiveLeadToMaster(user.id, masterId);
   }
 
+  @Get('completed-to-master/:masterId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENT)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Check if client has a completed (CLOSED) lead to a specific master',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns hasCompletedLead flag and last closed lead info',
+  })
+  async getCompletedLeadToMaster(
+    @Param('masterId') masterId: string,
+    @GetUser() user: JwtUser,
+  ) {
+    return this.leadsService.getCompletedLeadToMaster(user.id, masterId);
+  }
+
   @Get('availability-subscription/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT)
