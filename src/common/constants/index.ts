@@ -28,6 +28,7 @@ export {
 export const ACTIVE_LEAD_STATUSES: ReadonlyArray<LeadStatus> = [
   LeadStatus.NEW,
   LeadStatus.IN_PROGRESS,
+  LeadStatus.PENDING_CLOSE,
 ];
 
 /** Финальные статусы (без обратного перехода для мастера). */

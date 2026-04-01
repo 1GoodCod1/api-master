@@ -97,9 +97,14 @@ export class LeadsController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
+  @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update lead status' })
+  @ApiOperation({
+    summary: 'Update lead status',
+    description:
+      'Master: can transition statuses (e.g. IN_PROGRESS → PENDING_CLOSE). ' +
+      'Client: can confirm (PENDING_CLOSE → CLOSED) or reject (PENDING_CLOSE → IN_PROGRESS) closure.',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() updateDto: UpdateLeadStatusDto,

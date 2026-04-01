@@ -2,10 +2,10 @@
 CREATE TABLE "notifications" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
-    "type" "NotificationType" NOT NULL,
-    "category" "NotificationCategory",
     "title" TEXT,
     "message" TEXT NOT NULL,
+    "type" "NotificationType" NOT NULL,
+    "category" "NotificationCategory",
     "status" "NotificationStatus" NOT NULL DEFAULT 'PENDING',
     "sentAt" TIMESTAMP(3),
     "readAt" TIMESTAMP(3),
@@ -56,8 +56,22 @@ CREATE INDEX "notifications_userId_category_createdAt_idx" ON "notifications"("u
 CREATE INDEX "audit_logs_userId_idx" ON "audit_logs"("userId");
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
 CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+CREATE INDEX "audit_logs_entityType_entityId_idx" ON "audit_logs"("entityType", "entityId");
 CREATE INDEX "system_analytics_date_idx" ON "system_analytics"("date");
 CREATE UNIQUE INDEX "system_analytics_date_key" ON "system_analytics"("date");
 
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Переопределения шаблонов писем (локализация / админ)
+CREATE TABLE "email_template_overrides" (
+    "id" TEXT NOT NULL,
+    "templateId" TEXT NOT NULL,
+    "lang" TEXT NOT NULL,
+    "subject" TEXT,
+    "bodyHtml" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "email_template_overrides_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "email_template_overrides_templateId_lang_key" ON "email_template_overrides"("templateId", "lang");

@@ -4,6 +4,7 @@ CREATE TABLE "refresh_tokens" (
     "token" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
+    "rememberMe" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")

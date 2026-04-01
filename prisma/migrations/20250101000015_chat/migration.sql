@@ -19,6 +19,7 @@ CREATE TABLE "messages" (
     "senderType" "SenderType" NOT NULL,
     "content" VARCHAR(2000) NOT NULL,
     "readAt" TIMESTAMP(3),
+    "isAutoresponder" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
 );

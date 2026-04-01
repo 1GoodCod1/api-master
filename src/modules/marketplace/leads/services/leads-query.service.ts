@@ -304,6 +304,7 @@ export class LeadsQueryService {
       byStatus: {
         newLeads: statusMap[LeadStatus.NEW] || 0,
         inProgress: statusMap[LeadStatus.IN_PROGRESS] || 0,
+        pendingClose: statusMap[LeadStatus.PENDING_CLOSE] || 0,
         closed: statusMap[LeadStatus.CLOSED] || 0,
         spam: statusMap[LeadStatus.SPAM] || 0,
       },

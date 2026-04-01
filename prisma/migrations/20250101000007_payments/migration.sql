@@ -5,15 +5,13 @@ CREATE TABLE "payments" (
     "userId" TEXT NOT NULL,
     "amount" DECIMAL(65,30) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'MDL',
-    "tariffType" "TariffType" NOT NULL,
-    "stripeId" TEXT,
-    "stripeSession" TEXT,
-    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     "metadata" JSONB,
     "paidAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "tariffType" "TariffType" NOT NULL,
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
 
@@ -37,7 +35,6 @@ CREATE TABLE "tariffs" (
     "price" TEXT NOT NULL,
     "amount" DECIMAL(65,30) NOT NULL,
     "days" INTEGER NOT NULL DEFAULT 30,
-    "stripePriceId" TEXT,
     "description" TEXT,
     "features" JSONB NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -47,8 +44,6 @@ CREATE TABLE "tariffs" (
     CONSTRAINT "tariffs_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "payments_stripeId_key" ON "payments"("stripeId");
-CREATE UNIQUE INDEX "payments_stripeSession_key" ON "payments"("stripeSession");
 CREATE INDEX "payments_masterId_idx" ON "payments"("masterId");
 CREATE INDEX "payments_userId_idx" ON "payments"("userId");
 CREATE INDEX "payments_status_idx" ON "payments"("status");

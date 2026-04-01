@@ -17,6 +17,9 @@ CREATE TABLE "categories" (
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "icon" TEXT,
+    "iconKey" TEXT,
+    "iconUrl" TEXT,
+    "translations" JSONB,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -28,6 +31,7 @@ CREATE TABLE "cities" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "translations" JSONB,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -45,3 +49,17 @@ CREATE UNIQUE INDEX "categories_slug_key" ON "categories"("slug");
 
 CREATE UNIQUE INDEX "cities_name_key" ON "cities"("name");
 CREATE UNIQUE INDEX "cities_slug_key" ON "cities"("slug");
+
+-- Глобальные настройки приложения (key/value)
+CREATE TABLE "app_settings" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "app_settings_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "app_settings_key_key" ON "app_settings"("key");
+
+INSERT INTO "app_settings" ("id", "key", "value", "updatedAt")
+VALUES (gen_random_uuid(), 'referrals_enabled', 'false', NOW());

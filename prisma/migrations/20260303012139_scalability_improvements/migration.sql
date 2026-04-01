@@ -5,8 +5,7 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. Full-Text Search: tsvector column + GIN index on masters table
---    Enables PostgreSQL full-text search instead of slow ILIKE '%term%' scans.
+-- 1. Full-Text Search: колонка search_vector + триггер пересчёта (без GIN в Prisma-схеме)
 -- ----------------------------------------------------------------------------
 
 -- Add the search_vector column (no-op if already exists)
@@ -22,10 +21,6 @@ SET search_vector =
     setweight(to_tsvector('simple',  COALESCE(m.slug, '')), 'D')
 FROM users u
 WHERE u.id = m."userId";
-
--- Create GIN index for fast full-text lookup
-CREATE INDEX IF NOT EXISTS idx_masters_search_vector
-    ON masters USING GIN(search_vector);
 
 -- Trigger function: keep search_vector up-to-date when master's own fields change
 CREATE OR REPLACE FUNCTION trg_masters_search_vector() RETURNS trigger AS $$
@@ -57,21 +52,5 @@ CREATE TRIGGER trg_masters_search_vector
     FOR EACH ROW EXECUTE FUNCTION trg_masters_search_vector();
 
 
--- ----------------------------------------------------------------------------
--- 2. Additional performance indexes (safe, use CONCURRENTLY to avoid locks)
--- ----------------------------------------------------------------------------
-
--- Composite index for the most common search filter: category + city + tariff + rating
-CREATE INDEX IF NOT EXISTS idx_masters_search_main
-    ON masters("categoryId", "cityId", "tariffType", rating DESC, "isFeatured")
-    WHERE "categoryId" IS NOT NULL AND "cityId" IS NOT NULL;
-
--- Index for "available now" filter
-CREATE INDEX IF NOT EXISTS idx_masters_available_now
-    ON masters("isOnline", "availabilityStatus", "categoryId", "cityId")
-    WHERE "isOnline" = true AND "availabilityStatus" = 'AVAILABLE';
-
--- Index for tariff expiry checks
-CREATE INDEX IF NOT EXISTS idx_masters_tariff_expiry
-    ON masters("tariffType", "tariffExpiresAt")
-    WHERE "tariffType" != 'BASIC';
+-- Дополнительные частичные индексы под поиск не создаём здесь: в schema.prisma у Master нет @@index под них;
+-- при необходимости добавь объявление в Prisma и сгенерируй отдельную миграцию.

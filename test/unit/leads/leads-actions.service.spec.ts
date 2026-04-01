@@ -82,6 +82,15 @@ describe('LeadsActionsService', () => {
     masterProfile: { id: 'm1' } as never,
   };
 
+  /** Клиент подтверждает закрытие: PENDING_CLOSE → CLOSED (мастер так сделать не может). */
+  const clientUser: JwtUser = {
+    id: 'c1',
+    role: 'CLIENT',
+    phoneVerified: true,
+    isVerified: true,
+    masterProfile: null,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     service = new LeadsActionsService(
@@ -127,15 +136,17 @@ describe('LeadsActionsService', () => {
     expect(prisma.lead.update).not.toHaveBeenCalled();
   });
 
-  it('updates status, updates availability and invalidates cache on NEW to CLOSED', async () => {
+  it('updates status, updates availability and invalidates cache on client PENDING_CLOSE to CLOSED', async () => {
     prisma.lead.findUnique.mockResolvedValue({
       id: 'lead-1',
       masterId: 'm1',
-      status: 'NEW',
+      clientId: 'c1',
+      status: 'PENDING_CLOSE',
     } as never);
     prisma.lead.update.mockResolvedValue({
       id: 'lead-1',
       masterId: 'm1',
+      clientId: 'c1',
       status: 'CLOSED',
     } as never);
     availabilityService.decrementActiveLeads.mockResolvedValue({
@@ -152,7 +163,7 @@ describe('LeadsActionsService', () => {
     inAppNotifications.notifyMasterAvailable.mockResolvedValue({} as never);
     prisma.masterAvailabilitySubscription.update.mockResolvedValue({} as never);
 
-    await service.updateStatus('lead-1', masterUser, { status: 'CLOSED' });
+    await service.updateStatus('lead-1', clientUser, { status: 'CLOSED' });
 
     expect(availabilityService.decrementActiveLeads).toHaveBeenCalledWith('m1');
     expect(cache.invalidateMasterData).toHaveBeenCalledWith('m1');
@@ -165,12 +176,19 @@ describe('LeadsActionsService', () => {
     );
   });
 
-  it('triggers referral qualification and email drip with master context on CLOSED with clientId', async () => {
+  it('triggers referral qualification and email drip with master context when client confirms CLOSED', async () => {
+    const closingClient: JwtUser = {
+      id: 'client-1',
+      role: 'CLIENT',
+      phoneVerified: true,
+      isVerified: true,
+      masterProfile: null,
+    };
     prisma.lead.findUnique.mockResolvedValue({
       id: 'lead-2',
       masterId: 'm1',
       clientId: 'client-1',
-      status: 'NEW',
+      status: 'PENDING_CLOSE',
     } as never);
     prisma.lead.update.mockResolvedValue({
       id: 'lead-2',
@@ -187,7 +205,7 @@ describe('LeadsActionsService', () => {
       user: { firstName: 'John', lastName: 'Doe' },
     } as never);
 
-    await service.updateStatus('lead-2', masterUser, { status: 'CLOSED' });
+    await service.updateStatus('lead-2', closingClient, { status: 'CLOSED' });
 
     expect(referralsService.qualifyReferral).toHaveBeenCalledWith('client-1');
     expect(emailDripService.startChain).toHaveBeenCalledWith(

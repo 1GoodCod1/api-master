@@ -34,6 +34,9 @@ CREATE TABLE "masters" (
     "currentActiveLeads" INTEGER NOT NULL DEFAULT 0,
     "telegramChatId" TEXT,
     "whatsappPhone" TEXT,
+    "leadNotifyChannel" "LeadNotifyChannel" DEFAULT 'BOTH',
+    "notifyTariffSms" BOOLEAN NOT NULL DEFAULT true,
+    "notifyTariffInApp" BOOLEAN NOT NULL DEFAULT true,
     "workStartHour" INTEGER NOT NULL DEFAULT 9,
     "workEndHour" INTEGER NOT NULL DEFAULT 18,
     "autoresponderEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -97,6 +100,7 @@ CREATE TABLE "master_verifications" (
     "reviewedBy" TEXT,
     "reviewedAt" TIMESTAMP(3),
     "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "documentsDeletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "master_verifications_pkey" PRIMARY KEY ("id")
@@ -107,25 +111,16 @@ CREATE UNIQUE INDEX "masters_slug_key" ON "masters"("slug");
 CREATE INDEX "masters_cityId_idx" ON "masters"("cityId");
 CREATE INDEX "masters_categoryId_idx" ON "masters"("categoryId");
 CREATE INDEX "masters_rating_idx" ON "masters"("rating");
-CREATE INDEX "masters_avatarFileId_idx" ON "masters"("avatarFileId");
 CREATE INDEX "masters_tariffType_idx" ON "masters"("tariffType");
 CREATE INDEX "masters_isFeatured_idx" ON "masters"("isFeatured");
 CREATE INDEX "masters_createdAt_idx" ON "masters"("createdAt");
-CREATE INDEX "masters_slug_idx" ON "masters"("slug");
-CREATE INDEX "masters_pendingVerification_idx" ON "masters"("pendingVerification");
-CREATE INDEX "masters_lifetimePremium_idx" ON "masters"("lifetimePremium");
-CREATE INDEX "masters_isOnline_idx" ON "masters"("isOnline");
-CREATE INDEX "masters_lastActivityAt_idx" ON "masters"("lastActivityAt");
 CREATE INDEX "masters_categoryId_cityId_isFeatured_tariffType_idx" ON "masters"("categoryId", "cityId", "isFeatured", "tariffType");
 CREATE INDEX "masters_categoryId_cityId_rating_idx" ON "masters"("categoryId", "cityId", "rating");
 CREATE INDEX "masters_tariffType_isFeatured_rating_idx" ON "masters"("tariffType", "isFeatured", "rating");
 CREATE INDEX "masters_categoryId_tariffType_isFeatured_idx" ON "masters"("categoryId", "tariffType", "isFeatured");
 CREATE INDEX "masters_isOnline_lastActivityAt_idx" ON "masters"("isOnline", "lastActivityAt");
-CREATE INDEX "masters_isBusy_idx" ON "masters"("isBusy");
 CREATE INDEX "masters_isBusy_isOnline_idx" ON "masters"("isBusy", "isOnline");
-CREATE INDEX "masters_availabilityStatus_idx" ON "masters"("availabilityStatus");
 CREATE INDEX "masters_availabilityStatus_currentActiveLeads_idx" ON "masters"("availabilityStatus", "currentActiveLeads");
-CREATE INDEX "masters_latitude_longitude_idx" ON "masters"("latitude", "longitude");
 
 CREATE INDEX "quick_replies_masterId_idx" ON "quick_replies"("masterId");
 CREATE INDEX "quick_replies_masterId_order_idx" ON "quick_replies"("masterId", "order");
@@ -156,3 +151,20 @@ ALTER TABLE "master_verifications" ADD CONSTRAINT "master_verifications_masterId
 ALTER TABLE "master_verifications" ADD CONSTRAINT "master_verifications_documentFrontId_fkey" FOREIGN KEY ("documentFrontId") REFERENCES "files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "master_verifications" ADD CONSTRAINT "master_verifications_documentBackId_fkey" FOREIGN KEY ("documentBackId") REFERENCES "files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "master_verifications" ADD CONSTRAINT "master_verifications_selfieId_fkey" FOREIGN KEY ("selfieId") REFERENCES "files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Одноразовые токены привязки Telegram
+CREATE TABLE "telegram_connect_tokens" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "masterId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "telegram_connect_tokens_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "telegram_connect_tokens_token_key" ON "telegram_connect_tokens"("token");
+CREATE INDEX "telegram_connect_tokens_token_idx" ON "telegram_connect_tokens"("token");
+CREATE INDEX "telegram_connect_tokens_masterId_idx" ON "telegram_connect_tokens"("masterId");
+CREATE INDEX "telegram_connect_tokens_expiresAt_idx" ON "telegram_connect_tokens"("expiresAt");
+
+ALTER TABLE "telegram_connect_tokens" ADD CONSTRAINT "telegram_connect_tokens_masterId_fkey" FOREIGN KEY ("masterId") REFERENCES "masters"("id") ON DELETE CASCADE ON UPDATE CASCADE;

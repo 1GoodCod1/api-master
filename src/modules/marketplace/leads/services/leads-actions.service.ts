@@ -25,15 +25,33 @@ import { ReferralsService } from '../../../engagement/referrals/referrals.servic
  * Допустимые переходы статусов лида.
  * CLOSED и SPAM — финальные статусы. Возврат из них невозможен.
  */
+/**
+ * Допустимые переходы для МАСТЕРА.
+ * IN_PROGRESS → PENDING_CLOSE (запрос подтверждения у клиента).
+ * PENDING_CLOSE → CLOSED разрешён только клиенту (см. VALID_CLIENT_TRANSITIONS).
+ */
 const VALID_LEAD_STATUS_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
   [LeadStatus.NEW]: [
     LeadStatus.IN_PROGRESS,
-    LeadStatus.CLOSED,
+    LeadStatus.PENDING_CLOSE,
     LeadStatus.SPAM,
   ],
-  [LeadStatus.IN_PROGRESS]: [LeadStatus.CLOSED, LeadStatus.SPAM],
+  [LeadStatus.IN_PROGRESS]: [LeadStatus.PENDING_CLOSE, LeadStatus.SPAM],
+  [LeadStatus.PENDING_CLOSE]: [LeadStatus.SPAM], // мастер может только спам
   [LeadStatus.CLOSED]: [], // финальный
   [LeadStatus.SPAM]: [], // финальный
+};
+
+/**
+ * Допустимые переходы для КЛИЕНТА.
+ * Клиент может подтвердить (CLOSED) или отклонить (IN_PROGRESS) закрытие.
+ */
+const VALID_CLIENT_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
+  [LeadStatus.NEW]: [],
+  [LeadStatus.IN_PROGRESS]: [],
+  [LeadStatus.PENDING_CLOSE]: [LeadStatus.CLOSED, LeadStatus.IN_PROGRESS],
+  [LeadStatus.CLOSED]: [],
+  [LeadStatus.SPAM]: [],
 };
 
 /**
@@ -54,14 +72,19 @@ export class LeadsActionsService {
 
   /**
    * Обновление статуса лида с валидацией допустимых переходов.
+   * Мастер: IN_PROGRESS → PENDING_CLOSE (запрос подтверждения).
+   * Клиент: PENDING_CLOSE → CLOSED (подтвердил) или PENDING_CLOSE → IN_PROGRESS (отклонил).
    */
   async updateStatus(
     idOrEncoded: string,
     authUser: JwtUser,
     updateDto: UpdateLeadStatusDto,
   ) {
+    const isClient = authUser.role === UserRole.CLIENT;
+    const isAdmin = authUser.role === UserRole.ADMIN;
     const masterId = authUser.masterProfile?.id;
-    if (!masterId && authUser.role !== UserRole.ADMIN) {
+
+    if (!masterId && !isAdmin && !isClient) {
       throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     }
 
@@ -75,17 +98,25 @@ export class LeadsActionsService {
       throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
     }
 
-    if (authUser.role !== UserRole.ADMIN && lead.masterId !== masterId) {
+    // Проверка прав доступа
+    if (isClient) {
+      if (lead.clientId !== authUser.id) {
+        throw AppErrors.forbidden(AppErrorMessages.LEAD_UPDATE_OWN_ONLY);
+      }
+    } else if (!isAdmin && lead.masterId !== masterId) {
       throw AppErrors.forbidden(AppErrorMessages.LEAD_UPDATE_OWN_ONLY);
     }
 
     const oldStatus = lead.status;
     const newStatus = updateDto.status;
 
-    // Валидация допустимых переходов (только для мастера, не для ADMIN)
-    if (authUser.role !== UserRole.ADMIN) {
-      const allowedTransitions = VALID_LEAD_STATUS_TRANSITIONS[oldStatus] ?? [];
-      if (!allowedTransitions.includes(newStatus)) {
+    // Валидация допустимых переходов
+    if (!isAdmin) {
+      const transitions = isClient
+        ? (VALID_CLIENT_TRANSITIONS[oldStatus] ?? [])
+        : (VALID_LEAD_STATUS_TRANSITIONS[oldStatus] ?? []);
+
+      if (!transitions.includes(newStatus)) {
         if (FINAL_LEAD_STATUSES.includes(oldStatus)) {
           throw AppErrors.badRequest(
             AppErrorTemplates.leadFinalState(oldStatus),
@@ -95,7 +126,7 @@ export class LeadsActionsService {
           AppErrorTemplates.leadStatusTransition(
             oldStatus,
             newStatus,
-            allowedTransitions,
+            transitions,
           ),
         );
       }
@@ -108,6 +139,31 @@ export class LeadsActionsService {
         updatedAt: new Date(),
       },
     });
+
+    // При переходе в PENDING_CLOSE — уведомляем клиента о запросе подтверждения
+    if (newStatus === LeadStatus.PENDING_CLOSE && lead.clientId) {
+      const master = await this.prisma.master.findUnique({
+        where: { id: lead.masterId },
+        select: { user: { select: { firstName: true, lastName: true } } },
+      });
+      const masterName =
+        formatUserName(master?.user?.firstName, master?.user?.lastName) ||
+        'Мастер';
+
+      await this.inAppNotifications
+        .notify({
+          userId: lead.clientId,
+          category: NotificationCategory.LEAD_CLOSE_REQUESTED,
+          title: 'Запрос на закрытие заявки',
+          message: `${masterName} хочет закрыть вашу заявку. Подтвердите или отклоните.`,
+          messageKey: 'notifications.messages.leadCloseRequested',
+          messageParams: { masterName },
+          metadata: { leadId: updated.id, status: updated.status },
+        })
+        .catch((e) =>
+          this.logger.error('leadCloseRequested notification failed', e),
+        );
+    }
 
     // Обновление счётчика активных лидов при закрытии (Через централизованный сервис)
     if (oldStatus !== LeadStatus.CLOSED && newStatus === LeadStatus.CLOSED) {

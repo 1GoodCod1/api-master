@@ -17,6 +17,7 @@ enum UserRole {
 enum LeadStatus {
   NEW
   IN_PROGRESS
+  PENDING_CLOSE
   CLOSED
   SPAM
 }
@@ -61,6 +62,7 @@ enum NotificationCategory {
 
   // Client notifications
   LEAD_SENT
+  LEAD_CLOSE_REQUESTED
   MASTER_RESPONDED
   MASTER_AVAILABLE
   BOOKING_PENDING
