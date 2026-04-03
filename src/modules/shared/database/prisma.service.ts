@@ -6,22 +6,27 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 import { PRISMA_STATEMENT_TIMEOUT_MS } from '../../../common/constants';
 
-// function withStatementTimeoutInConnectionString(
-//   connectionString: string,
-// ): string {
-//   try {
-//     const url = new URL(connectionString);
-//     const existing = url.searchParams.get('options')?.trim();
-//     const flag = `-c statement_timeout=${PRISMA_STATEMENT_TIMEOUT_MS}`;
-//     if (existing?.includes('statement_timeout')) {
-//       return connectionString;
-//     }
-//     url.searchParams.set('options', existing ? `${existing} ${flag}` : flag);
-//     return url.toString();
-//   } catch {
-//     return connectionString;
-//   }
-// }
+/**
+ * Задаёт statement_timeout на уровне сессии через libpq options.
+ * Нельзя делать отдельный client.query(SET ...) в pool.on('connect') без await:
+ * Prisma может сразу начать запрос на том же клиенте → параллельные query() и DeprecationWarning в pg.
+ */
+function withStatementTimeoutInConnectionString(
+  connectionString: string,
+): string {
+  try {
+    const url = new URL(connectionString);
+    const existing = url.searchParams.get('options')?.trim();
+    const flag = `-c statement_timeout=${PRISMA_STATEMENT_TIMEOUT_MS}`;
+    if (existing?.includes('statement_timeout')) {
+      return connectionString;
+    }
+    url.searchParams.set('options', existing ? `${existing} ${flag}` : flag);
+    return url.toString();
+  } catch {
+    return connectionString;
+  }
+}
 
 /** У pg PoolClient в рантайме есть connection.stream; в @types/pg это не отражено */
 type PoolClientWithStream = PoolClient & {
@@ -40,12 +45,6 @@ function attachKeepAliveToPool(pool: Pool): void {
     } catch {
       // игнорируем ошибки настройки keepalive
     }
-    // Ограничение длительности запроса — длинные запросы не должны исчерпать пул
-    if (typeof client.query === 'function') {
-      void client
-        .query(`SET statement_timeout = '${PRISMA_STATEMENT_TIMEOUT_MS}'`)
-        .catch(() => {});
-    }
   });
 }
 
@@ -56,7 +55,7 @@ function createPgPool(
   const isTest = nodeEnv === 'test';
 
   const pool = new Pool({
-    connectionString,
+    connectionString: withStatementTimeoutInConnectionString(connectionString),
     max: isTest ? 3 : 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000, // 10 с: Docker / холодный старт БД (раньше было 2 с)

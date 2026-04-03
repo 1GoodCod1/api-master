@@ -235,9 +235,12 @@ export class MastersController {
 
   @Patch('online-status/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update master online status' })
+  @ApiOperation({
+    summary:
+      'Update master online status (admin override only — masters are tracked automatically via WebSocket)',
+  })
   async updateOnlineStatus(
     @GetUser() user: JwtUser,
     @Body() dto: UpdateOnlineStatusDto,

@@ -140,6 +140,13 @@ export class LeadsService {
     return this.queryService.getStats(authUser);
   }
 
+  async getClients(
+    authUser: JwtUser,
+    options: { search?: string; sortBy?: string; sortOrder?: string } = {},
+  ) {
+    return this.queryService.getClients(authUser, options);
+  }
+
   async subscribeToAvailability(clientId: string, masterId: string) {
     return this.subscriptionService.subscribe(clientId, masterId);
   }

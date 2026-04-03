@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -10,9 +15,15 @@ import type { SocketData, WebsocketJwtPayload } from '../types';
 export type { SocketData };
 
 @Injectable()
-export class WebsocketConnectionService implements OnModuleDestroy {
+export class WebsocketConnectionService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(WebsocketConnectionService.name);
   private userConnections = new Map<string, string[]>(); // userId -> socketIds
+  /** Grace period (ms) before setting master offline after last socket disconnects */
+  private readonly OFFLINE_GRACE_MS = 5_000;
+  /** Pending offline timers keyed by userId */
+  private offlineTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -20,6 +31,25 @@ export class WebsocketConnectionService implements OnModuleDestroy {
     private readonly redis: RedisService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * On server startup, reset all masters to offline (clean slate).
+   * Real online status will be set when masters reconnect via WebSocket.
+   */
+  async onModuleInit() {
+    try {
+      const { count } = await this.prisma.master.updateMany({
+        where: { isOnline: true },
+        data: { isOnline: false },
+      });
+      if (count > 0) {
+        this.logger.log(`Server startup: reset ${count} master(s) to offline`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to reset masters online status: ${msg}`);
+    }
+  }
 
   /**
    * Обработка нового подключения пользователя
@@ -40,6 +70,14 @@ export class WebsocketConnectionService implements OnModuleDestroy {
 
       const userId = payload.sub;
       (client.data as SocketData).userId = userId;
+      (client.data as SocketData).role = payload.role;
+
+      // Cancel any pending offline timer for this user (reconnected within grace period)
+      const pendingTimer = this.offlineTimers.get(userId);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        this.offlineTimers.delete(userId);
+      }
 
       // Сохраняем соединение в локальной мапе
       const userSockets = this.userConnections.get(userId) ?? [];
@@ -64,6 +102,9 @@ export class WebsocketConnectionService implements OnModuleDestroy {
           const msg = err instanceof Error ? err.message : String(err);
           this.logger.warn(`Failed to subscribe master to room: ${msg}`);
         }
+
+        // Auto-set master online
+        await this.setMasterOnlineStatus(userId, true);
       }
       if (payload.role === UserRole.ADMIN) {
         await client.join('admins');
@@ -102,7 +143,9 @@ export class WebsocketConnectionService implements OnModuleDestroy {
    * @param client Объект сокета
    */
   async handleDisconnect(client: Socket) {
-    const userId = (client.data as SocketData).userId;
+    const socketData = client.data as SocketData;
+    const userId = socketData.userId;
+    const role = socketData.role;
 
     if (userId) {
       const userSockets = this.userConnections.get(userId) ?? [];
@@ -128,6 +171,20 @@ export class WebsocketConnectionService implements OnModuleDestroy {
             `Failed to update Redis offline status for user ${userId}:`,
             msg,
           );
+        }
+
+        // Auto-set master offline with grace period (handles page refresh / brief disconnects)
+        if (role === UserRole.MASTER) {
+          const timer = setTimeout(() => {
+            this.offlineTimers.delete(userId);
+            // Re-check: if user reconnected during grace period, skip
+            if (this.isUserOnline(userId)) return;
+            this.setMasterOnlineStatus(userId, false).catch((err) => {
+              const msg = err instanceof Error ? err.message : String(err);
+              this.logger.warn(`Failed to set master offline: ${msg}`);
+            });
+          }, this.OFFLINE_GRACE_MS);
+          this.offlineTimers.set(userId, timer);
         }
 
         this.logger.log(`User fully disconnected (offline): ${userId}`);
@@ -181,6 +238,25 @@ export class WebsocketConnectionService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * Update master's isOnline + lastActivityAt in the database.
+   */
+  private async setMasterOnlineStatus(userId: string, isOnline: boolean) {
+    try {
+      await this.prisma.master.updateMany({
+        where: { userId },
+        data: {
+          isOnline,
+          lastActivityAt: new Date(),
+        },
+      });
+      this.logger.log(`Master ${userId} isOnline → ${isOnline}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to update master online status: ${msg}`);
+    }
+  }
+
   private getTokenFromSocket(client: Socket): string | null {
     const auth = client.handshake.auth as Record<string, unknown> | undefined;
     const authToken = auth?.token;
@@ -194,6 +270,12 @@ export class WebsocketConnectionService implements OnModuleDestroy {
   }
 
   onModuleDestroy() {
+    // Clear all pending offline timers
+    for (const timer of this.offlineTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.offlineTimers.clear();
+
     // Очищаем все соединения при уничтожении модуля для предотвращения утечек памяти
     this.userConnections.clear();
     this.logger.log(

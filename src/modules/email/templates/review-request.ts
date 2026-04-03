@@ -5,7 +5,7 @@ const T = {
     subject: 'Cum a fost serviciul? Lăsați o recenzie ⭐',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Comanda dvs.${ctx.masterName ? ` la meșterul <strong>${ctx.masterName}</strong>` : ''} a fost finalizată.</p>
+    <p>Cererea dvs.${ctx.masterName ? ` la meșterul <strong>${ctx.masterName}</strong>` : ''} a fost finalizată.</p>
     <p>Vă rugăm să evaluați calitatea serviciului — ajută alți clienți și motivează meșterul.</p>
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.reviewLink || `${ctx.frontendUrl}/client-dashboard/leads`}" class="btn">Lăsați o recenzie ⭐</a>
@@ -18,7 +18,7 @@ const T = {
     subject: 'Как прошла работа? Оставьте отзыв ⭐',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Ваш заказ${ctx.masterName ? ` у мастера <strong>${ctx.masterName}</strong>` : ''} выполнен.</p>
+    <p>Ваша заявка${ctx.masterName ? ` у мастера <strong>${ctx.masterName}</strong>` : ''} выполнена.</p>
     <p>Пожалуйста, оцените качество работы — это поможет другим клиентам и мотивирует мастера.</p>
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.reviewLink || `${ctx.frontendUrl}/client-dashboard/leads`}" class="btn">Оставить отзыв ⭐</a>
@@ -31,7 +31,7 @@ const T = {
     subject: 'How was the service? Leave a review ⭐',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Your order${ctx.masterName ? ` with master <strong>${ctx.masterName}</strong>` : ''} is complete.</p>
+    <p>Your request${ctx.masterName ? ` with master <strong>${ctx.masterName}</strong>` : ''} is complete.</p>
     <p>Please rate the quality — it helps other clients and motivates the master.</p>
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.reviewLink || `${ctx.frontendUrl}/client-dashboard/leads`}" class="btn">Leave a review ⭐</a>

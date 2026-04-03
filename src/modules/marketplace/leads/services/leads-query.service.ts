@@ -312,6 +312,116 @@ export class LeadsQueryService {
   }
 
   /**
+   * Список уникальных клиентов мастера с агрегированной статистикой по заявкам.
+   */
+  async getClients(
+    authUser: JwtUser,
+    options: { search?: string; sortBy?: string; sortOrder?: string } = {},
+  ) {
+    const masterId = authUser.masterProfile?.id;
+    if (!masterId) {
+      throw AppErrors.badRequest(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
+    }
+
+    const { search, sortBy = 'lastRequestAt', sortOrder = 'desc' } = options;
+
+    const where: Prisma.LeadWhereInput = { masterId };
+    if (search) {
+      where.OR = [
+        { clientName: { contains: search, mode: 'insensitive' } },
+        { clientPhone: { contains: search } },
+      ];
+    }
+
+    const leads = await this.prisma.lead.findMany({
+      where,
+      select: {
+        clientPhone: true,
+        clientName: true,
+        clientId: true,
+        status: true,
+        createdAt: true,
+        message: true,
+      },
+      orderBy: { createdAt: SORT_DESC },
+    });
+
+    // Group by clientPhone
+    const clientsMap = new Map<
+      string,
+      {
+        clientPhone: string;
+        clientName: string | null;
+        clientId: string | null;
+        totalRequests: number;
+        statusBreakdown: Record<string, number>;
+        lastRequestAt: Date;
+        firstRequestAt: Date;
+        lastMessage: string | null;
+      }
+    >();
+
+    for (const lead of leads) {
+      const key = lead.clientPhone;
+      const existing = clientsMap.get(key);
+      if (existing) {
+        existing.totalRequests++;
+        existing.statusBreakdown[lead.status] =
+          (existing.statusBreakdown[lead.status] || 0) + 1;
+        if (lead.createdAt > existing.lastRequestAt) {
+          existing.lastRequestAt = lead.createdAt;
+          existing.lastMessage = lead.message;
+          if (lead.clientName) existing.clientName = lead.clientName;
+        }
+        if (lead.createdAt < existing.firstRequestAt) {
+          existing.firstRequestAt = lead.createdAt;
+        }
+        if (lead.clientId && !existing.clientId) {
+          existing.clientId = lead.clientId;
+        }
+      } else {
+        clientsMap.set(key, {
+          clientPhone: lead.clientPhone,
+          clientName: lead.clientName,
+          clientId: lead.clientId,
+          totalRequests: 1,
+          statusBreakdown: { [lead.status]: 1 },
+          lastRequestAt: lead.createdAt,
+          firstRequestAt: lead.createdAt,
+          lastMessage: lead.message,
+        });
+      }
+    }
+
+    const clients = Array.from(clientsMap.values());
+
+    // Sort
+    const order = sortOrder === 'asc' ? 1 : -1;
+    clients.sort((a, b) => {
+      switch (sortBy) {
+        case 'totalRequests':
+          return (a.totalRequests - b.totalRequests) * order;
+        case 'clientName':
+          return (a.clientName || '').localeCompare(b.clientName || '') * order;
+        case 'firstRequestAt':
+          return (
+            (a.firstRequestAt.getTime() - b.firstRequestAt.getTime()) * order
+          );
+        case 'lastRequestAt':
+        default:
+          return (
+            (a.lastRequestAt.getTime() - b.lastRequestAt.getTime()) * order
+          );
+      }
+    });
+
+    return {
+      items: clients,
+      total: clients.length,
+    };
+  }
+
+  /**
    * Проверка наличия активной заявки от клиента к мастеру
    */
   async getActiveLeadToMaster(clientId: string, masterId: string) {

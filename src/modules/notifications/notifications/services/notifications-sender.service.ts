@@ -181,13 +181,11 @@ export class NotificationsSenderService {
 
     await this.sendSMS(to, text);
 
-    // Telegram: без дублей — собираем уникальные chatId
-    const globalChatId = this.configService.get<string>('telegram.chatId');
-    const telegramChatIds = new Set<string>();
-    if (options?.telegramChatId) telegramChatIds.add(options.telegramChatId);
-    if (globalChatId) telegramChatIds.add(globalChatId);
-    for (const chatId of telegramChatIds) {
-      await this.sendTelegram(telegramMessage, { chatId });
+    // Telegram: отправляем только в личный chatId мастера (если привязан).
+    // Глобальный TELEGRAM_CHAT_ID используется только как fallback для системных уведомлений,
+    // а не для персональных уведомлений о заявках.
+    if (options?.telegramChatId) {
+      await this.sendTelegram(telegramMessage, { chatId: options.telegramChatId });
     }
 
     if (options?.whatsappPhone) {

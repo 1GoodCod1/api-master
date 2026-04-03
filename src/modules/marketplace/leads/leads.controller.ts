@@ -113,6 +113,25 @@ export class LeadsController {
     return this.leadsService.updateStatus(id, user, updateDto);
   }
 
+  @Get('clients')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MASTER, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get aggregated client list for master (grouped by phone)',
+  })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'sortBy', required: false })
+  @ApiQuery({ name: 'sortOrder', required: false })
+  async getClients(
+    @GetUser() user: JwtUser,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
+    return this.leadsService.getClients(user, { search, sortBy, sortOrder });
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)

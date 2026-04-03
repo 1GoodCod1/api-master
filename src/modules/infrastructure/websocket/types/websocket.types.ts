@@ -2,6 +2,7 @@ import type { UserRole } from '@prisma/client';
 
 export interface SocketData {
   userId?: string;
+  role?: UserRole;
 }
 
 /** JWT payload после verify при установке WS-соединения (роль строго UserRole). */
