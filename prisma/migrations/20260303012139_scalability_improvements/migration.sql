@@ -1,5 +1,5 @@
 -- ============================================================================
--- Master-Hub Scalability Migration
+-- faber.md Scalability Migration
 -- Run this ONCE against your production database before deploying the new code.
 -- Safe to run multiple times (all statements are idempotent via IF NOT EXISTS).
 -- ============================================================================

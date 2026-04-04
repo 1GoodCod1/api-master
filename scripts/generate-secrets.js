@@ -19,9 +19,10 @@ const secrets = {
   JWT_REFRESH_SECRET: crypto.randomBytes(32).toString('hex'),
   ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex'),
   ID_ENCRYPTION_SECRET: crypto.randomBytes(32).toString('hex'),
+  WEBHOOK_SECRET: crypto.randomBytes(32).toString('hex'),
   VAPID_PUBLIC_KEY: vapidKeys.publicKey,
   VAPID_PRIVATE_KEY: vapidKeys.privateKey,
-  VAPID_EMAIL: 'admin@master-hub.md',
+  VAPID_EMAIL: 'admin@faber.md',
 };
 
 Object.entries(secrets).forEach(([key, value]) => {

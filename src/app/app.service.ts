@@ -66,7 +66,7 @@ export class AppService {
     name: string;
   } {
     return {
-      name: 'Master-Hub API',
+      name: 'faber.md API',
       version: this.configService.get('npm_package_version') || '1.0.0',
       build: this.configService.get<string>('buildId', 'local'),
     };

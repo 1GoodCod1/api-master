@@ -23,7 +23,7 @@ POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-project3}"
 
 CONTAINER=""
-for name in masterhub-postgres-prod masterhub-postgres; do
+for name in fabermd-postgres-prod fabermd-postgres; do
   if docker ps --format '{{.Names}}' | grep -q "^${name}$"; then
     CONTAINER="$name"
     break

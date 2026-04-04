@@ -160,7 +160,7 @@ export class ExportLeadsService {
     >,
   ): ExcelJS.Workbook {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Master-Hub';
+    workbook.creator = 'faber.md';
     workbook.created = new Date();
 
     const masterName =
@@ -227,7 +227,7 @@ export class ExportLeadsService {
     info.getRow(1).height = 32;
 
     info.mergeCells('A2:B2');
-    info.getCell('A2').value = 'Master-Hub';
+    info.getCell('A2').value = 'faber.md';
     info.getCell('A2').font = { size: 11, color: { argb: 'FF9CA3AF' } };
 
     info.addRow({});

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -6,19 +6,62 @@ import {
   isVipOrPremiumTariff,
   TELEGRAM_CONNECT_START_PREFIX,
   TELEGRAM_CONNECT_TOKEN_TTL_MINUTES,
+  CONTROLLER_PATH,
 } from '../../../../common/constants';
+import { API_GLOBAL_PREFIX } from '../../../../config/http-app';
 import { randomBytes } from 'crypto';
 import axios from 'axios';
-import type { TelegramConnectLink, TelegramWebhookBody } from '../../types';
+import type {
+  TelegramConnectLink,
+  TelegramWebhookBody,
+  TelegramChatMemberUpdate,
+} from '../../types';
 
 @Injectable()
-export class TelegramConnectService {
+export class TelegramConnectService implements OnModuleInit {
   private readonly logger = new Logger(TelegramConnectService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.registerWebhook();
+  }
+
+  private async registerWebhook(): Promise<void> {
+    const botToken = this.configService.get<string>('telegram.botToken');
+    const apiUrl = this.configService.get<string>('apiUrl');
+    const webhookSecret = this.configService.get<string>(
+      'telegram.webhookSecret',
+    );
+
+    if (!botToken || !apiUrl) {
+      this.logger.warn(
+        'Telegram webhook not registered: missing botToken or apiUrl',
+      );
+      return;
+    }
+
+    const webhookUrl = `${apiUrl}/${API_GLOBAL_PREFIX}/${CONTROLLER_PATH.telegramWebhook}`;
+
+    try {
+      await axios.post(
+        `https://api.telegram.org/bot${botToken}/setWebhook`,
+        {
+          url: webhookUrl,
+          allowed_updates: ['message', 'my_chat_member'],
+          ...(webhookSecret ? { secret_token: webhookSecret } : {}),
+        },
+        { timeout: 10000 },
+      );
+      this.logger.log(`Telegram webhook registered: ${webhookUrl}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to register Telegram webhook: ${msg}`);
+    }
+  }
 
   /**
    * Create a one-time token and return the Telegram connect link.
@@ -64,6 +107,11 @@ export class TelegramConnectService {
    * On /start connect_XXX: validate token, update master.telegramChatId, reply.
    */
   async handleWebhookUpdate(update: TelegramWebhookBody): Promise<void> {
+    if (update.my_chat_member) {
+      await this.handleChatMemberUpdate(update.my_chat_member);
+      return;
+    }
+
     const message = update.message;
     if (!message?.text?.startsWith('/start') || !message?.chat) return;
 
@@ -122,6 +170,27 @@ export class TelegramConnectService {
       chatId,
       '✅ Telegram подключен! Теперь вы будете получать уведомления о новых заявках здесь.',
     ).catch((e) => this.logger.warn('sendTelegramReply failed', e));
+  }
+
+  private async handleChatMemberUpdate(
+    member: TelegramChatMemberUpdate,
+  ): Promise<void> {
+    if (!member.chat?.id || !member.new_chat_member) return;
+
+    const { status } = member.new_chat_member;
+    const chatId = String(member.chat.id);
+
+    if (status === 'kicked' || status === 'left' || status === 'banned') {
+      const updated = await this.prisma.master.updateMany({
+        where: { telegramChatId: chatId },
+        data: { telegramChatId: null },
+      });
+      if (updated.count > 0) {
+        this.logger.log(
+          `Telegram disconnected (bot ${status}) for chatId ${chatId}`,
+        );
+      }
+    }
   }
 
   private async sendTelegramReply(chatId: string, text: string): Promise<void> {

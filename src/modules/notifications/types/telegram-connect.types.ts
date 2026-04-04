@@ -3,6 +3,21 @@ export interface TelegramConnectLink {
   expiresAt: string;
 }
 
+export type TelegramChatMemberStatus =
+  | 'member'
+  | 'kicked'
+  | 'left'
+  | 'banned'
+  | 'restricted'
+  | 'administrator'
+  | 'creator';
+
+export interface TelegramChatMemberUpdate {
+  chat?: { id: number; type?: string };
+  from?: { id: number; username?: string; first_name?: string };
+  new_chat_member?: { status: TelegramChatMemberStatus };
+}
+
 export interface TelegramWebhookBody {
   update_id?: number;
   message?: {
@@ -12,4 +27,5 @@ export interface TelegramWebhookBody {
     text?: string;
     date?: number;
   };
+  my_chat_member?: TelegramChatMemberUpdate;
 }

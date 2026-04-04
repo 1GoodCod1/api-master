@@ -24,7 +24,7 @@ export class ComplianceService {
   ) {}
 
   private getOrgName(): string {
-    return this.config.get<string>('ORGANIZATION_NAME', 'MasterHub SRL');
+    return this.config.get<string>('ORGANIZATION_NAME', 'faber.md SRL');
   }
 
   private getOrgAddress(): string {
@@ -39,7 +39,7 @@ export class ComplianceService {
   }
 
   private getDpoEmail(): string {
-    return this.config.get<string>('DPO_EMAIL', 'dpo@masterhub.md');
+    return this.config.get<string>('DPO_EMAIL', 'dpo@faber.md');
   }
 
   async getDpiaContext(): Promise<DpiaContext> {

@@ -81,7 +81,7 @@ async function bootstrap() {
 
     if (!isProd) {
       const swaggerConfig = new DocumentBuilder()
-        .setTitle('Master-Hub API')
+        .setTitle('faber.md API')
         .setDescription('Marketplace for masters in Moldova')
         .setVersion('1.0')
         .addBearerAuth()

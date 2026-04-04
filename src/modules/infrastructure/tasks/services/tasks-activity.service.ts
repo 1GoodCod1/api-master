@@ -233,7 +233,7 @@ export class TasksActivityService {
       // Отправляем SMS уведомление
       await this.notifications.sendSMS(
         master.user.phone,
-        `Внимание! Ваш профиль на MasterHub не обновлялся ${this.WARNING_THRESHOLD_DAYS} дней. ` +
+        `Внимание! Ваш профиль на faber.md не обновлялся ${this.WARNING_THRESHOLD_DAYS} дней. ` +
           `Через ${daysRemaining} дней ваш рейтинг будет снижен на ${this.RATING_PENALTY}, и профиль скрыт. ` +
           `Зайдите в личный кабинет для сохранения активности.`,
       );
@@ -277,7 +277,7 @@ export class TasksActivityService {
       // SMS уведомление
       await this.notifications.sendSMS(
         master.user.phone,
-        `Ваш профиль на MasterHub был деактивирован из-за отсутствия активности более ${this.INACTIVITY_THRESHOLD_DAYS} дней. ` +
+        `Ваш профиль на faber.md был деактивирован из-за отсутствия активности более ${this.INACTIVITY_THRESHOLD_DAYS} дней. ` +
           `Рейтинг снижен на ${this.RATING_PENALTY}. Войдите в личный кабинет для повторной активации.`,
       );
 

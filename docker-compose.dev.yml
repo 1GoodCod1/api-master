@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:18
-    container_name: masterhub-postgres
+    container_name: fabermd-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-project3}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql
       - ./docker/backups:/backups
     networks:
-      - masterhub-network
+      - fabermd-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -22,7 +22,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: masterhub-redis
+    container_name: fabermd-redis
     ports:
       - "6379:6379"
     volumes:
@@ -30,7 +30,7 @@ services:
       - ./docker/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     networks:
-      - masterhub-network
+      - fabermd-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -39,7 +39,7 @@ services:
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: masterhub-redis-commander
+    container_name: fabermd-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379
       HTTP_USER: admin
@@ -49,14 +49,14 @@ services:
     depends_on:
       - redis
     networks:
-      - masterhub-network
+      - fabermd-network
 
   prisma-studio:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: masterhub-prisma-studio
+    container_name: fabermd-prisma-studio
     ports:
       - "5555:5555"
     volumes:
@@ -65,7 +65,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - masterhub-network
+      - fabermd-network
     environment:
       HOST: "0.0.0.0"
     command: npx prisma studio --url="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-bacardi}@postgres:5432/${POSTGRES_DB:-project3}" --port 5555 --browser none
@@ -75,7 +75,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: masterhub-api-dev
+    container_name: fabermd-api-dev
     ports:
       - "4000:4000"
     environment:
@@ -94,7 +94,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - masterhub-network
+      - fabermd-network
     command: npm run start:dev
     restart: unless-stopped
     healthcheck:
@@ -109,7 +109,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: masterhub-bull-board
+    container_name: fabermd-bull-board
     ports:
       - "3500:3500"
     environment:
@@ -124,25 +124,25 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - masterhub-network
+      - fabermd-network
     command: npm run start:bull-board:dev
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: masterhub-prometheus-dev
+    container_name: fabermd-prometheus-dev
     ports:
       - "9090:9090"
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     networks:
-      - masterhub-network
+      - fabermd-network
     restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
-    container_name: masterhub-grafana-dev
+    container_name: fabermd-grafana-dev
     ports:
       - "3001:3000"
     environment:
@@ -152,11 +152,11 @@ services:
       - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
-      - masterhub-network
+      - fabermd-network
     restart: unless-stopped
 
 networks:
-  masterhub-network:
+  fabermd-network:
     driver: bridge
 
 volumes:

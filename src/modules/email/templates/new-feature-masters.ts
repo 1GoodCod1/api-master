@@ -2,7 +2,7 @@ import type { TemplateContext, TemplateFn } from './types';
 
 const T = {
   ro: {
-    subject: 'Master-Hub: Funcție nouă pentru meșteri 🚀',
+    subject: 'faber.md: Funcție nouă pentru meșteri 🚀',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Avem o nouă funcție pentru meșteri.</p>
@@ -15,13 +15,13 @@ const T = {
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.frontendUrl}/dashboard" class="btn">Mergi la cabinet →</a>
     </p>
-    <p style="margin-top:16px; font-size:12px; color:#999;">Cu stimă, echipa Master-Hub</p>
+    <p style="margin-top:16px; font-size:12px; color:#999;">Cu stimă, echipa faber.md</p>
   `,
     text: (ctx: TemplateContext) =>
       `Funcție nouă pentru meșteri${ctx.userName ? `, ${ctx.userName}` : ''}! Mai multe: ${ctx.frontendUrl}/dashboard`,
   },
   ru: {
-    subject: 'Master-Hub: Новая функция для мастеров 🚀',
+    subject: 'faber.md: Новая функция для мастеров 🚀',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>У нас появилась новая возможность для мастеров.</p>
@@ -34,13 +34,13 @@ const T = {
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.frontendUrl}/dashboard" class="btn">Перейти в кабинет →</a>
     </p>
-    <p style="margin-top:16px; font-size:12px; color:#999;">С уважением, команда Master-Hub</p>
+    <p style="margin-top:16px; font-size:12px; color:#999;">С уважением, команда faber.md</p>
   `,
     text: (ctx: TemplateContext) =>
       `Новая функция для мастеров${ctx.userName ? `, ${ctx.userName}` : ''}! Подробнее: ${ctx.frontendUrl}/dashboard`,
   },
   en: {
-    subject: 'Master-Hub: New feature for masters 🚀',
+    subject: 'faber.md: New feature for masters 🚀',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>We have a new feature for masters.</p>
@@ -53,7 +53,7 @@ const T = {
     <p style="text-align:center; margin-top:24px;">
       <a href="${ctx.frontendUrl}/dashboard" class="btn">Go to dashboard →</a>
     </p>
-    <p style="margin-top:16px; font-size:12px; color:#999;">Best regards, Master-Hub team</p>
+    <p style="margin-top:16px; font-size:12px; color:#999;">Best regards, faber.md team</p>
   `,
     text: (ctx: TemplateContext) =>
       `New feature for masters${ctx.userName ? `, ${ctx.userName}` : ''}! More: ${ctx.frontendUrl}/dashboard`,

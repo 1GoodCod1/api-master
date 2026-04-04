@@ -22,7 +22,7 @@
 services:
   postgres:
     image: postgres:18
-    container_name: masterhub-postgres-prod
+    container_name: fabermd-postgres-prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -34,7 +34,7 @@ services:
       - postgres_prod_data:/var/lib/postgresql/data
       - ./docker/backups:/backups
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -43,7 +43,7 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:1.22.1
-    container_name: masterhub-pgbouncer-prod
+    container_name: fabermd-pgbouncer-prod
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - POOL_MODE=transaction
@@ -56,7 +56,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER} || exit 1" ]
       interval: 10s
@@ -66,14 +66,14 @@ services:
 
   redis-master:
     image: bitnami/redis:7.2
-    container_name: masterhub-redis-master
+    container_name: fabermd-redis-master
     environment:
       - REDIS_REPLICATION_MODE=master
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - redis_master_data:/bitnami/redis/data
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
@@ -83,7 +83,7 @@ services:
 
   redis-replica-1:
     image: bitnami/redis:7.2
-    container_name: masterhub-redis-replica-1
+    container_name: fabermd-redis-replica-1
     environment:
       - REDIS_REPLICATION_MODE=slave
       - REDIS_MASTER_HOST=redis-master
@@ -93,7 +93,7 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
@@ -103,7 +103,7 @@ services:
 
   redis-replica-2:
     image: bitnami/redis:7.2
-    container_name: masterhub-redis-replica-2
+    container_name: fabermd-redis-replica-2
     environment:
       - REDIS_REPLICATION_MODE=slave
       - REDIS_MASTER_HOST=redis-master
@@ -113,7 +113,7 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
@@ -123,7 +123,7 @@ services:
 
   redis-sentinel-1:
     image: bitnami/redis-sentinel:7.2
-    container_name: masterhub-redis-sentinel-1
+    container_name: fabermd-redis-sentinel-1
     environment:
       - REDIS_MASTER_HOST=redis-master
       - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
@@ -134,7 +134,7 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
       interval: 10s
@@ -144,7 +144,7 @@ services:
 
   redis-sentinel-2:
     image: bitnami/redis-sentinel:7.2
-    container_name: masterhub-redis-sentinel-2
+    container_name: fabermd-redis-sentinel-2
     environment:
       - REDIS_MASTER_HOST=redis-master
       - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
@@ -155,7 +155,7 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
       interval: 10s
@@ -165,7 +165,7 @@ services:
 
   redis-sentinel-3:
     image: bitnami/redis-sentinel:7.2
-    container_name: masterhub-redis-sentinel-3
+    container_name: fabermd-redis-sentinel-3
     environment:
       - REDIS_MASTER_HOST=redis-master
       - REDIS_MASTER_PASSWORD=${REDIS_PASSWORD}
@@ -176,7 +176,7 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     healthcheck:
       test: [ "CMD", "redis-cli", "-p", "26379", "ping" ]
       interval: 10s
@@ -186,7 +186,7 @@ services:
 
   gateway:
     image: nginx:1.27-alpine
-    container_name: masterhub-gateway-prod
+    container_name: fabermd-gateway-prod
     ports:
       - "4001:80"
     volumes:
@@ -195,7 +195,7 @@ services:
       api:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
 
   api:
@@ -203,7 +203,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: masterhub-api-prod
+    container_name: fabermd-api-prod
     # ports:
     #   - "4001:4000" # Прямой доступ закрыт, используем gateway
     env_file:
@@ -226,7 +226,7 @@ services:
       redis-sentinel-1:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health" ]
@@ -252,7 +252,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: masterhub-worker-prod
+    container_name: fabermd-worker-prod
     command: [ "node", "dist/processes/worker/worker.js" ]
     env_file:
       - .env
@@ -276,7 +276,7 @@ services:
       api:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "node", "-e", "process.exit(0)" ]
@@ -296,15 +296,15 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: masterhub-bull-board-prod
+    container_name: fabermd-bull-board-prod
     command: [ "node", "dist/processes/bull-board/bull-board.js" ]
     env_file:
       - .env
     environment:
       - TZ=Europe/Chisinau
       - BULL_BOARD_PORT=3500
-      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
-      - REDIS_SENTINEL_NAME=mymaster
+      - REDIS_SENTINELS=${REDIS_SENTINELS}
+      - REDIS_SENTINEL_NAME=${REDIS_SENTINEL_NAME}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
       - "${PORT_BULL_BOARD:-127.0.0.1:3500:3500}"
@@ -312,24 +312,24 @@ services:
       redis-sentinel-1:
         condition: service_healthy
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: masterhub-prometheus-prod
+    container_name: fabermd-prometheus-prod
     ports:
       - "${PORT_PROMETHEUS:-127.0.0.1:9091:9090}"
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_prod_data:/prometheus
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
-    container_name: masterhub-grafana-prod
+    container_name: fabermd-grafana-prod
     ports:
       - "${PORT_GRAFANA:-127.0.0.1:3002:3000}"
     environment:
@@ -340,11 +340,11 @@ services:
       - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
-      - masterhub-prod-network
+      - fabermd-prod-network
     restart: unless-stopped
 
 networks:
-  masterhub-prod-network:
+  fabermd-prod-network:
     driver: bridge
 
 volumes:

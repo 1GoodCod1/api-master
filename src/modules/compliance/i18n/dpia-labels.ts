@@ -126,7 +126,7 @@ const en: DpiaLabels = {
 
   section1: '1. Description of Processing Operations',
   processingDesc:
-    'The platform "MasterHub" is a marketplace connecting service masters with clients. The system processes personal data to facilitate service discovery, booking, payment processing, and quality assurance through reviews.',
+    'The platform "faber.md" is a marketplace connecting service masters with clients. The system processes personal data to facilitate service discovery, booking, payment processing, and quality assurance through reviews.',
   dataCategories: 'Categories of Personal Data Processed',
   cat_identity: 'Identity data — full name, email, phone number',
   cat_auth:
@@ -278,7 +278,7 @@ const ru: DpiaLabels = {
 
   section1: '1. Описание операций по обработке',
   processingDesc:
-    'Платформа «MasterHub» — это маркетплейс, соединяющий мастеров по оказанию услуг с клиентами. Система обрабатывает персональные данные для поиска услуг, бронирования, обработки платежей и обеспечения качества через отзывы.',
+    'Платформа «faber.md» — это маркетплейс, соединяющий мастеров по оказанию услуг с клиентами. Система обрабатывает персональные данные для поиска услуг, бронирования, обработки платежей и обеспечения качества через отзывы.',
   dataCategories: 'Категории обрабатываемых персональных данных',
   cat_identity: 'Идентификационные данные — ФИО, email, телефон',
   cat_auth:
@@ -430,7 +430,7 @@ const ro: DpiaLabels = {
 
   section1: '1. Descrierea operațiunilor de prelucrare',
   processingDesc:
-    'Platforma „MasterHub" este un marketplace care conectează meșterii cu clienții. Sistemul prelucrează date personale pentru găsirea serviciilor, rezervare, procesarea plăților și asigurarea calității prin recenzii.',
+    'Platforma „faber.md" este un marketplace care conectează meșterii cu clienții. Sistemul prelucrează date personale pentru găsirea serviciilor, rezervare, procesarea plăților și asigurarea calității prin recenzii.',
   dataCategories: 'Categorii de date personale prelucrate',
   cat_identity: 'Date de identificare — nume, email, telefon',
   cat_auth:

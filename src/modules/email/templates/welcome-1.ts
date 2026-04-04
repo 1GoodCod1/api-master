@@ -2,10 +2,10 @@ import type { TemplateContext, TemplateFn } from './types';
 
 const T = {
   ro: {
-    subject: 'Bun venit la Master-Hub! 🎉',
+    subject: 'Bun venit la faber.md! 🎉',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Suntem bucuroși că v-ați alăturat Master-Hub — platforma pentru găsirea celor mai buni meșteri din Moldova.</p>
+    <p>Suntem bucuroși că v-ați alăturat faber.md — platforma pentru găsirea celor mai buni meșteri din Moldova.</p>
     <p><strong>Ce puteți face:</strong></p>
     <ul>
       <li>🔍 Găsiți un meșter după categorie și oraș</li>
@@ -21,10 +21,10 @@ const T = {
       `Bun venit${ctx.userName ? `, ${ctx.userName}` : ''}! Începeți căutarea: ${ctx.frontendUrl}/masters`,
   },
   ru: {
-    subject: 'Добро пожаловать в Master-Hub! 🎉',
+    subject: 'Добро пожаловать в faber.md! 🎉',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>Мы рады, что вы присоединились к Master-Hub — платформе для поиска лучших мастеров Молдовы.</p>
+    <p>Мы рады, что вы присоединились к faber.md — платформе для поиска лучших мастеров Молдовы.</p>
     <p><strong>Что вы можете сделать:</strong></p>
     <ul>
       <li>🔍 Найти мастера по категории и городу</li>
@@ -40,10 +40,10 @@ const T = {
       `Добро пожаловать${ctx.userName ? `, ${ctx.userName}` : ''}! Начните поиск мастера: ${ctx.frontendUrl}/masters`,
   },
   en: {
-    subject: 'Welcome to Master-Hub! 🎉',
+    subject: 'Welcome to faber.md! 🎉',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
-    <p>We're glad you joined Master-Hub — the platform for finding the best masters in Moldova.</p>
+    <p>We're glad you joined faber.md — the platform for finding the best masters in Moldova.</p>
     <p><strong>What you can do:</strong></p>
     <ul>
       <li>🔍 Find a master by category and city</li>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# pg_dump backup для Master Hub
+# pg_dump backup для faber.md
 # Использование: npm run backup (из корня api-master)
 # Результат: ./docker/backups/backup-YYYYMMDD-HHMMSS.sql
 # =============================================================================
@@ -27,7 +27,7 @@ MAX_BACKUPS="${BACKUP_MAX_COUNT:-10}"
 
 # Ищем контейнер Postgres (prod или dev)
 CONTAINER=""
-for name in masterhub-postgres-prod masterhub-postgres; do
+for name in fabermd-postgres-prod fabermd-postgres; do
   if docker ps --format '{{.Names}}' | grep -q "^${name}$"; then
     CONTAINER="$name"
     break

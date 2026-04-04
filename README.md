@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚒️ MasterHub API
+# ⚒️ faber.md API
 
 ### Маркетплейс мастеров
 
@@ -12,7 +12,7 @@
 
 ## 📖 О проекте
 
-MasterHub — бэкенд-сервис маркетплейса для поиска и управления мастерами (сервисными специалистами). Построен на NestJS с модульной архитектурой: REST API, WebSocket, очереди Bull, платежи, уведомления и мониторинг.
+faber.md — бэкенд-сервис маркетплейса для поиска и управления мастерами (сервисными специалистами). Построен на NestJS с модульной архитектурой: REST API, WebSocket, очереди Bull, платежи, уведомления и мониторинг.
 
 Отдельно собирается **worker** (`nest build worker`, `worker.ts`) — фоновые задачи без полного HTTP-стека API.
 
@@ -191,7 +191,7 @@ npm run docker:seed
 | Переменная | Описание | По умолчанию |
 |---|---|---|
 | `B2_APPLICATION_KEY_ID` / `B2_APPLICATION_KEY` | B2 ключи | — |
-| `B2_BUCKET` | Название бакета | `master-hub-uploads` |
+| `B2_BUCKET` | Название бакета | `faber-md-uploads` |
 | `B2_REGION` | Регион | `eu-central-003` |
 
 ### Уведомления (опционально)
@@ -228,13 +228,13 @@ npm run docker:logs        # логи API-контейнера
 
 | Контейнер | Порт | Назначение |
 |---|---|---|
-| `masterhub-api-dev` | 4000 | NestJS API |
-| `masterhub-postgres` | 5432 | PostgreSQL |
-| `masterhub-redis` | 6379 | Redis |
-| `masterhub-redis-commander` | 8081 | Redis GUI |
-| `masterhub-prisma-studio` | 5555 | Визуальный редактор БД |
-| `masterhub-prometheus-dev` | 9090 | Метрики |
-| `masterhub-grafana-dev` | 3001 | Дашборды |
+| `fabermd-api-dev` | 4000 | NestJS API |
+| `fabermd-postgres` | 5432 | PostgreSQL |
+| `fabermd-redis` | 6379 | Redis |
+| `fabermd-redis-commander` | 8081 | Redis GUI |
+| `fabermd-prisma-studio` | 5555 | Визуальный редактор БД |
+| `fabermd-prometheus-dev` | 9090 | Метрики |
+| `fabermd-grafana-dev` | 3001 | Дашборды |
 
 ### Prod-окружение
 
@@ -575,6 +575,6 @@ npm run docker:seed:prod
 
 <div align="center">
 
-© 2026 MasterHub Team · Все права защищены
+© 2026 faber.md Team · Все права защищены
 
 </div>

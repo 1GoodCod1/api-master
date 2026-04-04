@@ -55,7 +55,7 @@ export const winstonConfig = {
         winston.format.timestamp(),
         winston.format.ms(),
         prefixRequestIdConsole(),
-        nestWinstonModuleUtilities.format.nestLike('Master-Hub', {
+        nestWinstonModuleUtilities.format.nestLike('faber.md', {
           colors: true,
           prettyPrint: true,
         }),

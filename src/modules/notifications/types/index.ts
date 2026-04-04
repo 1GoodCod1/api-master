@@ -9,6 +9,7 @@ export type {
 export type { SaveNotificationParams } from './notifications-action.types';
 export type {
   TelegramConnectLink,
+  TelegramChatMemberUpdate,
   TelegramWebhookBody,
 } from './telegram-connect.types';
 export type { PushPayload } from './web-push.types';

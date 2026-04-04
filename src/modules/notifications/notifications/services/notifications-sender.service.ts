@@ -185,7 +185,9 @@ export class NotificationsSenderService {
     // Глобальный TELEGRAM_CHAT_ID используется только как fallback для системных уведомлений,
     // а не для персональных уведомлений о заявках.
     if (options?.telegramChatId) {
-      await this.sendTelegram(telegramMessage, { chatId: options.telegramChatId });
+      await this.sendTelegram(telegramMessage, {
+        chatId: options.telegramChatId,
+      });
     }
 
     if (options?.whatsappPhone) {

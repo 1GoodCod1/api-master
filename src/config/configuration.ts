@@ -13,7 +13,7 @@ export default () => ({
   database: {
     url:
       process.env.DATABASE_URL ||
-      'postgresql://postgres:password@localhost:5432/master-hub',
+      'postgresql://postgres:password@localhost:5432/faber-md',
     readUrl: process.env.DATABASE_READ_URL || undefined,
   },
 
@@ -49,7 +49,7 @@ export default () => ({
       1,
       parseInt(process.env.REFRESH_COOKIE_MAX_AGE_DAYS || '7', 10) || 7,
     ),
-    // Домен cookie для поддоменов (напр. '.master-hub.md').
+    // Домен cookie для поддоменов (напр. '.faber.md').
     // В dev пусто; в проде задать, чтобы cookie работала на api.* и www.*
     cookieDomain: process.env.COOKIE_DOMAIN || '',
   },
@@ -125,7 +125,7 @@ export default () => ({
 
   email: {
     enabled: process.env.EMAIL_ENABLED !== 'false',
-    from: process.env.EMAIL_FROM || 'noreply@master-hub.md',
+    from: process.env.EMAIL_FROM || 'noreply@faber.md',
     smtp: {
       host: process.env.SMTP_HOST || '',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -138,7 +138,7 @@ export default () => ({
   webPush: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
-    email: process.env.VAPID_EMAIL || 'admin@master-hub.md',
+    email: process.env.VAPID_EMAIL || 'admin@faber.md',
   },
 
   rateLimit: {

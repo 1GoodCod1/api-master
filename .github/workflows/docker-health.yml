@@ -36,16 +36,16 @@ jobs:
 
       - name: Check PostgreSQL health
         run: |
-          docker exec masterhub-postgres pg_isready -U postgres
-          docker exec masterhub-postgres psql -U postgres -c "SELECT version();"
+          docker exec fabermd-postgres pg_isready -U postgres
+          docker exec fabermd-postgres psql -U postgres -c "SELECT version();"
 
       - name: Check Redis health
         run: |
-          docker exec masterhub-redis redis-cli ping
-          docker exec masterhub-redis redis-cli INFO server
+          docker exec fabermd-redis redis-cli ping
+          docker exec fabermd-redis redis-cli INFO server
 
       - name: Run database migrations
-        run: docker exec masterhub-api-dev npx prisma migrate deploy
+        run: docker exec fabermd-api-dev npx prisma migrate deploy
 
       - name: Check API health
         run: |
@@ -71,4 +71,5 @@ jobs:
         with:
           status: ${{ job.status }}
           text: 'Docker stack health check failed! :warning:'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

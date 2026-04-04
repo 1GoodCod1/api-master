@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { TariffType, UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 
-const DEV_ADMIN_EMAIL = 'admin@master-hub.md';
+const DEV_ADMIN_EMAIL = 'admin@faber.md';
 const DEV_ADMIN_PASSWORD = 'admin123';
 const DEV_ADMIN_PHONE = '+37360000000';
 

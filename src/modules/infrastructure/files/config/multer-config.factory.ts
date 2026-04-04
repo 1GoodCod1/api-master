@@ -108,7 +108,7 @@ export function createMulterOptions(configService: ConfigService) {
         _file: Express.Multer.File,
         cb: (err: Error | null, metadata?: Record<string, string>) => void,
       ) => {
-        cb(null, { 'x-amz-meta-source': 'master-hub' });
+        cb(null, { 'x-amz-meta-source': 'faber.md' });
       },
       key: (
         _req: Express.Request,

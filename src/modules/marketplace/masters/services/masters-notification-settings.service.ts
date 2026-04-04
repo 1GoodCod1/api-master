@@ -22,7 +22,12 @@ export class MastersNotificationSettingsService {
     });
     if (!master)
       throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
-    return master;
+    return {
+      ...master,
+      leadNotifyChannel: master.leadNotifyChannel
+        ? master.leadNotifyChannel.toLowerCase()
+        : null,
+    };
   }
 
   async updateNotificationSettings(
@@ -61,9 +66,22 @@ export class MastersNotificationSettingsService {
     if (dto.notifyTariffInApp !== undefined)
       data.notifyTariffInApp = dto.notifyTariffInApp;
 
-    return this.prisma.master.update({
+    const updated = await this.prisma.master.update({
       where: { userId },
       data,
+      select: {
+        telegramChatId: true,
+        whatsappPhone: true,
+        leadNotifyChannel: true,
+        notifyTariffSms: true,
+        notifyTariffInApp: true,
+      },
     });
+    return {
+      ...updated,
+      leadNotifyChannel: updated.leadNotifyChannel
+        ? updated.leadNotifyChannel.toLowerCase()
+        : null,
+    };
   }
 }

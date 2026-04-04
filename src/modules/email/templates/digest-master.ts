@@ -2,7 +2,7 @@ import type { TemplateContext, TemplateFn } from './types';
 
 const T = {
   ro: {
-    subject: 'Master-Hub: Digest pentru meșteri — cereri și actualizări',
+    subject: 'faber.md: Digest pentru meșteri — cereri și actualizări',
     html: (ctx: TemplateContext) => `
     <p>Bună ziua${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Digestul săptămânal pentru meșteri — cereri, recenzii și actualizări ale platformei.</p>
@@ -22,7 +22,7 @@ const T = {
       `Digest pentru meșteri${ctx.userName ? `, ${ctx.userName}` : ''}. ${ctx.frontendUrl}/dashboard/leads`,
   },
   ru: {
-    subject: 'Master-Hub: Дайджест для мастеров — заявки и обновления',
+    subject: 'faber.md: Дайджест для мастеров — заявки и обновления',
     html: (ctx: TemplateContext) => `
     <p>Здравствуйте${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Ваш еженедельный дайджест для мастеров — заявки, отзывы и обновления платформы.</p>
@@ -42,7 +42,7 @@ const T = {
       `Дайджест для мастеров${ctx.userName ? `, ${ctx.userName}` : ''}. ${ctx.frontendUrl}/dashboard/leads`,
   },
   en: {
-    subject: 'Master-Hub: Digest for masters — requests and updates',
+    subject: 'faber.md: Digest for masters — requests and updates',
     html: (ctx: TemplateContext) => `
     <p>Hello${ctx.userName ? `, ${ctx.userName}` : ''}!</p>
     <p>Your weekly digest for masters — requests, reviews and platform updates.</p>

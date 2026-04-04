@@ -134,7 +134,7 @@ export class EmailTemplateService {
     });
 
     if (override && (override.subject != null || override.bodyHtml != null)) {
-      const subject = override.subject ?? 'Master-Hub';
+      const subject = override.subject ?? 'faber.md';
       let bodyHtml = override.bodyHtml
         ? sanitizeEmailHtml(override.bodyHtml)
         : '';
@@ -153,7 +153,7 @@ export class EmailTemplateService {
     const template = TEMPLATES[templateName];
     if (!template) {
       return {
-        subject: 'Master-Hub',
+        subject: 'faber.md',
         html: `<p>Шаблон не найден</p>`,
         text: `Template "${templateName}" not found`,
       };
@@ -210,11 +210,11 @@ export class EmailTemplateService {
 </head>
 <body>
   <div class="container">
-    <div class="header"><h1>Master-Hub</h1></div>
+    <div class="header"><h1>faber.md</h1></div>
     <div class="content">${bodyHtml}</div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} MasterHub. Все права защищены.</p>
-      <p><a href="${this.frontendUrl}" style="color:#f59e0b;">master-hub.md</a></p>
+      <p>© ${new Date().getFullYear()} faber.md. Все права защищены.</p>
+      <p><a href="${this.frontendUrl}" style="color:#f59e0b;">faber.md</a></p>
     </div>
   </div>
 </body>
