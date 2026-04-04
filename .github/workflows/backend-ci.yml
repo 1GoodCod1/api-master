@@ -125,7 +125,7 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            cd /opt/fabermd-backend
-            docker-compose -f docker-compose.prod.yml pull api
-            docker-compose -f docker-compose.prod.yml up -d api
+            cd ~/masterhub/api-master
+            docker compose -f docker-compose.prod.yml pull api
+            docker compose -f docker-compose.prod.yml up -d api
             docker exec fabermd-api-prod npx prisma migrate deploy
