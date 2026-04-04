@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.24.1
+    image: edoburu/pgbouncer:v1.25.1-p0
     container_name: fabermd-pgbouncer-prod
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
