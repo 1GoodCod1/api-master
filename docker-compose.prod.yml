@@ -1,23 +1,4 @@
-# =============================================================================
-# PRODUCTION — переменные из .env (локально) или из UI (Dokploy)
-# =============================================================================
-# Локальный запуск:
-#   cp .env.production.example .env
-#   # Заполните .env, затем:
-#   docker compose -f docker-compose.prod.yml up -d
-#
-# Dokploy: добавьте переменные из .env.production.example в Environment tab.
-# Dokploy сохраняет их в .env, compose подхватывает через env_file: .env
-#
-# Порты Postgres (5433), PgBouncer (6432), Prometheus (9091), Grafana (3002)
-# по умолчанию привязаны к 127.0.0.1 — доступ только с самого сервера (localhost).
-# API и контейнеры общаются внутри Docker-сети: postgres:5432, redis:6379 и т.д.
-# Для доступа снаружи (отладка, Grafana в браузере): в .env добавьте:
-#   PORT_POSTGRES=5433:5432
-#   PORT_PGBOUNCER=6432:6432
-#   PORT_PROMETHEUS=9091:9090
-#   PORT_GRAFANA=3002:3000
-# =============================================================================
+# PRODUCTION 
 
 services:
   postgres:
@@ -42,7 +23,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.22.1
+    image: edoburu/pgbouncer:1.24.1
     container_name: fabermd-pgbouncer-prod
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -65,7 +46,7 @@ services:
     restart: unless-stopped
 
   redis-master:
-    image: bitnami/redis:7.2
+    image: bitnami/redis:7.4
     container_name: fabermd-redis-master
     environment:
       - REDIS_REPLICATION_MODE=master
@@ -82,7 +63,7 @@ services:
     restart: unless-stopped
 
   redis-replica-1:
-    image: bitnami/redis:7.2
+    image: bitnami/redis:7.4
     container_name: fabermd-redis-replica-1
     environment:
       - REDIS_REPLICATION_MODE=slave
@@ -102,7 +83,7 @@ services:
     restart: unless-stopped
 
   redis-replica-2:
-    image: bitnami/redis:7.2
+    image: bitnami/redis:7.4
     container_name: fabermd-redis-replica-2
     environment:
       - REDIS_REPLICATION_MODE=slave
@@ -122,7 +103,7 @@ services:
     restart: unless-stopped
 
   redis-sentinel-1:
-    image: bitnami/redis-sentinel:7.2
+    image: bitnami/redis-sentinel:7.4
     container_name: fabermd-redis-sentinel-1
     environment:
       - REDIS_MASTER_HOST=redis-master
@@ -143,7 +124,7 @@ services:
     restart: unless-stopped
 
   redis-sentinel-2:
-    image: bitnami/redis-sentinel:7.2
+    image: bitnami/redis-sentinel:7.4
     container_name: fabermd-redis-sentinel-2
     environment:
       - REDIS_MASTER_HOST=redis-master
@@ -164,7 +145,7 @@ services:
     restart: unless-stopped
 
   redis-sentinel-3:
-    image: bitnami/redis-sentinel:7.2
+    image: bitnami/redis-sentinel:7.4
     container_name: fabermd-redis-sentinel-3
     environment:
       - REDIS_MASTER_HOST=redis-master
@@ -185,7 +166,7 @@ services:
     restart: unless-stopped
 
   gateway:
-    image: nginx:1.27-alpine
+    image: nginx:1.28-alpine
     container_name: fabermd-gateway-prod
     ports:
       - "4001:80"

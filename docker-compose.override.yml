@@ -1,0 +1,10 @@
+services:
+  api:
+    image: ${BACKEND_IMAGE}
+    build: !reset null
+  worker:
+    image: ${BACKEND_IMAGE}
+    build: !reset null
+  bull-board:
+    image: ${BACKEND_IMAGE}
+    build: !reset null
