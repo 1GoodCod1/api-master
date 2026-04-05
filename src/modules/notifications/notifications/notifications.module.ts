@@ -16,6 +16,7 @@ import { NotificationsSenderService } from './services/notifications-sender.serv
 import { InAppNotificationService } from './services/in-app-notification.service';
 import { WebSocketModule } from '../../infrastructure/websocket/websocket.module';
 import { WebPushModule } from '../web-push/web-push.module';
+import { createBullOptions } from '../../../config/bull.config';
 
 @Module({
   imports: [
@@ -23,37 +24,15 @@ import { WebPushModule } from '../web-push/web-push.module';
       {
         name: 'sms',
         imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          redis: {
-            host: configService.get('redis.host'),
-            port: configService.get('redis.port'),
-            password: configService.get('redis.password'),
-            connectTimeout: 10000,
-            lazyConnect: true,
-            retryStrategy: (times: number) => {
-              if (times > 10) return null;
-              return Math.min(times * 50, 2000);
-            },
-          },
-        }),
+        useFactory: (configService: ConfigService) =>
+          createBullOptions(configService),
         inject: [ConfigService],
       },
       {
         name: 'telegram',
         imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          redis: {
-            host: configService.get('redis.host'),
-            port: configService.get('redis.port'),
-            password: configService.get('redis.password'),
-            connectTimeout: 10000,
-            lazyConnect: true,
-            retryStrategy: (times: number) => {
-              if (times > 10) return null;
-              return Math.min(times * 50, 2000);
-            },
-          },
-        }),
+        useFactory: (configService: ConfigService) =>
+          createBullOptions(configService),
         inject: [ConfigService],
       },
     ),

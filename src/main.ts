@@ -123,7 +123,9 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION] Unhandled Promise Rejection:', reason);
   console.error('Promise:', promise);
   if (process.env.NODE_ENV === 'production' && !isShuttingDownRef.current) {
-    process.exit(1);
+    console.error(
+      '[UNHANDLED REJECTION] Logged in production — not exiting to preserve uptime',
+    );
   }
 });
 

@@ -10,6 +10,7 @@ import { ExportAccessService } from './services/export-access.service';
 import { ExportLeadsService } from './services/export-leads.service';
 import { ExportAnalyticsService } from './services/export-analytics.service';
 import { ExportProcessor } from './processor/export.processor';
+import { createBullOptions } from '../../config/bull.config';
 
 @Module({
   imports: [
@@ -18,25 +19,18 @@ import { ExportProcessor } from './processor/export.processor';
     BullModule.registerQueueAsync({
       name: 'export',
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('redis.host'),
-          port: configService.get('redis.port'),
-          password: configService.get('redis.password'),
-          connectTimeout: 10000,
-          lazyConnect: true,
-          retryStrategy: (times: number) => {
-            if (times > 10) return null;
-            return Math.min(times * 50, 2000);
+      useFactory: (configService: ConfigService) => {
+        const bullOptions = createBullOptions(configService);
+        return {
+          redis: bullOptions.redis,
+          defaultJobOptions: {
+            removeOnComplete: { age: 600 }, // 10 минут — время на скачивание
+            removeOnFail: { age: 600 },
+            attempts: 2,
+            backoff: { type: 'exponential' as const, delay: 2000 },
           },
-        },
-        defaultJobOptions: {
-          removeOnComplete: { age: 600 }, // 10 минут — время на скачивание
-          removeOnFail: { age: 600 },
-          attempts: 2,
-          backoff: { type: 'exponential' as const, delay: 2000 },
-        },
-      }),
+        };
+      },
       inject: [ConfigService],
     }),
   ],
