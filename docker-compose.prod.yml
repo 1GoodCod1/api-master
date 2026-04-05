@@ -30,7 +30,7 @@ services:
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=5000
       - DEFAULT_POOL_SIZE=100
-      - IGNORE_STARTUP_PARAMETERS=extra_float_digits
+      - IGNORE_STARTUP_PARAMETERS=extra_float_digits,statement_timeout
     ports:
       - "${PORT_PGBOUNCER:-127.0.0.1:6432:5432}"
     depends_on:
