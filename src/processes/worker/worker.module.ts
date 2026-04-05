@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BullModule } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import configuration, { createBullOptions } from '../../config';
 
 // Общая инфраструктура
@@ -56,6 +57,9 @@ import { UsersModule } from '../../modules/users/users.module';
 
     // Планировщик cron
     ScheduleModule.forRoot(),
+
+    // Как в AppModule — MastersModule и др. используют EventEmitter2
+    EventEmitterModule.forRoot(),
 
     // Общая инфраструктура
     PrismaModule,

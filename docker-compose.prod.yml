@@ -295,6 +295,19 @@ services:
     networks:
       - fabermd-prod-network
     restart: unless-stopped
+    # Образ проверяет :4000/health — для Bull Board это неверно (слушает 3500).
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3500/', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   prometheus:
     image: prom/prometheus:latest
@@ -324,6 +337,20 @@ services:
       - fabermd-prod-network
     restart: unless-stopped
 
+  # Portainer — веб-UI для Docker (контейнеры, логи, volumes).
+  # По умолчанию только localhost:9443. Доступ с ПК: ssh -L 9443:127.0.0.1:9443 user@host → https://localhost:9443
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: fabermd-portainer-prod
+    ports:
+      - "${PORT_PORTAINER:-127.0.0.1:9443:9443}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - fabermd-prod-network
+    restart: unless-stopped
+
 networks:
   fabermd-prod-network:
     driver: bridge
@@ -333,3 +360,4 @@ volumes:
   redis_master_data:
   prometheus_prod_data:
   grafana_prod_data:
+  portainer_data:
