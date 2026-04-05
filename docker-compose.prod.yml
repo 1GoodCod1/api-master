@@ -27,6 +27,7 @@ services:
     container_name: fabermd-pgbouncer-prod
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AUTH_TYPE=scram-sha-256
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=5000
       - DEFAULT_POOL_SIZE=100
