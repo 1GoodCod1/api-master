@@ -129,4 +129,4 @@ jobs:
             git pull origin main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api
-            docker exec fabermd-api-prod npx prisma migrate deploy
+            docker exec fabermd-api-prod sh -c 'DATABASE_URL="$DIRECT_URL" npx prisma migrate deploy'

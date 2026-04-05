@@ -29,9 +29,10 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Install only production dependencies
+# Install only production dependencies + prisma CLI for migrations
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --prefer-offline --no-audit --ignore-scripts
+    npm ci --only=production --prefer-offline --no-audit --ignore-scripts && \
+    npm install prisma@latest --save-optional --no-audit
 
 # Copy prisma for production
 COPY prisma ./prisma
@@ -61,6 +62,7 @@ USER nodejs
 COPY --chown=nodejs:nodejs --from=dependencies /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs --from=builder /app/dist ./dist
 COPY --chown=nodejs:nodejs --from=builder /app/prisma ./prisma
+COPY --chown=nodejs:nodejs --from=builder /app/prisma.config.mjs ./
 COPY --chown=nodejs:nodejs package*.json ./
 
 # Security: Run as non-root
