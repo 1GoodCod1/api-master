@@ -242,7 +242,8 @@ describe('HTML Sanitization Utilities', () => {
       const start = Date.now();
       sanitizeStrict(largeString);
       const duration = Date.now() - start;
-      expect(duration).toBeLessThan(100); // Should complete in <100ms
+      // CI / shared runners и Windows могут давать заметный разброс; порог — дымовой тест на регрессии
+      expect(duration).toBeLessThan(500);
     });
 
     it('should handle deeply nested objects', () => {

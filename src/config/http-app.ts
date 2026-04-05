@@ -21,7 +21,7 @@ export const GLOBAL_PREFIX_EXCLUDE: Array<
   'docs-json',
   'docs-yaml',
   'favicon.ico',
-  'uploads/(.*)',
+  'uploads/*path',
 ];
 
 export function applyGlobalPrefix(app: INestApplication): void {
