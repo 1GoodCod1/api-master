@@ -193,8 +193,8 @@ services:
       - TZ=Europe/Chisinau
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_SENTINELS=${REDIS_SENTINELS}
-      - REDIS_SENTINEL_NAME=${REDIS_SENTINEL_NAME}
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./logs:/app/logs
@@ -241,8 +241,8 @@ services:
       - TZ=Europe/Chisinau
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}?pgbouncer=true
       - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_SENTINELS=${REDIS_SENTINELS}
-      - REDIS_SENTINEL_NAME=${REDIS_SENTINEL_NAME}
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - ./logs:/app/logs
@@ -284,8 +284,8 @@ services:
     environment:
       - TZ=Europe/Chisinau
       - BULL_BOARD_PORT=3500
-      - REDIS_SENTINELS=${REDIS_SENTINELS}
-      - REDIS_SENTINEL_NAME=${REDIS_SENTINEL_NAME}
+      - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_NAME=mymaster
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
       - "${PORT_BULL_BOARD:-127.0.0.1:3500:3500}"
