@@ -21,6 +21,11 @@ export default () => ({
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
+    /**
+     * Пароль только для Sentinel (порт 26379), если в кластере включён requirepass на Sentinel.
+     * Bitnami по умолчанию Sentinel без пароля — не задавать, иначе ioredis шлёт AUTH на Sentinel → WARN «default user does not require a password».
+     */
+    sentinelPassword: process.env.REDIS_SENTINEL_PASSWORD,
     /** Прод: REDIS_SENTINELS=host:26379,... */
     sentinels: process.env.REDIS_SENTINELS
       ? process.env.REDIS_SENTINELS.split(',').map((s) => {

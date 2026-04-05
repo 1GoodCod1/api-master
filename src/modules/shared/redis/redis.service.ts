@@ -23,6 +23,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       'mymaster',
     );
     const password = this.configService.get<string>('redis.password', '');
+    const sentinelPassword = this.configService.get<string | undefined>(
+      'redis.sentinelPassword',
+    );
 
     const options: RedisOptions = {
       password,
@@ -43,7 +46,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (sentinels && sentinels.length > 0) {
       options.sentinels = sentinels;
       options.name = name;
-      options.sentinelPassword = password;
+      if (sentinelPassword) {
+        options.sentinelPassword = sentinelPassword;
+      }
     } else {
       options.host = this.configService.get<string>('redis.host', 'localhost');
       options.port = this.configService.get<number>('redis.port', 6379);

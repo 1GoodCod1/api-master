@@ -6,6 +6,9 @@ export function createBullOptions(configService: ConfigService) {
     configService.get<{ host: string; port: number }[]>('redis.sentinels');
   const name = configService.get<string>('redis.sentinelName', 'mymaster');
   const password = configService.get<string>('redis.password', '');
+  const sentinelPassword = configService.get<string | undefined>(
+    'redis.sentinelPassword',
+  );
 
   const redisOptions: RedisOptions = {
     password,
@@ -20,7 +23,9 @@ export function createBullOptions(configService: ConfigService) {
   if (sentinels && sentinels.length > 0) {
     redisOptions.sentinels = sentinels;
     redisOptions.name = name;
-    redisOptions.sentinelPassword = password;
+    if (sentinelPassword) {
+      redisOptions.sentinelPassword = sentinelPassword;
+    }
   } else {
     redisOptions.host = configService.get<string>('redis.host', 'localhost');
     redisOptions.port = configService.get<number>('redis.port', 6379);
