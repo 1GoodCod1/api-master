@@ -192,7 +192,7 @@ services:
     environment:
       - TZ=Europe/Chisinau
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}?pgbouncer=true
-      - DIRECT_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DIRECT_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_SENTINELS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
       - REDIS_SENTINEL_NAME=mymaster
       - REDIS_PASSWORD=${REDIS_PASSWORD}
