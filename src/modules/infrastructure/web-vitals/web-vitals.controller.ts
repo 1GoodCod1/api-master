@@ -7,9 +7,11 @@ import {
   HttpCode,
   Logger,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { WebVitalDto } from './web-vitals.dto';
 import { CONTROLLER_PATH } from '../../../common/constants';
 
+@SkipThrottle()
 @Controller(CONTROLLER_PATH.webVitals)
 export class WebVitalsController {
   private readonly logger = new Logger(WebVitalsController.name);
