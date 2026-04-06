@@ -117,7 +117,7 @@ export class AdminSystemService {
     }
   }
 
-  private getSystemMetrics(): Promise<{
+  private async getSystemMetrics(): Promise<{
     memory: { total: string; used: string; free: string; usage: string };
     cpu: { load: number[]; cores: number };
     uptime: string;
@@ -127,7 +127,9 @@ export class AdminSystemService {
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
 
-    return Promise.resolve({
+    const cpuLoad = await this.getCpuLoadPercent();
+
+    return {
       memory: {
         total: this.formatBytes(totalMem),
         used: this.formatBytes(usedMem),
@@ -135,11 +137,41 @@ export class AdminSystemService {
         usage: ((usedMem / totalMem) * 100).toFixed(2) + '%',
       },
       cpu: {
-        load: os.loadavg(),
+        load: cpuLoad,
         cores: os.cpus().length,
       },
       uptime: this.formatUptime(os.uptime()),
       platform: os.platform(),
+    };
+  }
+
+  /**
+   * Возвращает реальный процент загрузки каждого ядра CPU.
+   * Делает два замера с интервалом 150ms и считает разницу.
+   * Работает корректно на Linux (prod) и Windows (dev).
+   */
+  private getCpuLoadPercent(): Promise<number[]> {
+    return new Promise((resolve) => {
+      const startSample = os.cpus();
+      setTimeout(() => {
+        const endSample = os.cpus();
+        const loads = startSample.map((startCore, i) => {
+          const endCore = endSample[i];
+          const startTotal = Object.values(startCore.times).reduce(
+            (a, b) => a + b,
+            0,
+          );
+          const endTotal = Object.values(endCore.times).reduce(
+            (a, b) => a + b,
+            0,
+          );
+          const totalDiff = endTotal - startTotal;
+          if (totalDiff === 0) return 0;
+          const idleDiff = endCore.times.idle - startCore.times.idle;
+          return parseFloat(((1 - idleDiff / totalDiff) * 100).toFixed(1));
+        });
+        resolve(loads);
+      }, 150);
     });
   }
 
