@@ -5,6 +5,8 @@ import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';
 import { RedisService } from '../../../shared/redis/redis.service';
 import { StorageService } from '../../../infrastructure/files/services/storage.service';
 import * as os from 'os';
+import * as fs from 'fs';
+import { statfs } from 'fs/promises';
 import { SORT_ASC } from '../../../../common/constants';
 import type { SystemStats } from '../types';
 
@@ -118,23 +120,37 @@ export class AdminSystemService {
   }
 
   private async getSystemMetrics(): Promise<{
-    memory: { total: string; used: string; free: string; usage: string };
+    memory: {
+      total: string;
+      used: string;
+      free: string;
+      available: string;
+      usage: string;
+    };
+    disk: { total: string; used: string; free: string; usage: string };
     cpu: { load: number[]; cores: number };
     uptime: string;
     platform: string;
   }> {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-
-    const cpuLoad = await this.getCpuLoadPercent();
+    const [cpuLoad, memInfo, diskInfo] = await Promise.all([
+      this.getCpuLoadPercent(),
+      this.getMemInfo(),
+      this.getDiskInfo(),
+    ]);
 
     return {
       memory: {
-        total: this.formatBytes(totalMem),
-        used: this.formatBytes(usedMem),
-        free: this.formatBytes(freeMem),
-        usage: ((usedMem / totalMem) * 100).toFixed(2) + '%',
+        total: this.formatBytes(memInfo.total),
+        used: this.formatBytes(memInfo.used),
+        free: this.formatBytes(memInfo.free),
+        available: this.formatBytes(memInfo.available),
+        usage: ((memInfo.used / memInfo.total) * 100).toFixed(2) + '%',
+      },
+      disk: {
+        total: this.formatBytes(diskInfo.total),
+        used: this.formatBytes(diskInfo.used),
+        free: this.formatBytes(diskInfo.free),
+        usage: ((diskInfo.used / diskInfo.total) * 100).toFixed(2) + '%',
       },
       cpu: {
         load: cpuLoad,
@@ -143,6 +159,55 @@ export class AdminSystemService {
       uptime: this.formatUptime(os.uptime()),
       platform: os.platform(),
     };
+  }
+
+  /** Reads /proc/meminfo for accurate used/available (includes Linux buffer cache).
+   *  Falls back to os.totalmem/freemem on non-Linux (Windows dev). */
+  private getMemInfo(): Promise<{
+    total: number;
+    used: number;
+    free: number;
+    available: number;
+  }> {
+    try {
+      const content = fs.readFileSync('/proc/meminfo', 'utf8');
+      const get = (key: string): number => {
+        const match = content.match(
+          new RegExp(`^${key}:\\s+(\\d+)\\s+kB`, 'm'),
+        );
+        return match ? parseInt(match[1]) * 1024 : 0;
+      };
+      const total = get('MemTotal') || os.totalmem();
+      const available = get('MemAvailable') || os.freemem();
+      const free = get('MemFree') || os.freemem();
+      const used = total - available;
+      return Promise.resolve({ total, used, free, available });
+    } catch {
+      const total = os.totalmem();
+      const free = os.freemem();
+      return Promise.resolve({
+        total,
+        used: total - free,
+        free,
+        available: free,
+      });
+    }
+  }
+
+  /** Returns disk usage for the root filesystem. */
+  private async getDiskInfo(): Promise<{
+    total: number;
+    used: number;
+    free: number;
+  }> {
+    try {
+      const stats = await statfs('/');
+      const total = stats.blocks * stats.bsize;
+      const free = stats.bfree * stats.bsize;
+      return { total, used: total - free, free };
+    } catch {
+      return { total: 0, used: 0, free: 0 };
+    }
   }
 
   /**

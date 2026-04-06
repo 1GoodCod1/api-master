@@ -11,6 +11,13 @@ export interface SystemStats {
       total: string;
       used: string;
       free: string;
+      available: string;
+      usage: string;
+    };
+    disk: {
+      total: string;
+      used: string;
+      free: string;
       usage: string;
     };
     cpu: {
