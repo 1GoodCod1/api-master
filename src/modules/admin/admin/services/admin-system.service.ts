@@ -349,9 +349,12 @@ export class AdminSystemService {
 
   formatBytes(bytes: number): string {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    if (bytes === 0) return '0 Byte';
+    if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
+    const value = bytes / Math.pow(1024, i);
+    // Keep 2 decimal places for MB and above so the frontend chart stays accurate
+    const formatted = i >= 2 ? value.toFixed(2) : Math.round(value).toString();
+    return `${formatted} ${sizes[i]}`;
   }
 
   formatUptime(seconds: number): string {
