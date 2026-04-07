@@ -120,13 +120,16 @@ jobs:
     environment: production
     steps:
       - uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
+          envs: GH_PAT
           script: |
             cd ~/masterhub/api-master
-            git pull origin main
+            git pull https://x-access-token:${GH_PAT}@github.com/1goodcod1/api-master.git main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api
             # DIRECT_URL — прямое подключение к Postgres (миграции не через PgBouncer)
