@@ -115,7 +115,6 @@ export class UsersManageService {
   }
 
   private async invalidateCache(userId: string) {
-    await this.cache.del(this.cache.keys.userMasterProfile(userId));
-    await this.cache.del(this.cache.keys.userProfile(userId));
+    await this.cache.invalidateUser(userId);
   }
 }

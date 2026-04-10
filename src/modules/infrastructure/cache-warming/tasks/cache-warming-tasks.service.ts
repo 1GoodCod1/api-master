@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MastersService } from '../../../marketplace/masters/masters.service';
+import { MastersListingService } from '../../../marketplace/masters/services/masters-listing.service';
+import { MastersSearchService } from '../../../marketplace/masters/services/masters-search.service';
+import { MastersLandingStatsService } from '../../../marketplace/masters/services/masters-landing-stats.service';
 import { CategoriesService } from '../../../marketplace/categories/categories.service';
 import { CitiesService } from '../../../marketplace/cities/cities.service';
 import { TariffsService } from '../../../marketplace/tariffs/tariffs.service';
@@ -19,7 +21,9 @@ export class CacheWarmingTasksService {
   private readonly logger = new Logger(CacheWarmingTasksService.name);
 
   constructor(
-    private readonly mastersService: MastersService,
+    private readonly mastersListingService: MastersListingService,
+    private readonly mastersSearchService: MastersSearchService,
+    private readonly mastersLandingStatsService: MastersLandingStatsService,
     private readonly categoriesService: CategoriesService,
     private readonly citiesService: CitiesService,
     private readonly tariffsService: TariffsService,
@@ -30,7 +34,7 @@ export class CacheWarmingTasksService {
     await this.runTask('Popular masters', () =>
       Promise.all(
         CACHE_WARMING_LIMITS.popularMasters.map((limit) =>
-          this.mastersService.getPopularMasters(limit),
+          this.mastersListingService.getPopularMasters(limit),
         ),
       ),
     );
@@ -40,7 +44,7 @@ export class CacheWarmingTasksService {
     await this.runTask('New masters', () =>
       Promise.all(
         CACHE_WARMING_LIMITS.newMasters.map((limit) =>
-          this.mastersService.getNewMasters(limit),
+          this.mastersListingService.getNewMasters(limit),
         ),
       ),
     );
@@ -58,7 +62,7 @@ export class CacheWarmingTasksService {
 
   async warmSearchFilters(): Promise<void> {
     await this.runTask('Search filters', () =>
-      this.mastersService.getSearchFilters(),
+      this.mastersListingService.getSearchFilters(),
     );
   }
 
@@ -101,7 +105,7 @@ export class CacheWarmingTasksService {
 
   async warmLandingStats(): Promise<void> {
     await this.runTask('Landing stats', () =>
-      this.mastersService.getLandingStats(),
+      this.mastersLandingStatsService.getLandingStats(),
     );
   }
 
@@ -111,7 +115,7 @@ export class CacheWarmingTasksService {
     return categories
       .slice(0, CACHE_WARMING_LIMITS.topMastersPerCategory)
       .map((category) =>
-        this.mastersService
+        this.mastersSearchService
           .findAll(this.createSearchDto({ categoryId: category.id }))
           .catch((err) =>
             this.logger.warn(
@@ -128,7 +132,7 @@ export class CacheWarmingTasksService {
     return cities
       .slice(0, CACHE_WARMING_LIMITS.topMastersPerCity)
       .map((city) =>
-        this.mastersService
+        this.mastersSearchService
           .findAll(this.createSearchDto({ cityId: city.id }))
           .catch((err) =>
             this.logger.warn(
@@ -150,7 +154,7 @@ export class CacheWarmingTasksService {
     for (const category of categories.slice(0, catLimit)) {
       for (const city of cities.slice(0, cityLimit)) {
         promises.push(
-          this.mastersService
+          this.mastersSearchService
             .findAll(
               this.createSearchDto({
                 categoryId: category.id,

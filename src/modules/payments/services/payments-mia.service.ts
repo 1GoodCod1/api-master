@@ -12,7 +12,8 @@ import { Prisma } from '@prisma/client';
 import { PaymentStatus, TariffType } from '../../../common/constants';
 import { getEffectiveTariff } from '../../../common/helpers/plans';
 import { PaymentsWebhookService } from './payments-webhook.service';
-import { AuditService } from '../../audit/audit.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AUDIT_EVENT } from '../../audit/audit.events';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 import type {
@@ -32,7 +33,7 @@ export class PaymentsMiaService {
     private readonly configService: ConfigService,
     private readonly tariffsService: TariffsService,
     private readonly webhookService: PaymentsWebhookService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /** MIA API доступен (для реальных платежей и test-pay). В sandbox terminalId необязателен. */
@@ -155,7 +156,7 @@ export class PaymentsMiaService {
       });
 
       // Audit log: создание платежа (sandbox)
-      await this.auditService.log({
+      this.eventEmitter.emit(AUDIT_EVENT, {
         userId: userId,
         action: AuditAction.PAYMENT_CREATED,
         entityType: AuditEntityType.Payment,
@@ -262,7 +263,7 @@ export class PaymentsMiaService {
     });
 
     // Audit log: создание платежа
-    await this.auditService.log({
+    this.eventEmitter.emit(AUDIT_EVENT, {
       userId: userId,
       action: AuditAction.PAYMENT_CREATED,
       entityType: AuditEntityType.Payment,
@@ -283,21 +284,13 @@ export class PaymentsMiaService {
   }
 
   private async getAmount(tariffType: TariffType): Promise<number> {
-    try {
-      const tariff = await this.tariffsService.findByType(tariffType);
-      return Number(tariff.amount);
-    } catch {
-      return { BASIC: 0, VIP: 199, PREMIUM: 399 }[tariffType] ?? 0;
-    }
+    const tariff = await this.tariffsService.findByType(tariffType);
+    return Number(tariff.amount);
   }
 
   private async getDays(tariffType: TariffType): Promise<number> {
-    try {
-      const tariff = await this.tariffsService.findByType(tariffType);
-      return tariff.days;
-    } catch {
-      return 30;
-    }
+    const tariff = await this.tariffsService.findByType(tariffType);
+    return tariff.days;
   }
 
   /**

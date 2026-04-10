@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { LeadsController } from './leads.controller';
+import { LeadsQueryController } from './leads-query.controller';
+import { LeadsSubscriptionController } from './leads-subscription.controller';
 import { PrismaModule } from '../../shared/database/prisma.module';
 import { RedisModule } from '../../shared/redis/redis.module';
 import { NotificationsModule } from '../../notifications/notifications/notifications.module';
@@ -29,7 +31,11 @@ import { ReferralsModule } from '../../engagement/referrals/referrals.module';
     EmailModule,
     ReferralsModule,
   ],
-  controllers: [LeadsController],
+  controllers: [
+    LeadsController,
+    LeadsQueryController,
+    LeadsSubscriptionController,
+  ],
   providers: [
     LeadsService,
     RecaptchaService,

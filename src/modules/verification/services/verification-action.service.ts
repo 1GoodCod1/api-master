@@ -18,7 +18,8 @@ import {
   VerificationDecision,
 } from '../dto/review-verification.dto';
 import { VerificationDocumentsPurgeService } from './verification-documents-purge.service';
-import { AuditService } from '../../audit/audit.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AUDIT_EVENT } from '../../audit/audit.events';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 import { Prisma, UserRole } from '@prisma/client';
@@ -34,7 +35,7 @@ export class VerificationActionService {
     private readonly encryption: EncryptionService,
     private readonly consentService: ConsentService,
     private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -132,20 +133,16 @@ export class VerificationActionService {
         masterName,
       });
 
-      try {
-        await this.auditService.log({
-          userId,
-          action: AuditAction.VERIFICATION_SUBMITTED,
-          entityType: AuditEntityType.MasterVerification,
-          entityId: verification.id,
-          newData: {
-            masterId: user.masterProfile.id,
-            documentType: dto.documentType,
-          } satisfies Prisma.InputJsonValue,
-        });
-      } catch (err) {
-        this.logger.error('Audit log failed on verification submit', err);
-      }
+      this.eventEmitter.emit(AUDIT_EVENT, {
+        userId,
+        action: AuditAction.VERIFICATION_SUBMITTED,
+        entityType: AuditEntityType.MasterVerification,
+        entityId: verification.id,
+        newData: {
+          masterId: user.masterProfile.id,
+          documentType: dto.documentType,
+        } satisfies Prisma.InputJsonValue,
+      });
 
       return {
         message: 'Verification request submitted successfully',
@@ -249,22 +246,18 @@ export class VerificationActionService {
         });
       }
 
-      try {
-        await this.auditService.log({
-          userId: adminId,
-          action: AuditAction.VERIFICATION_REVIEWED,
-          entityType: AuditEntityType.MasterVerification,
-          entityId: verificationId,
-          newData: {
-            decision: dto.decision,
-            masterId: verification.masterId,
-            status,
-            hasNotes: Boolean(dto.notes?.trim()),
-          } satisfies Prisma.InputJsonValue,
-        });
-      } catch (err) {
-        this.logger.error('Audit log failed on verification review', err);
-      }
+      this.eventEmitter.emit(AUDIT_EVENT, {
+        userId: adminId,
+        action: AuditAction.VERIFICATION_REVIEWED,
+        entityType: AuditEntityType.MasterVerification,
+        entityId: verificationId,
+        newData: {
+          decision: dto.decision,
+          masterId: verification.masterId,
+          status,
+          hasNotes: Boolean(dto.notes?.trim()),
+        } satisfies Prisma.InputJsonValue,
+      });
 
       return {
         message:
@@ -285,7 +278,6 @@ export class VerificationActionService {
   }
 
   private async invalidateCache(userId: string) {
-    await this.cache.del(this.cache.keys.userMasterProfile(userId));
-    await this.cache.del(this.cache.keys.userProfile(userId));
+    await this.cache.invalidateUser(userId);
   }
 }

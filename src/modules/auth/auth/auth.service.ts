@@ -106,13 +106,7 @@ export class AuthService {
   }
 
   async invalidateUserCache(userId: string) {
-    try {
-      await this.cache.del(this.cache.keys.userProfile(userId));
-      await this.cache.del(this.cache.keys.userMasterProfile(userId));
-    } catch (err) {
-      this.logger.error('invalidateUserCache failed', err);
-      throw err;
-    }
+    await this.cache.invalidateUser(userId);
   }
 
   // ==================== СБРОС ПАРОЛЯ ====================

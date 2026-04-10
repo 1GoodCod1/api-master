@@ -265,6 +265,16 @@ export class CacheService {
   } as const;
 
   /**
+   * Инвалидация кеша пользователя (профиль + мастер-профиль).
+   */
+  async invalidateUser(userId: string): Promise<void> {
+    await Promise.all([
+      this.del(this.keys.userProfile(userId)),
+      this.del(this.keys.userMasterProfile(userId)),
+    ]);
+  }
+
+  /**
    * Полная инвалидация кеша, связанного с мастером (профиль, поиск, топы).
    * Параллельно. При изменении профиля/данных мастера.
    *

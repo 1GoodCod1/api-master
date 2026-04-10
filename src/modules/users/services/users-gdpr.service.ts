@@ -9,7 +9,8 @@ import { GDPR_PAGE_SIZE } from '../../../common/constants';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
-import { AuditService } from '../../audit/audit.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AUDIT_EVENT } from '../../audit/audit.events';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 import type {
@@ -31,7 +32,7 @@ export class UsersGdprService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -55,7 +56,7 @@ export class UsersGdprService {
       await this.prisma.user.delete({ where: { id: userId } });
       await this.invalidateCache(userId);
 
-      await this.auditService.log({
+      this.eventEmitter.emit(AUDIT_EVENT, {
         userId: userId,
         action: AuditAction.USER_SELF_DELETED,
         entityType: AuditEntityType.User,
@@ -120,9 +121,28 @@ export class UsersGdprService {
 
     const [leads, reviews, bookings, loginHistory, notifications, consents] =
       await Promise.all([
-        this.fetchLeadsPaginated(leadWhere),
-        this.fetchReviewsPaginated(reviewWhere),
-        this.fetchBookingsPaginated(bookingWhere),
+        this.fetchPaginated(this.prisma.lead, leadWhere, {
+          message: true,
+          clientPhone: true,
+          clientName: true,
+          status: true,
+          createdAt: true,
+        } as const),
+        this.fetchPaginated(this.prisma.review, reviewWhere, {
+          rating: true,
+          comment: true,
+          clientPhone: true,
+          clientName: true,
+          createdAt: true,
+        } as const),
+        this.fetchPaginated(this.prisma.booking, bookingWhere, {
+          clientPhone: true,
+          clientName: true,
+          startTime: true,
+          endTime: true,
+          status: true,
+          createdAt: true,
+        } as const),
         this.prisma.loginHistory.findMany({
           where: { userId },
           select: {
@@ -235,7 +255,7 @@ export class UsersGdprService {
       createdAt: c.createdAt.toISOString(),
     }));
 
-    await this.auditService.log({
+    this.eventEmitter.emit(AUDIT_EVENT, {
       userId: userId,
       action: AuditAction.USER_DATA_EXPORTED,
       entityType: AuditEntityType.User,
@@ -255,108 +275,28 @@ export class UsersGdprService {
     };
   }
 
-  private async fetchLeadsPaginated(
-    where: { masterId: string } | { clientId: string },
-  ) {
-    const results: Array<{
-      message: string;
-      clientPhone: string;
-      clientName: string | null;
-      status: string;
-      createdAt: Date;
-    }> = [];
+  /**
+   * Generic cursor-based paginated fetcher.
+   * Replaces duplicate fetchLeadsPaginated / fetchReviewsPaginated / fetchBookingsPaginated.
+   */
+
+  private async fetchPaginated<T extends { id: string }>(
+    model: { findMany: (args: any) => Promise<T[]> },
+    where: Record<string, unknown>,
+    select: Record<string, boolean>,
+  ): Promise<Omit<T, 'id'>[]> {
+    const results: Omit<T, 'id'>[] = [];
     let cursor: { id: string } | undefined;
 
     do {
-      const batch = await this.prisma.lead.findMany({
+      const batch: T[] = await model.findMany({
         take: GDPR_PAGE_SIZE,
         ...(cursor ? { cursor, skip: 1 } : {}),
         where,
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-        select: {
-          message: true,
-          clientPhone: true,
-          clientName: true,
-          status: true,
-          createdAt: true,
-          id: true,
-        },
+        select: { ...select, id: true },
       });
-      results.push(...batch.map(({ id: _id, ...r }) => r));
-      const last = batch[batch.length - 1];
-      cursor =
-        batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
-    } while (cursor);
-
-    return results;
-  }
-
-  private async fetchReviewsPaginated(
-    where: { masterId: string } | { clientId: string },
-  ) {
-    const results: Array<{
-      rating: number;
-      comment: string | null;
-      clientPhone: string;
-      clientName: string | null;
-      createdAt: Date;
-    }> = [];
-    let cursor: { id: string } | undefined;
-
-    do {
-      const batch = await this.prisma.review.findMany({
-        take: GDPR_PAGE_SIZE,
-        ...(cursor ? { cursor, skip: 1 } : {}),
-        where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-        select: {
-          rating: true,
-          comment: true,
-          clientPhone: true,
-          clientName: true,
-          createdAt: true,
-          id: true,
-        },
-      });
-      results.push(...batch.map(({ id: _id, ...r }) => r));
-      const last = batch[batch.length - 1];
-      cursor =
-        batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
-    } while (cursor);
-
-    return results;
-  }
-
-  private async fetchBookingsPaginated(
-    where: { masterId: string } | { clientId: string },
-  ) {
-    const results: Array<{
-      clientPhone: string;
-      clientName: string | null;
-      startTime: Date;
-      endTime: Date;
-      status: string;
-      createdAt: Date;
-    }> = [];
-    let cursor: { id: string } | undefined;
-
-    do {
-      const batch = await this.prisma.booking.findMany({
-        take: GDPR_PAGE_SIZE,
-        ...(cursor ? { cursor, skip: 1 } : {}),
-        where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-        select: {
-          clientPhone: true,
-          clientName: true,
-          startTime: true,
-          endTime: true,
-          status: true,
-          createdAt: true,
-          id: true,
-        },
-      });
-      results.push(...batch.map(({ id: _id, ...r }) => r));
+      results.push(...batch.map(({ id: _id, ...rest }) => rest));
       const last = batch[batch.length - 1];
       cursor =
         batch.length === GDPR_PAGE_SIZE && last ? { id: last.id } : undefined;
@@ -366,7 +306,6 @@ export class UsersGdprService {
   }
 
   private async invalidateCache(userId: string) {
-    await this.cache.del(this.cache.keys.userMasterProfile(userId));
-    await this.cache.del(this.cache.keys.userProfile(userId));
+    await this.cache.invalidateUser(userId);
   }
 }

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConsentType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { AuditService } from '../../audit/audit.service';
+import { AUDIT_EVENT } from '../../audit/audit.events';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
 
@@ -11,7 +12,7 @@ export class ConsentService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -47,9 +48,9 @@ export class ConsentService {
       `Consent granted: user=${userId}, type=${consentType}, version=${meta.version ?? '1.0'}`,
     );
 
-    // Audit log: выдача согласия
-    await this.auditService.log({
-      userId: userId,
+    // Audit via event (decoupled from AuditService)
+    this.eventEmitter.emit(AUDIT_EVENT, {
+      userId,
       action: AuditAction.CONSENT_GRANTED,
       entityType: AuditEntityType.Consent,
       entityId: consentType,
@@ -80,9 +81,9 @@ export class ConsentService {
 
     this.logger.log(`Consent revoked: user=${userId}, type=${consentType}`);
 
-    // Audit log: отзыв согласия
-    await this.auditService.log({
-      userId: userId,
+    // Audit via event (decoupled from AuditService)
+    this.eventEmitter.emit(AUDIT_EVENT, {
+      userId,
       action: AuditAction.CONSENT_REVOKED,
       entityType: AuditEntityType.Consent,
       entityId: consentType,

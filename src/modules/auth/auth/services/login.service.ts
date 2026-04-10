@@ -12,7 +12,8 @@ import { LoginDto } from '../dto/login.dto';
 import { TokenService } from './token.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { AuthLockoutService } from './auth-lockout.service';
-import { AuditService } from '../../../audit/audit.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AUDIT_EVENT } from '../../../audit/audit.events';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
 import {
@@ -29,7 +30,7 @@ export class LoginService {
     private readonly tokenService: TokenService,
     private readonly cache: CacheService,
     private readonly lockout: AuthLockoutService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -93,7 +94,7 @@ export class LoginService {
           userAgent,
           AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
         );
-        await this.auditService.log({
+        this.eventEmitter.emit(AUDIT_EVENT, {
           userId: user.id,
           action: AuditAction.LOGIN_FAILED,
           entityType: AuditEntityType.User,
@@ -132,7 +133,7 @@ export class LoginService {
         userAgent,
         AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
       );
-      await this.auditService.log({
+      this.eventEmitter.emit(AUDIT_EVENT, {
         userId: user.id,
         action: AuditAction.LOGIN_FAILED,
         entityType: AuditEntityType.User,
@@ -165,8 +166,8 @@ export class LoginService {
     );
 
     await this.updateLoginMetadata(user.id, ipAddress, userAgent);
-    await this.invalidateUserCache(user.id);
-    await this.auditService.log({
+    await this.cache.invalidateUser(user.id);
+    this.eventEmitter.emit(AUDIT_EVENT, {
       userId: user.id,
       action: AuditAction.LOGIN_SUCCESS,
       entityType: AuditEntityType.User,
@@ -201,7 +202,7 @@ export class LoginService {
       });
 
       if (userId) {
-        await this.auditService.log({
+        this.eventEmitter.emit(AUDIT_EVENT, {
           userId,
           action: AuditAction.USER_LOGOUT,
           entityType: AuditEntityType.User,
@@ -222,9 +223,9 @@ export class LoginService {
   async logoutAll(userId: string) {
     try {
       await this.prisma.refreshToken.deleteMany({ where: { userId } });
-      await this.invalidateUserCache(userId);
+      await this.cache.invalidateUser(userId);
 
-      await this.auditService.log({
+      this.eventEmitter.emit(AUDIT_EVENT, {
         userId,
         action: AuditAction.USER_LOGOUT_ALL,
         entityType: AuditEntityType.User,
@@ -313,10 +314,5 @@ export class LoginService {
         },
       }),
     ]);
-  }
-
-  private async invalidateUserCache(userId: string) {
-    await this.cache.del(this.cache.keys.userProfile(userId));
-    await this.cache.del(this.cache.keys.userMasterProfile(userId));
   }
 }

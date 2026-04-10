@@ -1,12 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { MastersService } from './masters.service';
+import { MastersSearchService } from './services/masters-search.service';
 import { CONTROLLER_PATH, SORT_DESC } from '../../../common/constants';
 
 @ApiTags('Search')
 @Controller(CONTROLLER_PATH.search)
 export class SearchController {
-  constructor(private readonly mastersService: MastersService) {}
+  constructor(private readonly mastersSearchService: MastersSearchService) {}
 
   @Get('masters')
   @ApiOperation({ summary: 'Simple master search with filters' })
@@ -31,6 +31,6 @@ export class SearchController {
       sortOrder: SORT_DESC,
     };
 
-    return this.mastersService.findAll(searchDto);
+    return this.mastersSearchService.findAll(searchDto);
   }
 }

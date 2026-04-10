@@ -156,8 +156,7 @@ export class PaymentsWebhookService {
   ): Promise<void> {
     try {
       await Promise.all([
-        this.cache.del(this.cache.keys.userMasterProfile(userId)),
-        this.cache.del(this.cache.keys.userProfile(userId)),
+        this.cache.invalidateUser(userId),
         this.cache.invalidateMasterRelated(masterId),
       ]);
     } catch (e) {

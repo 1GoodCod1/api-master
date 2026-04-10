@@ -13,6 +13,7 @@ import {
   REVIEWS_LIST_DEFAULT_LIMIT,
   REVIEWS_LIST_MAX_LIMIT,
 } from '../../../common/constants';
+import { parseLimit, parsePage } from '../../../common/utils/pagination.util';
 import type { FindReviewsOptions } from './types';
 export type { FindReviewsOptions } from './types';
 
@@ -46,8 +47,12 @@ export class ReviewsService {
     const { limit, page, ...rest } = options;
     return this.queryService.findAllForMaster(masterId, {
       ...rest,
-      limit: this.parseLimit(limit),
-      page: this.parsePage(page),
+      limit: parseLimit(
+        limit,
+        REVIEWS_LIST_DEFAULT_LIMIT,
+        REVIEWS_LIST_MAX_LIMIT,
+      ),
+      page: parsePage(page),
     });
   }
 
@@ -86,11 +91,18 @@ export class ReviewsService {
    */
   async getMyReviews(user: JwtUser, options: FindReviewsOptions = {}) {
     const { limit, page, ...rest } = options;
+    const parsedLimit = parseLimit(
+      limit,
+      REVIEWS_LIST_DEFAULT_LIMIT,
+      REVIEWS_LIST_MAX_LIMIT,
+    );
+    const parsedPage = parsePage(page);
+
     if (user.role === UserRole.CLIENT) {
       return this.queryService.findAllForClient(user.id, {
         ...rest,
-        limit: this.parseLimit(limit),
-        page: this.parsePage(page),
+        limit: parsedLimit,
+        page: parsedPage,
       });
     }
 
@@ -101,8 +113,8 @@ export class ReviewsService {
     return this.queryService.findAllForMaster(masterId, {
       ...rest,
       statusIn: [ReviewStatus.PENDING, ReviewStatus.VISIBLE],
-      limit: this.parseLimit(limit),
-      page: this.parsePage(page),
+      limit: parsedLimit,
+      page: parsedPage,
     });
   }
 
@@ -160,18 +172,6 @@ export class ReviewsService {
   // ============================================
   // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
   // ============================================
-
-  private parseLimit(limit?: string): number {
-    if (!limit) return REVIEWS_LIST_DEFAULT_LIMIT;
-    const num = Number(limit) || REVIEWS_LIST_DEFAULT_LIMIT;
-    return Math.min(REVIEWS_LIST_MAX_LIMIT, Math.max(1, num));
-  }
-
-  private parsePage(page?: string): number | undefined {
-    if (!page) return undefined;
-    const num = Number(page);
-    return Number.isNaN(num) ? undefined : num;
-  }
 
   private parseAndValidateStatus(statusRaw: string): ReviewStatus {
     const status = statusRaw.toUpperCase() as ReviewStatus;

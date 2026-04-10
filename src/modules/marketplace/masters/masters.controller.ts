@@ -1,17 +1,11 @@
 import { UserRole } from '@prisma/client';
-import {
-  CONTROLLER_PATH,
-  VIEWS_HISTORY_PERIOD,
-  VIEWS_HISTORY_PERIODS,
-  type ViewsHistoryPeriod,
-} from '../../../common/constants';
+import { CONTROLLER_PATH } from '../../../common/constants';
 import {
   Controller,
   Get,
   Post,
   Put,
   Patch,
-  Delete,
   Body,
   Param,
   Query,
@@ -25,19 +19,19 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { MastersService } from './masters.service';
-import { TelegramConnectService } from '../../notifications/notifications/services/telegram-connect.service';
+import { MastersSearchService } from './services/masters-search.service';
+import { MastersSuggestService } from './services/masters-suggest.service';
+import { MastersListingService } from './services/masters-listing.service';
+import { MastersProfileService } from './services/masters-profile.service';
+import { MastersTariffService } from './services/masters-tariff.service';
+import { MastersAvailabilityService } from './services/masters-availability.service';
+import { MastersPublicProfileService } from './services/masters-public-profile.service';
+import { encodeId } from '../../shared/utils/id-encoder';
 import { UpdateMasterDto } from './dto/update-master.dto';
 import { UpdateMasterServicesDto } from './dto/update-services.dto';
 import { SearchMastersDto } from './dto/search-masters.dto';
 import { SuggestQueryDto } from './dto/suggest-query.dto';
-import { SetMasterAvatarDto } from './dto/set-avatar.dto';
 import { UpdateOnlineStatusDto } from './dto/update-online-status.dto';
-import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
-import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
-import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
-import { UpdateQuickRepliesDto } from './dto/update-quick-replies.dto';
-import { UpdateAutoresponderSettingsDto } from './dto/update-autoresponder-settings.dto';
 import { ClaimFreePlanDto } from './dto/claim-free-plan.dto';
 import {
   JwtAuthGuard,
@@ -55,14 +49,27 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 @Controller(CONTROLLER_PATH.masters)
 export class MastersController {
   constructor(
-    private readonly mastersService: MastersService,
-    private readonly telegramConnect: TelegramConnectService,
+    private readonly searchService: MastersSearchService,
+    private readonly suggestService: MastersSuggestService,
+    private readonly listingService: MastersListingService,
+    private readonly profileService: MastersProfileService,
+    private readonly tariffService: MastersTariffService,
+    private readonly availabilityService: MastersAvailabilityService,
+    private readonly publicProfileService: MastersPublicProfileService,
   ) {}
+
+  private onInvalidate(masterId: string, slug?: string | null) {
+    return this.profileService.invalidateMasterCache(
+      masterId,
+      slug,
+      encodeId(masterId),
+    );
+  }
 
   @Get()
   @ApiOperation({ summary: 'Search masters with filters' })
   async findAll(@Query() searchDto: SearchMastersDto) {
-    return this.mastersService.findAll(searchDto);
+    return this.searchService.findAll(searchDto);
   }
 
   @Get('suggest')
@@ -71,13 +78,13 @@ export class MastersController {
       'Smart search suggestions (categories, masters, services) with fuzzy matching',
   })
   async getSuggestions(@Query() dto: SuggestQueryDto) {
-    return this.mastersService.getSuggestions(dto);
+    return this.suggestService.getSuggestions(dto);
   }
 
   @Get('filters')
   @ApiOperation({ summary: 'Get available search filters' })
   async getFilters() {
-    return this.mastersService.getSearchFilters();
+    return this.listingService.getSearchFilters();
   }
 
   @Get('popular')
@@ -86,17 +93,7 @@ export class MastersController {
   async getPopularMasters(
     @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
   ) {
-    return this.mastersService.getPopularMasters(limit);
-  }
-
-  @Get(':slug/photos')
-  @ApiOperation({ summary: 'Get master photos (public, max 15)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getMasterPhotos(
-    @Param('slug') slugOrId: string,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 15,
-  ) {
-    return this.mastersService.getMasterPhotos(slugOrId, limit);
+    return this.listingService.getPopularMasters(limit);
   }
 
   @Get('new')
@@ -105,13 +102,7 @@ export class MastersController {
   async getNewMasters(
     @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
   ) {
-    return this.mastersService.getNewMasters(limit);
-  }
-
-  @Get('landing-stats')
-  @ApiOperation({ summary: 'Get landing page stats (public)' })
-  async getLandingStats() {
-    return this.mastersService.getLandingStats();
+    return this.listingService.getNewMasters(limit);
   }
 
   @Get('profile/me')
@@ -120,7 +111,7 @@ export class MastersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get master profile (authenticated)' })
   async getProfile(@GetUser() user: JwtUser) {
-    return this.mastersService.getProfile(user.id);
+    return this.profileService.getProfile(user.id);
   }
 
   @Put('profile/me')
@@ -133,7 +124,7 @@ export class MastersController {
     @Body() updateDto: UpdateMasterDto,
   ) {
     const allowServices = user.role === UserRole.ADMIN || user.isVerified;
-    return this.mastersService.updateProfile(user.id, updateDto, allowServices);
+    return this.profileService.updateProfile(user.id, updateDto, allowServices);
   }
 
   @Patch('profile/me/services')
@@ -145,36 +136,7 @@ export class MastersController {
     @GetUser() user: JwtUser,
     @Body() dto: UpdateMasterServicesDto,
   ) {
-    return this.mastersService.updateServices(user.id, dto.services);
-  }
-
-  @Patch('avatar/me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Set current user master avatar by fileId' })
-  async setAvatar(@Body() dto: SetMasterAvatarDto, @GetUser() user: JwtUser) {
-    return this.mastersService.setMyAvatar(user.id, dto.fileId);
-  }
-
-  @Get('photos/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get my photos' })
-  async getMyPhotos(@GetUser() user: JwtUser) {
-    return this.mastersService.getMyPhotos(user.id);
-  }
-
-  @Delete('photos/:fileId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get by my photo by id' })
-  async removeMyPhoto(
-    @Param('fileId') fileId: string,
-    @GetUser() user: JwtUser,
-  ) {
-    return this.mastersService.removeMyPhoto(user.id, fileId);
+    return this.profileService.updateServices(user.id, dto.services);
   }
 
   @Get('tariff/me')
@@ -183,7 +145,7 @@ export class MastersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current tariff info' })
   async getTariff(@GetUser() user: JwtUser) {
-    return this.mastersService.getTariff(user.id);
+    return this.tariffService.getTariff(user.id);
   }
 
   @Post('tariff/claim-free')
@@ -194,42 +156,8 @@ export class MastersController {
     summary: 'Claim free plan (verified masters only, 1-click)',
   })
   async claimFreePlan(@GetUser() user: JwtUser, @Body() dto: ClaimFreePlanDto) {
-    return this.mastersService.claimFreePlan(user.id, dto.tariffType);
-  }
-
-  @Get('stats/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get master statistics' })
-  async getStats(@GetUser() user: JwtUser) {
-    return this.mastersService.getStats(user.id);
-  }
-
-  @Get('stats/me/views-history')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get profile views history (past weeks or months)' })
-  @ApiQuery({
-    name: 'period',
-    required: true,
-    enum: [...VIEWS_HISTORY_PERIODS],
-  })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  async getViewsHistory(
-    @GetUser() user: JwtUser,
-    @Query('period') period: ViewsHistoryPeriod = VIEWS_HISTORY_PERIOD.WEEK,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 12,
-  ) {
-    const safePeriod =
-      period === VIEWS_HISTORY_PERIOD.MONTH
-        ? VIEWS_HISTORY_PERIOD.MONTH
-        : VIEWS_HISTORY_PERIOD.WEEK;
-    return this.mastersService.getViewsHistory(
-      user.id,
-      safePeriod,
-      Math.min(Math.max(limit || 12, 1), 24),
+    return this.tariffService.claimFreePlan(user.id, dto.tariffType, (m, s) =>
+      this.onInvalidate(m, s),
     );
   }
 
@@ -245,130 +173,11 @@ export class MastersController {
     @GetUser() user: JwtUser,
     @Body() dto: UpdateOnlineStatusDto,
   ) {
-    return this.mastersService.updateOnlineStatus(user.id, dto.isOnline);
-  }
-
-  @Patch('availability-status/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update master availability status and max leads' })
-  async updateAvailabilityStatus(
-    @GetUser() user: JwtUser,
-    @Body() dto: UpdateAvailabilityStatusDto,
-  ) {
-    return this.mastersService.updateAvailabilityStatus(user.id, dto);
-  }
-
-  @Get('availability-status/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get master availability status' })
-  async getAvailabilityStatus(@GetUser() user: JwtUser) {
-    return this.mastersService.getAvailabilityStatus(user.id);
-  }
-
-  @Get('notifications-settings/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get notification settings (Telegram, WhatsApp)' })
-  async getNotificationSettings(@GetUser() user: JwtUser) {
-    return await this.mastersService.getNotificationSettings(user.id);
-  }
-
-  @Post('telegram-connect-token/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary:
-      'Create Telegram connect link (Premium only). Opens t.me/bot?start=connect_XXX',
-  })
-  async createTelegramConnectLink(@GetUser() user: JwtUser) {
-    return this.telegramConnect.createConnectLink(user.id);
-  }
-
-  @Patch('notifications-settings/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Update notification settings (Telegram, WhatsApp). Premium only.',
-  })
-  async updateNotificationSettings(
-    @GetUser() user: JwtUser,
-    @Body() dto: UpdateNotificationSettingsDto,
-  ) {
-    return await this.mastersService.updateNotificationSettings(user.id, dto);
-  }
-
-  @Get('schedule-settings/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Get schedule settings (working hours, slot duration)',
-  })
-  async getScheduleSettings(@GetUser() user: JwtUser) {
-    return await this.mastersService.getScheduleSettings(user.id);
-  }
-
-  @Patch('schedule-settings/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Update schedule settings (working hours, slot duration)',
-  })
-  async updateScheduleSettings(
-    @GetUser() user: JwtUser,
-    @Body() dto: UpdateScheduleSettingsDto,
-  ) {
-    return await this.mastersService.updateScheduleSettings(user.id, dto);
-  }
-
-  @Get('quick-replies/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get my quick replies (master)' })
-  async getMyQuickReplies(@GetUser() user: JwtUser) {
-    return this.mastersService.getQuickReplies(user.id);
-  }
-
-  @Put('quick-replies/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Replace my quick replies list (master)' })
-  async replaceMyQuickReplies(
-    @GetUser() user: JwtUser,
-    @Body() dto: UpdateQuickRepliesDto,
-  ) {
-    return this.mastersService.replaceQuickReplies(user.id, dto);
-  }
-
-  @Get('autoresponder/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get my autoresponder settings (master)' })
-  async getMyAutoresponderSettings(@GetUser() user: JwtUser) {
-    return this.mastersService.getAutoresponderSettings(user.id);
-  }
-
-  @Patch('autoresponder/me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.MASTER, UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update my autoresponder settings (master)' })
-  async updateMyAutoresponderSettings(
-    @GetUser() user: JwtUser,
-    @Body() dto: UpdateAutoresponderSettingsDto,
-  ) {
-    return this.mastersService.updateAutoresponderSettings(user.id, dto);
+    return this.availabilityService.updateOnlineStatus(
+      user.id,
+      dto.isOnline,
+      (m, s) => this.onInvalidate(m, s),
+    );
   }
 
   @Get(':slug')
@@ -378,6 +187,6 @@ export class MastersController {
     @Param('slug') slugOrId: string,
     @Req() req: RequestWithOptionalUser,
   ): Promise<unknown> {
-    return this.mastersService.findOne(slugOrId, req, true);
+    return this.publicProfileService.findOne(slugOrId, req, true);
   }
 }

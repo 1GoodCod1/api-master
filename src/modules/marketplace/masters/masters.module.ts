@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MastersService } from './masters.service';
 import { MastersController } from './masters.controller';
+import { MastersSettingsController } from './masters-settings.controller';
+import { MastersStatsController } from './masters-stats.controller';
+import { MastersMediaController } from './masters-media.controller';
 import { PortfolioController } from './portfolio.controller';
 import { PrismaModule } from '../../shared/database/prisma.module';
 import { RedisModule } from '../../shared/redis/redis.module';
@@ -34,7 +37,14 @@ import { MastersLandingStatsService } from './services/masters-landing-stats.ser
     AuditModule,
     FilesModule,
   ],
-  controllers: [MastersController, SearchController, PortfolioController],
+  controllers: [
+    MastersController,
+    MastersSettingsController,
+    MastersStatsController,
+    MastersMediaController,
+    SearchController,
+    PortfolioController,
+  ],
   providers: [
     MastersService,
     MastersListingService,
@@ -53,6 +63,21 @@ import { MastersLandingStatsService } from './services/masters-landing-stats.ser
     MastersQuickRepliesService,
     MastersLandingStatsService,
   ],
-  exports: [MastersService, MastersAvailabilityService],
+  exports: [
+    MastersService,
+    MastersAvailabilityService,
+    MastersSearchService,
+    MastersSuggestService,
+    MastersListingService,
+    MastersProfileService,
+    MastersPublicProfileService,
+    MastersPhotosService,
+    MastersStatsService,
+    MastersTariffService,
+    MastersNotificationSettingsService,
+    MastersScheduleService,
+    MastersQuickRepliesService,
+    MastersLandingStatsService,
+  ],
 })
 export class MastersModule {}

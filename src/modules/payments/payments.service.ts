@@ -1,4 +1,4 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../common/errors';
 import { UserRole } from '@prisma/client';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -15,8 +15,6 @@ import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
  */
 @Injectable()
 export class PaymentsService {
-  private readonly logger = new Logger(PaymentsService.name);
-
   constructor(
     private readonly miaService: PaymentsMiaService,
     private readonly webhookService: PaymentsWebhookService,
@@ -26,105 +24,47 @@ export class PaymentsService {
 
   // ==================== СОЗДАНИЕ ПЛАТЕЖЕЙ ====================
 
-  /**
-   * Создать QR-платёж через MIA (MAIB)
-   */
   async createMiaCheckout(dto: CreatePaymentDto, userId: string) {
-    try {
-      return await this.miaService.createTariffQrPayment(dto, userId);
-    } catch (err) {
-      this.logger.error('createMiaCheckout failed', err);
-      throw err;
-    }
+    return this.miaService.createTariffQrPayment(dto, userId);
   }
 
   async handleMiaCallback(orderId: string) {
-    try {
-      await this.webhookService.completeMiaTariffPayment(orderId);
-      return { received: true };
-    } catch (err) {
-      this.logger.error('handleMiaCallback failed', err);
-      throw err;
-    }
+    await this.webhookService.completeMiaTariffPayment(orderId);
+    return { received: true };
   }
 
   async simulateMiaSandboxPayment(paymentId: string, userId: string) {
-    try {
-      return await this.miaService.simulateSandboxPayment(paymentId, userId);
-    } catch (err) {
-      this.logger.error('simulateMiaSandboxPayment failed', err);
-      throw err;
-    }
+    return this.miaService.simulateSandboxPayment(paymentId, userId);
   }
 
   // ==================== ЗАПРОСЫ И СТАТИСТИКА ====================
 
-  /**
-   * Получить платежи мастера с проверкой прав (ADMIN или сам мастер)
-   */
   async getPaymentsForMaster(masterId: string, authUser: JwtUser) {
-    try {
-      this.validateMasterAccess(masterId, authUser);
-      return await this.queryService.getPaymentsForMaster(masterId);
-    } catch (err) {
-      if (err instanceof ForbiddenException) {
-        throw err;
-      }
-      this.logger.error('getPaymentsForMaster failed', err);
-      throw err;
-    }
+    this.validateMasterAccess(masterId, authUser);
+    return this.queryService.getPaymentsForMaster(masterId);
   }
 
-  /**
-   * Получить статистику платежей с проверкой прав
-   */
   async getPaymentStats(masterId: string, authUser: JwtUser) {
-    try {
-      this.validateMasterAccess(masterId, authUser);
-      return await this.queryService.getPaymentStats(masterId);
-    } catch (err) {
-      if (err instanceof ForbiddenException) {
-        throw err;
-      }
-      this.logger.error('getPaymentStats failed', err);
-      throw err;
-    }
+    this.validateMasterAccess(masterId, authUser);
+    return this.queryService.getPaymentStats(masterId);
   }
 
   // ==================== УПРАВЛЕНИЕ АПГРЕЙДАМИ ====================
 
   async confirmPendingUpgrade(userId: string) {
-    try {
-      return await this.upgradeService.confirmPendingUpgrade(userId);
-    } catch (err) {
-      this.logger.error('confirmPendingUpgrade failed', err);
-      throw err;
-    }
+    return this.upgradeService.confirmPendingUpgrade(userId);
   }
 
   async cancelPendingUpgrade(userId: string) {
-    try {
-      return await this.upgradeService.cancelPendingUpgrade(userId);
-    } catch (err) {
-      this.logger.error('cancelPendingUpgrade failed', err);
-      throw err;
-    }
+    return this.upgradeService.cancelPendingUpgrade(userId);
   }
 
   async cancelTariffAtPeriodEnd(userId: string) {
-    try {
-      return await this.upgradeService.cancelTariffAtPeriodEnd(userId);
-    } catch (err) {
-      this.logger.error('cancelTariffAtPeriodEnd failed', err);
-      throw err;
-    }
+    return this.upgradeService.cancelTariffAtPeriodEnd(userId);
   }
 
   // ==================== ВСПОМОГАТЕЛЬНЫЕ ====================
 
-  /**
-   * Универсальная проверка прав доступа к финансовым данным мастера
-   */
   private validateMasterAccess(masterId: string, authUser: JwtUser) {
     if (authUser.role === UserRole.ADMIN) return;
 

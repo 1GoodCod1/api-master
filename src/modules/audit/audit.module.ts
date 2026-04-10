@@ -3,13 +3,19 @@ import { AuditService } from './audit.service';
 import { AuditController } from './audit.controller';
 import { AuditLogWriterService } from './services/audit-log-writer.service';
 import { AuditLogQueryService } from './services/audit-log-query.service';
+import { AuditEventListener } from './audit-event.listener';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { RedisModule } from '../shared/redis/redis.module';
 
 @Module({
   imports: [PrismaModule, RedisModule],
   controllers: [AuditController],
-  providers: [AuditService, AuditLogWriterService, AuditLogQueryService],
+  providers: [
+    AuditService,
+    AuditLogWriterService,
+    AuditLogQueryService,
+    AuditEventListener,
+  ],
   exports: [AuditService],
 })
 export class AuditModule {}
