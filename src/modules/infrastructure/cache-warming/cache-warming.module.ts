@@ -8,7 +8,6 @@ import { CategoriesModule } from '../../marketplace/categories/categories.module
 import { CitiesModule } from '../../marketplace/cities/cities.module';
 import { TariffsModule } from '../../marketplace/tariffs/tariffs.module';
 import { PromotionsModule } from '../../marketplace/promotions/promotions.module';
-import { AuthModule } from '../../auth/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { AuthModule } from '../../auth/auth/auth.module';
     CitiesModule,
     TariffsModule,
     PromotionsModule,
-    AuthModule,
   ],
   controllers: [CacheWarmingController],
   providers: [CacheWarmingService, CacheWarmingTasksService],
