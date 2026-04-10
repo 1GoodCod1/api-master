@@ -1,5 +1,11 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { CONTROLLER_PATH } from '../../../common/constants';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
@@ -60,7 +66,8 @@ export class LeadsQueryController {
   @Roles(UserRole.CLIENT)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Check if client has a completed (CLOSED) lead to a specific master',
+    summary:
+      'Check if client has a completed (CLOSED) lead to a specific master',
   })
   @ApiResponse({
     status: 200,

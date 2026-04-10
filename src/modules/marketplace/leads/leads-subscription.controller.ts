@@ -1,5 +1,10 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CONTROLLER_PATH } from '../../../common/constants';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
@@ -11,7 +16,9 @@ import { LeadsAvailabilitySubscriptionService } from './services/leads-availabil
 @ApiTags('Leads Subscriptions')
 @Controller(CONTROLLER_PATH.leads)
 export class LeadsSubscriptionController {
-  constructor(private readonly subscriptionService: LeadsAvailabilitySubscriptionService) {}
+  constructor(
+    private readonly subscriptionService: LeadsAvailabilitySubscriptionService,
+  ) {}
 
   @Get('availability-subscription/:masterId')
   @UseGuards(JwtAuthGuard, RolesGuard)

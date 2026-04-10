@@ -66,7 +66,6 @@ export class LeadsController {
     return this.leadsService.create(createLeadDto, user, ipAddress);
   }
 
-
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)
@@ -109,7 +108,6 @@ export class LeadsController {
     return this.actionsService.updateStatus(id, user, updateDto);
   }
 
-
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.MASTER, UserRole.ADMIN, UserRole.CLIENT)
@@ -120,6 +118,4 @@ export class LeadsController {
   async findOne(@Param('id') idOrEncoded: string, @GetUser() user: JwtUser) {
     return this.listService.findOne(idOrEncoded, user);
   }
-
-
 }
