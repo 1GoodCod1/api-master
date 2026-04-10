@@ -8,7 +8,7 @@ import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { VerificationStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
-import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../../notifications/events';
 import { EncryptionService } from '../../shared/utils/encryption.service';
 import { ConsentService } from '../../consent/services/consent.service';
 import { ConsentType } from '../../consent/dto/grant-consent.dto';
@@ -30,7 +30,7 @@ export class VerificationActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationEvents: NotificationEventEmitter,
     private readonly encryption: EncryptionService,
     private readonly consentService: ConsentService,
     private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
@@ -126,18 +126,11 @@ export class VerificationActionService {
       const masterName =
         [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
         user.phone;
-      await this.inAppNotifications
-        .notifyNewVerificationRequest({
-          verificationId: verification.id,
-          masterId: user.masterProfile.id,
-          masterName,
-        })
-        .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.logger.warn(
-            `Failed to send in-app new verification notification: ${msg}`,
-          );
-        });
+      this.notificationEvents.notifyNewVerificationRequest({
+        verificationId: verification.id,
+        masterId: user.masterProfile.id,
+        masterName,
+      });
 
       try {
         await this.auditService.log({
@@ -226,18 +219,11 @@ export class VerificationActionService {
         await this.invalidateCache(userId);
 
         // In-app уведомление мастеру: верификация одобрена
-        await this.inAppNotifications
-          .notifyVerificationApproved(userId, {
-            verificationId,
-            masterId: verification.masterId,
-            isFirst100: false,
-          })
-          .catch((e: unknown) => {
-            const msg = e instanceof Error ? e.message : String(e);
-            this.logger.warn(
-              `Failed to send in-app verification approved: ${msg}`,
-            );
-          });
+        this.notificationEvents.notifyVerificationApproved(userId, {
+          verificationId,
+          masterId: verification.masterId,
+          isFirst100: false,
+        });
 
         await this.verificationDocumentsPurge
           .purgeVerificationFilesById(verificationId)
@@ -256,18 +242,11 @@ export class VerificationActionService {
 
         // In-app уведомление мастеру: верификация отклонена
         const userId = verification.master.userId;
-        await this.inAppNotifications
-          .notifyVerificationRejected(userId, {
-            verificationId,
-            masterId: verification.masterId,
-            reason: dto.notes || undefined,
-          })
-          .catch((e: unknown) => {
-            const msg = e instanceof Error ? e.message : String(e);
-            this.logger.warn(
-              `Failed to send in-app verification rejected: ${msg}`,
-            );
-          });
+        this.notificationEvents.notifyVerificationRejected(userId, {
+          verificationId,
+          masterId: verification.masterId,
+          reason: dto.notes || undefined,
+        });
       }
 
       try {

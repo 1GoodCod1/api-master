@@ -8,7 +8,6 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { BullModule } from '@nestjs/bull';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { TerminusModule } from '@nestjs/terminus';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import configuration, { createBullOptions } from './config';
@@ -23,6 +22,7 @@ import { PrismaModule } from './modules/shared/database/prisma.module';
 import { RedisModule } from './modules/shared/redis/redis.module';
 import { RedisService } from './modules/shared/redis/redis.service';
 import { CacheModule } from './modules/shared/cache/cache.module';
+import { NotificationEventsModule } from './modules/notifications/events';
 
 // Функциональные модули
 import { AppModule as AppRootModule } from './app/app.module';
@@ -99,6 +99,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     RedisModule,
     CacheModule,
     EmailModule,
+    NotificationEventsModule,
 
     // Системные модули
     ScheduleModule.forRoot(),
@@ -137,7 +138,6 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     }),
 
     EventEmitterModule.forRoot(),
-    TerminusModule,
 
     // Функциональные модули
     AppRootModule,

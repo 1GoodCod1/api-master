@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationCategory } from '@prisma/client';
 import { BookingStatus } from '../../../../common/constants';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../../../notifications/events';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 import { formatDateTime } from '../../../shared/utils/format-date.util';
 
@@ -9,10 +9,10 @@ import { formatDateTime } from '../../../shared/utils/format-date.util';
 export class BookingsNotificationService {
   private readonly logger = new Logger(BookingsNotificationService.name);
 
-  constructor(private readonly inAppNotifications: InAppNotificationService) {}
+  constructor(private readonly notificationEvents: NotificationEventEmitter) {}
 
   /** Мастер предложил время — уведомить клиента подтвердить или отклонить */
-  async notifyBookingPending(
+  notifyBookingPending(
     masterId: string,
     master: {
       user: { id: string; firstName: string | null; lastName: string | null };
@@ -21,16 +21,15 @@ export class BookingsNotificationService {
     clientName: string | undefined,
     start: Date,
     bookingId: string,
-  ): Promise<void> {
+  ): void {
     try {
       const masterName = formatUserName(
         master.user.firstName,
         master.user.lastName,
       );
 
-      // Уведомить клиента о подтверждении
       if (clientId) {
-        await this.inAppNotifications.notify({
+        this.notificationEvents.notify({
           userId: clientId,
           category: NotificationCategory.BOOKING_PENDING,
           title: 'Мастер предложил время',
@@ -53,7 +52,7 @@ export class BookingsNotificationService {
   }
 
   /** Client booked time — notify master to confirm or reject */
-  async notifyBookingPendingForMaster(
+  notifyBookingPendingForMaster(
     masterId: string,
     master: {
       user: { id: string; firstName: string | null; lastName: string | null };
@@ -62,9 +61,9 @@ export class BookingsNotificationService {
     clientName: string | undefined,
     start: Date,
     bookingId: string,
-  ): Promise<void> {
+  ): void {
     try {
-      await this.inAppNotifications.notify({
+      this.notificationEvents.notify({
         userId: master.user.id,
         category: NotificationCategory.BOOKING_PENDING,
         title: 'Новая запись от клиента',
@@ -87,7 +86,7 @@ export class BookingsNotificationService {
     }
   }
 
-  async notifyBookingConfirmed(
+  notifyBookingConfirmed(
     masterId: string,
     master: {
       user: { id: string; firstName: string | null; lastName: string | null };
@@ -96,24 +95,20 @@ export class BookingsNotificationService {
     clientName: string | undefined,
     start: Date,
     bookingId: string,
-  ): Promise<void> {
+  ): void {
     try {
       const masterName = formatUserName(
         master.user.firstName,
         master.user.lastName,
       );
 
-      await this.inAppNotifications.notifyBookingConfirmed(
-        master.user.id,
-        clientId,
-        {
-          bookingId,
-          masterId,
-          masterName: masterName || undefined,
-          clientName: clientName || undefined,
-          startTime: formatDateTime(start),
-        },
-      );
+      this.notificationEvents.notifyBookingConfirmed(master.user.id, clientId, {
+        bookingId,
+        masterId,
+        masterName: masterName || undefined,
+        clientName: clientName || undefined,
+        startTime: formatDateTime(start),
+      });
     } catch (error) {
       this.logger.warn(
         `Failed to send booking notification: ${error instanceof Error ? error.message : String(error)}`,
@@ -121,7 +116,7 @@ export class BookingsNotificationService {
     }
   }
 
-  async notifyBookingCancelled(booking: {
+  notifyBookingCancelled(booking: {
     master: {
       user: { id: string; firstName: string | null; lastName: string | null };
     };
@@ -130,14 +125,14 @@ export class BookingsNotificationService {
     clientId: string | null;
     clientName: string | null;
     startTime: Date;
-  }): Promise<void> {
+  }): void {
     try {
       const masterName = formatUserName(
         booking.master.user.firstName,
         booking.master.user.lastName,
       );
 
-      await this.inAppNotifications.notifyBookingCancelled(
+      this.notificationEvents.notifyBookingCancelled(
         booking.master.user.id,
         booking.clientId,
         {
@@ -159,7 +154,7 @@ export class BookingsNotificationService {
    * Запись переведена в COMPLETED — лид мог закрыться в БД без отдельного PATCH /leads.
    * In-app + WebSocket (LEAD_STATUS_UPDATED) обновляют кэш клиента (Leads/Bookings).
    */
-  async notifyBookingCompletedForClient(booking: {
+  notifyBookingCompletedForClient(booking: {
     id: string;
     leadId: string | null;
     masterId: string;
@@ -167,14 +162,14 @@ export class BookingsNotificationService {
     master: {
       user: { id: string; firstName: string | null; lastName: string | null };
     };
-  }): Promise<void> {
+  }): void {
     if (!booking.clientId) return;
     try {
       const masterName = formatUserName(
         booking.master.user.firstName,
         booking.master.user.lastName,
       );
-      await this.inAppNotifications.notify({
+      this.notificationEvents.notify({
         userId: booking.clientId,
         category: NotificationCategory.LEAD_STATUS_UPDATED,
         title: 'Запись выполнена',

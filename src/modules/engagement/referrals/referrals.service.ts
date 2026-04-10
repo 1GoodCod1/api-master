@@ -9,7 +9,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { MastersService } from '../../marketplace/masters/masters.service';
-import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../../notifications/events';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class ReferralsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mastersService: MastersService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationEvents: NotificationEventEmitter,
     private readonly appSettings: AppSettingsService,
   ) {}
 
@@ -243,7 +243,7 @@ export class ReferralsService {
         );
       }
 
-      await this.inAppNotifications.notify({
+      this.notificationEvents.notify({
         userId: referrer.id,
         category: NotificationCategory.NEW_PROMOTION,
         title: 'Реферальный бонус',

@@ -107,30 +107,23 @@ export class BookingsActionService {
 
     if (isMasterCreating) {
       // Мастер предложил время → уведомить клиента подтвердить/отклонить
-      void this.notifications
-        .notifyBookingPending(
-          masterId,
-          master,
-          resolved.resolvedClientId,
-          resolved.resolvedName,
-          start,
-          booking.id,
-        )
-        .catch((e) => this.logger.error('notifyBookingPending failed', e));
+      this.notifications.notifyBookingPending(
+        masterId,
+        master,
+        resolved.resolvedClientId,
+        resolved.resolvedName,
+        start,
+        booking.id,
+      );
     } else {
-      // Клиент записался → уведомить мастера подтвердить/отклонить
-      void this.notifications
-        .notifyBookingPendingForMaster(
-          masterId,
-          master,
-          resolved.resolvedClientId,
-          resolved.resolvedName,
-          start,
-          booking.id,
-        )
-        .catch((e) =>
-          this.logger.error('notifyBookingPendingForMaster failed', e),
-        );
+      this.notifications.notifyBookingPendingForMaster(
+        masterId,
+        master,
+        resolved.resolvedClientId,
+        resolved.resolvedName,
+        start,
+        booking.id,
+      );
     }
 
     return booking;
@@ -189,16 +182,14 @@ export class BookingsActionService {
       .catch((e) =>
         this.logger.error('updateLeadStatusOnCreate (confirm) failed', e),
       );
-    void this.notifications
-      .notifyBookingConfirmed(
-        booking.masterId,
-        booking.master,
-        booking.clientId,
-        booking.clientName ?? undefined,
-        booking.startTime,
-        booking.id,
-      )
-      .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
+    this.notifications.notifyBookingConfirmed(
+      booking.masterId,
+      booking.master,
+      booking.clientId,
+      booking.clientName ?? undefined,
+      booking.startTime,
+      booking.id,
+    );
 
     return updated;
   }
@@ -250,9 +241,7 @@ export class BookingsActionService {
       },
     });
 
-    void this.notifications
-      .notifyBookingCancelled(updated)
-      .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
+    this.notifications.notifyBookingCancelled(updated);
 
     return updated;
   }
@@ -323,32 +312,24 @@ export class BookingsActionService {
       .catch((e) => this.logger.error('updateLeadOnStatusChange failed', e));
 
     if (newStatus === BookingStatus.CONFIRMED) {
-      void this.notifications
-        .notifyBookingConfirmed(
-          booking.masterId,
-          booking.master,
-          booking.clientId,
-          booking.clientName ?? undefined,
-          booking.startTime,
-          booking.id,
-        )
-        .catch((e) => this.logger.error('notifyBookingConfirmed failed', e));
+      this.notifications.notifyBookingConfirmed(
+        booking.masterId,
+        booking.master,
+        booking.clientId,
+        booking.clientName ?? undefined,
+        booking.startTime,
+        booking.id,
+      );
     } else if (newStatus === BookingStatus.CANCELLED) {
-      void this.notifications
-        .notifyBookingCancelled(booking)
-        .catch((e) => this.logger.error('notifyBookingCancelled failed', e));
+      this.notifications.notifyBookingCancelled(booking);
     } else if (newStatus === BookingStatus.COMPLETED) {
-      void this.notifications
-        .notifyBookingCompletedForClient({
-          id: updated.id,
-          leadId: booking.leadId,
-          masterId: booking.masterId,
-          clientId: booking.clientId,
-          master: booking.master,
-        })
-        .catch((e) =>
-          this.logger.error('notifyBookingCompletedForClient failed', e),
-        );
+      this.notifications.notifyBookingCompletedForClient({
+        id: updated.id,
+        leadId: booking.leadId,
+        masterId: booking.masterId,
+        clientId: booking.clientId,
+        master: booking.master,
+      });
     }
 
     return updated;

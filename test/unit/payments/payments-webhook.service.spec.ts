@@ -1,8 +1,7 @@
 import { PaymentStatus } from '@prisma/client';
 import { PaymentsWebhookService } from '../../../src/modules/payments/services/payments-webhook.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
-import type { NotificationsService } from '../../../src/modules/notifications/notifications/notifications.service';
+import type { NotificationEventEmitter } from '../../../src/modules/notifications/events';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 
 type PrismaPaymentsWebhookMock = {
@@ -22,13 +21,10 @@ describe('PaymentsWebhookService', () => {
     },
   };
 
-  const inAppNotifications = {
+  const notificationEvents = {
     notifyPaymentSuccess: jest.fn(),
-  } as unknown as jest.Mocked<InAppNotificationService>;
-
-  const notifications = {
-    sendPaymentConfirmation: jest.fn().mockResolvedValue(undefined),
-  } as unknown as jest.Mocked<NotificationsService>;
+    sendPaymentConfirmation: jest.fn(),
+  } as unknown as jest.Mocked<NotificationEventEmitter>;
 
   const cache = {
     del: jest.fn(),
@@ -53,8 +49,7 @@ describe('PaymentsWebhookService', () => {
     auditService.log.mockResolvedValue(undefined);
     service = new PaymentsWebhookService(
       prisma as unknown as PrismaService,
-      inAppNotifications,
-      notifications,
+      notificationEvents,
       cache,
       auditService as never,
     );
@@ -97,7 +92,7 @@ describe('PaymentsWebhookService', () => {
     prisma.payment.update.mockResolvedValue({ id: 'p1' } as never);
     prisma.master.update.mockResolvedValue({ userId: 'u1' } as never);
     prisma.master.findUnique.mockResolvedValue({ userId: 'u1' } as never);
-    inAppNotifications.notifyPaymentSuccess.mockResolvedValue({} as never);
+    notificationEvents.notifyPaymentSuccess.mockReturnValue(undefined);
 
     await service.completeMiaTariffPayment('p1');
 
@@ -120,7 +115,7 @@ describe('PaymentsWebhookService', () => {
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:master-profile');
     expect(cache.del).toHaveBeenCalledWith('cache:user:u1:profile');
     expect(cache.invalidateMasterRelated).toHaveBeenCalledWith('m1');
-    expect(inAppNotifications.notifyPaymentSuccess).toHaveBeenCalledWith('u1', {
+    expect(notificationEvents.notifyPaymentSuccess).toHaveBeenCalledWith('u1', {
       paymentId: 'p1',
       tariffType: 'VIP',
       amount: '100',

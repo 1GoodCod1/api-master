@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../common/errors';
 import { ReportStatus } from '../../common/constants';
 import { PrismaService } from '../shared/database/prisma.service';
-import { InAppNotificationService } from '../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../notifications/events';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { ReportsValidationService } from './services/reports-validation.service';
@@ -20,7 +20,7 @@ export class ReportsService {
     private readonly validationService: ReportsValidationService,
     private readonly actionService: ReportsActionService,
     private readonly queryService: ReportsQueryService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationEvents: NotificationEventEmitter,
   ) {}
 
   /**
@@ -51,16 +51,12 @@ export class ReportsService {
       },
     });
 
-    try {
-      await this.inAppNotifications.notifyNewReport({
-        reportId: report.id,
-        reason: report.reason,
-        clientId: report.clientId,
-        masterId: report.masterId,
-      });
-    } catch (err) {
-      console.error('Failed to send new report notification:', err);
-    }
+    this.notificationEvents.notifyNewReport({
+      reportId: report.id,
+      reason: report.reason,
+      clientId: report.clientId,
+      masterId: report.masterId,
+    });
 
     return report;
   }

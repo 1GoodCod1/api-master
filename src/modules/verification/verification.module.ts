@@ -4,7 +4,6 @@ import { VerificationController } from './verification.controller';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { RedisModule } from '../shared/redis/redis.module';
 import { PhoneVerificationModule } from '../auth/phone-verification/phone-verification.module';
-import { NotificationsModule } from '../notifications/notifications/notifications.module';
 import { EncryptionModule } from '../shared/encryption/encryption.module';
 import { ConsentModule } from '../consent/consent.module';
 import { AuditModule } from '../audit/audit.module';
@@ -18,7 +17,6 @@ import { VerificationDocumentsPurgeService } from './services/verification-docum
     PrismaModule,
     RedisModule,
     PhoneVerificationModule,
-    NotificationsModule,
     EncryptionModule,
     ConsentModule,
     AuditModule,

@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { InAppNotificationService } from '../../notifications/notifications/services/in-app-notification.service';
-import { NotificationsService } from '../../notifications/notifications/notifications.service';
+import { NotificationEventEmitter } from '../../notifications/events';
 import { CacheService } from '../../shared/cache/cache.service';
 import { Prisma } from '@prisma/client';
 import { PaymentStatus, TariffType } from '../../../common/constants';
@@ -15,8 +14,7 @@ export class PaymentsWebhookService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly inAppNotifications: InAppNotificationService,
-    private readonly notifications: NotificationsService,
+    private readonly notificationEvents: NotificationEventEmitter,
     private readonly cache: CacheService,
     private readonly auditService: AuditService,
   ) {}
@@ -70,7 +68,7 @@ export class PaymentsWebhookService {
           },
         });
         if (master?.user?.phone) {
-          await this.notifications.sendPaymentConfirmation(
+          this.notificationEvents.sendPaymentConfirmation(
             master.user.phone,
             {
               tariffType: String(payment.tariffType),
@@ -83,7 +81,7 @@ export class PaymentsWebhookService {
           );
         }
         if (master) {
-          await this.inAppNotifications.notifyPaymentSuccess(master.userId, {
+          this.notificationEvents.notifyPaymentSuccess(master.userId, {
             paymentId: orderId,
             tariffType: String(payment.tariffType),
             amount: String(payment.amount),

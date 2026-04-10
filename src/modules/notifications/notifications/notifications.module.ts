@@ -17,6 +17,7 @@ import { InAppNotificationService } from './services/in-app-notification.service
 import { WebSocketModule } from '../../infrastructure/websocket/websocket.module';
 import { WebPushModule } from '../web-push/web-push.module';
 import { createBullOptions } from '../../../config/bull.config';
+import { NotificationEventListener } from '../events/notification-event.listener';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { createBullOptions } from '../../../config/bull.config';
     TelegramProcessor,
     TelegramConnectService,
     TelegramWebhookSecretGuard,
+    NotificationEventListener,
   ],
   exports: [
     NotificationsService,

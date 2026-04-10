@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../../../notifications/events';
 import { TariffType } from '../../../../common/constants';
 import { getEffectiveTariff } from '../../../../common/helpers/plans';
 import { CreatePromotionDto } from '../dto/create-promotion.dto';
@@ -20,7 +20,7 @@ export class PromotionsActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly notifications: InAppNotificationService,
+    private readonly notificationEvents: NotificationEventEmitter,
     private readonly validationService: PromotionsValidationService,
   ) {}
 
@@ -152,16 +152,12 @@ export class PromotionsActionService {
     const masterName = promotion.master.user.firstName || 'Мастер';
 
     for (const fav of interestedClients) {
-      await this.notifications
-        .notifyNewPromotion(fav.userId, {
-          masterId,
-          masterName,
-          promotionId: promotion.id,
-          discount: promotion.discount,
-        })
-        .catch((e) =>
-          this.logger.error(`Failed to notify user ${fav.userId}`, e),
-        );
+      this.notificationEvents.notifyNewPromotion(fav.userId, {
+        masterId,
+        masterName,
+        promotionId: promotion.id,
+        discount: promotion.discount,
+      });
     }
   }
 

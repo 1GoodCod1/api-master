@@ -16,7 +16,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { RegisterDto } from '../dto/register.dto';
 import { TokenService } from './token.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationEventEmitter } from '../../../notifications/events';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -37,7 +37,7 @@ export class RegistrationService {
     private readonly prisma: PrismaService,
     private readonly tokenService: TokenService,
     private readonly cache: CacheService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationEvents: NotificationEventEmitter,
     private readonly emailDripService: EmailDripService,
     private readonly referralsService: ReferralsService,
     private readonly auditService: AuditService,
@@ -169,7 +169,7 @@ export class RegistrationService {
         .filter(Boolean)
         .join(' ')
         .trim();
-      await this.inAppNotifications.notifyNewRegistration({
+      this.notificationEvents.notifyNewRegistration({
         userId: user.id,
         role: user.role,
         name: name || undefined,

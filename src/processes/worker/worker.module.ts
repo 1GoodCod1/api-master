@@ -11,6 +11,7 @@ import { PrismaModule } from '../../modules/shared/database/prisma.module';
 import { RedisModule } from '../../modules/shared/redis/redis.module';
 import { CacheModule } from '../../modules/shared/cache/cache.module';
 import { EmailModule } from '../../modules/email/email.module';
+import { NotificationEventsModule } from '../../modules/notifications/events';
 
 // Модули воркера (cron, Bull, прогрев кеша)
 import { TasksModule } from '../../modules/infrastructure/tasks/tasks.module';
@@ -33,7 +34,7 @@ import { UsersModule } from '../../modules/users/users.module';
  * НЕ включает:
  *  - HTTP-контроллеры (LeadsModule, ReviewsModule, PaymentsModule и т.д.)
  *  - Swagger / ServeStatic
- *  - Prometheus / TerminusModule
+ *  - Prometheus
  *
  * Включает только то, что нужно для:
  *  1. Bull processors (SMS, Telegram) — через NotificationsModule
@@ -66,6 +67,7 @@ import { UsersModule } from '../../modules/users/users.module';
     RedisModule,
     CacheModule,
     EmailModule,
+    NotificationEventsModule,
 
     // Dependencies (требуются модулям ниже)
     AuthModule,

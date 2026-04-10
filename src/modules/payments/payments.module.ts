@@ -9,7 +9,6 @@ import { PaymentsMiaService } from './services/payments-mia.service';
 import { PaymentsWebhookService } from './services/payments-webhook.service';
 import { PaymentsQueryService } from './services/payments-query.service';
 import { PaymentsUpgradeService } from './services/payments-upgrade.service';
-import { NotificationsModule } from '../notifications/notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
@@ -18,7 +17,6 @@ import { AuditModule } from '../audit/audit.module';
     PrismaModule,
     MastersModule,
     TariffsModule,
-    NotificationsModule,
     AuditModule,
   ],
   controllers: [PaymentsController],

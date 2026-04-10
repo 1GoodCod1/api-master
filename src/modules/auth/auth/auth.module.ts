@@ -11,7 +11,6 @@ import { PrismaModule } from '../../shared/database/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
 import { CacheModule } from '../../shared/cache/cache.module';
 import { EmailModule } from '../../email/email.module';
-import { NotificationsModule } from '../../notifications/notifications/notifications.module';
 import { ReferralsModule } from '../../engagement/referrals/referrals.module';
 import { ConsentModule } from '../../consent/consent.module';
 import { TokenService } from './services/token.service';
@@ -40,7 +39,6 @@ import { AuthLockoutService } from './services/auth-lockout.service';
     AuditModule,
     CacheModule,
     EmailModule,
-    NotificationsModule,
     ReferralsModule,
     ConsentModule,
   ],
