@@ -43,6 +43,7 @@ describe('LoginService', () => {
 
   const cache = {
     del: jest.fn(),
+    invalidateUser: jest.fn(),
     keys: {
       userProfile: jest.fn((id: string) => `user:${id}:profile`),
       userMasterProfile: jest.fn((id: string) => `user:${id}:master-profile`),
@@ -55,8 +56,8 @@ describe('LoginService', () => {
     clearLockout: jest.fn().mockResolvedValue(undefined),
   };
 
-  const auditService = {
-    log: jest.fn().mockResolvedValue(undefined),
+  const eventEmitter = {
+    emit: jest.fn(),
   };
 
   let service: LoginService;
@@ -66,13 +67,17 @@ describe('LoginService', () => {
     lockout.checkLocked.mockResolvedValue(undefined);
     lockout.recordFailed.mockResolvedValue(undefined);
     lockout.clearLockout.mockResolvedValue(undefined);
-    auditService.log.mockResolvedValue(undefined);
+    (cache.invalidateUser as jest.Mock).mockImplementation((id: string) => {
+      cache.del(`user:${id}:profile`);
+      cache.del(`user:${id}:master-profile`);
+      return Promise.resolve();
+    });
     service = new LoginService(
       prisma as unknown as PrismaService,
       tokenService,
       cache,
       lockout as never,
-      auditService as never,
+      eventEmitter as never,
     );
   });
 

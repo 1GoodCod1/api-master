@@ -34,14 +34,15 @@ describe('UsersGdprService', () => {
 
   const cache = {
     del: jest.fn().mockResolvedValue(undefined),
+    invalidateUser: jest.fn().mockResolvedValue(undefined),
     keys: {
-      userMasterProfile: (id: string) => `cache:user:${id}:master`,
+      userMasterProfile: (id: string) => `cache:user:${id}:master-profile`,
       userProfile: (id: string) => `cache:user:${id}:profile`,
     },
   } as unknown as CacheService;
 
-  const auditService = {
-    log: jest.fn().mockResolvedValue(undefined),
+  const eventEmitter = {
+    emit: jest.fn(),
   };
 
   let service: UsersGdprService;
@@ -67,11 +68,10 @@ describe('UsersGdprService', () => {
     prisma.loginHistory.findMany.mockResolvedValue([]);
     prisma.notification.findMany.mockResolvedValue([]);
     prisma.userConsent.findMany.mockResolvedValue([]);
-    auditService.log.mockResolvedValue(undefined);
     service = new UsersGdprService(
       prisma as unknown as PrismaService,
       cache,
-      auditService as never,
+      eventEmitter as never,
     );
   });
 
@@ -107,8 +107,7 @@ describe('UsersGdprService', () => {
       await expect(service.removeSelf('u1')).resolves.toEqual({ ok: true });
 
       expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'u1' } });
-      expect(cache.del).toHaveBeenCalledWith('cache:user:u1:master');
-      expect(cache.del).toHaveBeenCalledWith('cache:user:u1:profile');
+      expect(cache.invalidateUser).toHaveBeenCalledWith('u1');
     });
   });
 

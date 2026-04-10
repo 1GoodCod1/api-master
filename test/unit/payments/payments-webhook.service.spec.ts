@@ -29,6 +29,7 @@ describe('PaymentsWebhookService', () => {
   const cache = {
     del: jest.fn(),
     invalidate: jest.fn(),
+    invalidateUser: jest.fn().mockResolvedValue(undefined),
     invalidateMasterRelated: jest.fn().mockResolvedValue(undefined),
     keys: {
       userMasterProfile: jest.fn(
@@ -112,8 +113,7 @@ describe('PaymentsWebhookService', () => {
       select: { userId: true },
     });
 
-    expect(cache.del).toHaveBeenCalledWith('cache:user:u1:master-profile');
-    expect(cache.del).toHaveBeenCalledWith('cache:user:u1:profile');
+    expect(cache.invalidateUser).toHaveBeenCalledWith('u1');
     expect(cache.invalidateMasterRelated).toHaveBeenCalledWith('m1');
     expect(notificationEvents.notifyPaymentSuccess).toHaveBeenCalledWith('u1', {
       paymentId: 'p1',
