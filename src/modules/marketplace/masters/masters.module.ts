@@ -9,8 +9,10 @@ import { NotificationsModule } from '../../notifications/notifications/notificat
 import { SearchController } from './search.controller';
 import { AuditModule } from '../../audit/audit.module';
 import { FilesModule } from '../../infrastructure/files/files.module';
+import { MastersListingService } from './services/masters-listing.service';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersSearchSqlService } from './services/masters-search-sql.service';
+import { MastersSuggestService } from './services/masters-suggest.service';
 import { MastersProfileService } from './services/masters-profile.service';
 import { MastersPublicProfileService } from './services/masters-public-profile.service';
 import { MastersPhotosService } from './services/masters-photos.service';
@@ -35,8 +37,10 @@ import { MastersLandingStatsService } from './services/masters-landing-stats.ser
   controllers: [MastersController, SearchController, PortfolioController],
   providers: [
     MastersService,
+    MastersListingService,
     MastersSearchService,
     MastersSearchSqlService,
+    MastersSuggestService,
     MastersProfileService,
     MastersPublicProfileService,
     MastersPhotosService,

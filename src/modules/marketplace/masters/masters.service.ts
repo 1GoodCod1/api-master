@@ -21,14 +21,18 @@ import { MastersProfileService } from './services/masters-profile.service';
 import { MastersPublicProfileService } from './services/masters-public-profile.service';
 import { MastersQuickRepliesService } from './services/masters-quick-replies.service';
 import { MastersScheduleService } from './services/masters-schedule.service';
+import { MastersListingService } from './services/masters-listing.service';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersStatsService } from './services/masters-stats.service';
+import { MastersSuggestService } from './services/masters-suggest.service';
 import { MastersTariffService } from './services/masters-tariff.service';
 import type { InvalidateMasterCacheFn } from './types';
 
 /**
  * Центральный координатор мастеров. Делегирует вызовы специализированным сервисам.
- * @see MastersSearchService — поиск и фильтрация
+ * @see MastersSearchService — поиск (findAll)
+ * @see MastersSuggestService — автодополнение
+ * @see MastersListingService — листинг главной (popular, new, filters)
  * @see MastersProfileService — профили
  * @see MastersPhotosService — фото
  * @see MastersStatsService — статистика
@@ -41,6 +45,8 @@ export class MastersService {
 
   constructor(
     private readonly searchService: MastersSearchService,
+    private readonly suggestService: MastersSuggestService,
+    private readonly listingService: MastersListingService,
     private readonly profileService: MastersProfileService,
     private readonly publicProfileService: MastersPublicProfileService,
     private readonly photosService: MastersPhotosService,
@@ -65,19 +71,19 @@ export class MastersService {
   }
 
   async getSearchFilters() {
-    return this.searchService.getSearchFilters();
+    return this.listingService.getSearchFilters();
   }
 
   async getPopularMasters(limit: number = 10) {
-    return this.searchService.getPopularMasters(limit);
+    return this.listingService.getPopularMasters(limit);
   }
 
   async getNewMasters(limit: number = 10) {
-    return this.searchService.getNewMasters(limit);
+    return this.listingService.getNewMasters(limit);
   }
 
   async getSuggestions(dto: SuggestQueryDto) {
-    return this.searchService.getSuggestions(dto);
+    return this.suggestService.getSuggestions(dto);
   }
 
   // ==================== ПРОФИЛИ ====================
