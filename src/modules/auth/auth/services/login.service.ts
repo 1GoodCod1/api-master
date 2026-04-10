@@ -37,120 +37,18 @@ export class LoginService {
    */
   async login(loginDto: LoginDto, ipAddress?: string, userAgent?: string) {
     try {
-      const { email, password, rememberMe } = loginDto;
-
-      // 0. Проверка блокировки (account lockout после 5 неудачных попыток)
-      await this.lockout.checkLocked(email, ipAddress);
-
-      // 1. Поиск пользователя
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-        include: {
-          masterProfile: true,
-        },
-      });
-
-      // 2. Проверка IP на наличие в черном списке
-      if (ipAddress) {
-        await this.checkIpBlacklist(ipAddress);
-      }
-
-      // 3. Валидация пароля и логирование неудачных попыток
-      if (!user || !(await argon2.verify(user.password, password))) {
-        if (user) {
-          await this.lockout.recordFailed(email, ipAddress);
-          await this.logLoginAttempt(
-            user.id,
-            false,
-            ipAddress,
-            userAgent,
-            AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
-          );
-          await this.auditService.log({
-            userId: user.id,
-            action: AuditAction.LOGIN_FAILED,
-            entityType: AuditEntityType.User,
-            entityId: user.id,
-            newData: {
-              reason: AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
-            } satisfies Prisma.InputJsonValue,
-            ipAddress,
-            userAgent,
-          });
-        } else if (ipAddress) {
-          await this.lockout.recordFailed(undefined, ipAddress);
-        }
-        throw AppErrors.unauthorized(
-          AppErrorMessages.AUTH_LOGIN_INVALID_CREDENTIALS,
-        );
-      }
-
-      // 4. Проверка на блокировку аккаунта
-      if (user.isBanned) {
-        await this.logLoginAttempt(
-          user.id,
-          false,
-          ipAddress,
-          userAgent,
-          AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
-        );
-        await this.auditService.log({
-          userId: user.id,
-          action: AuditAction.LOGIN_FAILED,
-          entityType: AuditEntityType.User,
-          entityId: user.id,
-          newData: {
-            reason: AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
-          } satisfies Prisma.InputJsonValue,
-          ipAddress,
-          userAgent,
-        });
-        throw AppErrors.unauthorized(
-          AppErrorMessages.AUTH_LOGIN_ACCOUNT_BANNED,
-        );
-      }
-
-      // 4a. Сброс блокировки при успешном входе
-      await this.lockout.clearLockout(email, ipAddress);
-
-      // 5. Генерация токенов
-      const accessToken = this.tokenService.generateAccessToken(user);
-      const refreshToken = await this.tokenService.generateRefreshToken(
-        user.id,
-        rememberMe,
+      const user = await this.authenticateCredentials(
+        loginDto,
+        ipAddress,
+        userAgent,
       );
-
-      // 6. Обновление данных последнего входа и сохранение истории (в транзакции)
-      await this.updateLoginMetadata(user.id, ipAddress, userAgent);
-
-      // 7. Очистка кеша профиля пользователя
-      await this.invalidateUserCache(user.id);
-
-      // 7.5. Audit log — успешный вход
-      await this.auditService.log({
-        userId: user.id,
-        action: AuditAction.LOGIN_SUCCESS,
-        entityType: AuditEntityType.User,
-        entityId: user.id,
-        ipAddress: ipAddress,
-        userAgent: userAgent,
-      });
-
-      // 8. Сборка ответа
-      return {
-        accessToken,
-        refreshToken,
-        rememberMe: !!rememberMe,
-        user: {
-          id: user.id,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          isVerified: user.isVerified,
-          phoneVerified: user.phoneVerified,
-          masterProfile: user.masterProfile,
-        },
-      };
+      await this.ensureAccountActive(user, ipAddress, userAgent);
+      return await this.generateSession(
+        user,
+        loginDto.rememberMe,
+        ipAddress,
+        userAgent,
+      );
     } catch (err) {
       if (
         err instanceof UnauthorizedException ||
@@ -161,6 +59,136 @@ export class LoginService {
       this.logger.error('Login failed', err);
       throw err;
     }
+  }
+
+  /**
+   * Проверяет lockout, загружает пользователя, проверяет IP и верифицирует пароль.
+   * Бросает UnauthorizedException при любом несоответствии.
+   */
+  private async authenticateCredentials(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const { email, password } = loginDto;
+
+    await this.lockout.checkLocked(email, ipAddress);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { masterProfile: true },
+    });
+
+    if (ipAddress) {
+      await this.checkIpBlacklist(ipAddress);
+    }
+
+    if (!user || !(await argon2.verify(user.password, password))) {
+      if (user) {
+        await this.lockout.recordFailed(email, ipAddress);
+        await this.logLoginAttempt(
+          user.id,
+          false,
+          ipAddress,
+          userAgent,
+          AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
+        );
+        await this.auditService.log({
+          userId: user.id,
+          action: AuditAction.LOGIN_FAILED,
+          entityType: AuditEntityType.User,
+          entityId: user.id,
+          newData: {
+            reason: AUTH_LOGIN_FAIL_REASON_INVALID_PASSWORD,
+          } satisfies Prisma.InputJsonValue,
+          ipAddress,
+          userAgent,
+        });
+      } else if (ipAddress) {
+        await this.lockout.recordFailed(undefined, ipAddress);
+      }
+      throw AppErrors.unauthorized(
+        AppErrorMessages.AUTH_LOGIN_INVALID_CREDENTIALS,
+      );
+    }
+
+    return user;
+  }
+
+  /**
+   * Проверяет, что аккаунт не заблокирован, и сбрасывает lockout-счётчик.
+   * Бросает UnauthorizedException если пользователь забанен.
+   */
+  private async ensureAccountActive(
+    user: Awaited<ReturnType<typeof this.authenticateCredentials>>,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    if (user.isBanned) {
+      await this.logLoginAttempt(
+        user.id,
+        false,
+        ipAddress,
+        userAgent,
+        AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
+      );
+      await this.auditService.log({
+        userId: user.id,
+        action: AuditAction.LOGIN_FAILED,
+        entityType: AuditEntityType.User,
+        entityId: user.id,
+        newData: {
+          reason: AUTH_LOGIN_FAIL_REASON_ACCOUNT_BANNED,
+        } satisfies Prisma.InputJsonValue,
+        ipAddress,
+        userAgent,
+      });
+      throw AppErrors.unauthorized(AppErrorMessages.AUTH_LOGIN_ACCOUNT_BANNED);
+    }
+
+    await this.lockout.clearLockout(user.email, ipAddress);
+  }
+
+  /**
+   * Генерирует токены, обновляет метаданные входа, инвалидирует кеш, пишет аудит.
+   */
+  private async generateSession(
+    user: Awaited<ReturnType<typeof this.authenticateCredentials>>,
+    rememberMe: boolean | undefined,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const accessToken = this.tokenService.generateAccessToken(user);
+    const refreshToken = await this.tokenService.generateRefreshToken(
+      user.id,
+      rememberMe,
+    );
+
+    await this.updateLoginMetadata(user.id, ipAddress, userAgent);
+    await this.invalidateUserCache(user.id);
+    await this.auditService.log({
+      userId: user.id,
+      action: AuditAction.LOGIN_SUCCESS,
+      entityType: AuditEntityType.User,
+      entityId: user.id,
+      ipAddress,
+      userAgent,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      rememberMe: !!rememberMe,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isVerified: user.isVerified,
+        phoneVerified: user.phoneVerified,
+        masterProfile: user.masterProfile,
+      },
+    };
   }
 
   /**
