@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PaymentsService } from './payments.service';
-import { PaymentsController } from './payments.controller';
+import { PaymentsMiaController } from './payments-mia.controller';
+import { PaymentsWebhookController } from './payments-webhook.controller';
+import { PaymentsQueryController } from './payments-query.controller';
+import { PaymentsUpgradeController } from './payments-upgrade.controller';
 import { PrismaModule } from '../shared/database/prisma.module';
 import { MastersModule } from '../marketplace/masters/masters.module';
 import { TariffsModule } from '../marketplace/tariffs/tariffs.module';
@@ -19,14 +21,23 @@ import { AuditModule } from '../audit/audit.module';
     TariffsModule,
     AuditModule,
   ],
-  controllers: [PaymentsController],
+  controllers: [
+    PaymentsMiaController,
+    PaymentsWebhookController,
+    PaymentsQueryController,
+    PaymentsUpgradeController,
+  ],
   providers: [
-    PaymentsService,
     PaymentsMiaService,
     PaymentsWebhookService,
     PaymentsQueryService,
     PaymentsUpgradeService,
   ],
-  exports: [PaymentsService],
+  exports: [
+    PaymentsMiaService,
+    PaymentsWebhookService,
+    PaymentsQueryService,
+    PaymentsUpgradeService,
+  ],
 })
 export class PaymentsModule {}

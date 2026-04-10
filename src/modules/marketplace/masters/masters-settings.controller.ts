@@ -20,7 +20,6 @@ import { MastersNotificationSettingsService } from './services/masters-notificat
 import { MastersScheduleService } from './services/masters-schedule.service';
 import { MastersQuickRepliesService } from './services/masters-quick-replies.service';
 import { MastersProfileService } from './services/masters-profile.service';
-
 import { UpdateAvailabilityStatusDto } from './dto/update-availability-status.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 import { UpdateScheduleSettingsDto } from './dto/update-schedule-settings.dto';
