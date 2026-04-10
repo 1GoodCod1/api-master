@@ -11,6 +11,7 @@ import { LeadsValidationService } from './services/leads-validation.service';
 import { LeadsClientDataService } from './services/leads-client-data.service';
 import { LeadsSpamService } from './services/leads-spam.service';
 import { LeadsAnalyticsService } from './services/leads-analytics.service';
+import { LeadsListService } from './services/leads-list.service';
 import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
 import { LeadsCreateNotificationService } from './services/leads-create-notification.service';
@@ -26,6 +27,7 @@ export class LeadsService {
     private readonly clientDataService: LeadsClientDataService,
     private readonly spamService: LeadsSpamService,
     private readonly analyticsService: LeadsAnalyticsService,
+    private readonly listService: LeadsListService,
     private readonly queryService: LeadsQueryService,
     private readonly actionsService: LeadsActionsService,
     private readonly createNotificationService: LeadsCreateNotificationService,
@@ -120,11 +122,11 @@ export class LeadsService {
       page?: number;
     } = {},
   ) {
-    return this.queryService.findAll(authUser, options);
+    return this.listService.findAll(authUser, options);
   }
 
   async findOne(idOrEncoded: string, authUser: JwtUser) {
-    return this.queryService.findOne(idOrEncoded, authUser);
+    return this.listService.findOne(idOrEncoded, authUser);
   }
 
   async updateStatus(

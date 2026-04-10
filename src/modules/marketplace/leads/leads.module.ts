@@ -8,6 +8,7 @@ import { RecaptchaService } from '../../shared/utils/recaptcha.service';
 import { LeadsValidationService } from './services/leads-validation.service';
 import { LeadsSpamService } from './services/leads-spam.service';
 import { LeadsAnalyticsService } from './services/leads-analytics.service';
+import { LeadsListService } from './services/leads-list.service';
 import { LeadsQueryService } from './services/leads-query.service';
 import { LeadsActionsService } from './services/leads-actions.service';
 import { LeadsAvailabilitySubscriptionService } from './services/leads-availability-subscription.service';
@@ -36,6 +37,7 @@ import { ReferralsModule } from '../../engagement/referrals/referrals.module';
     LeadsClientDataService,
     LeadsSpamService,
     LeadsAnalyticsService,
+    LeadsListService,
     LeadsQueryService,
     LeadsActionsService,
     LeadsCreateNotificationService,
