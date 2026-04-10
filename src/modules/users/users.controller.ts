@@ -15,21 +15,28 @@ import {
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles, type RequestWithUser } from '../../common/decorators';
-import { UsersService } from './users.service';
+import PDFDocument from 'pdfkit';
+import { buildPersonalDataPdf } from './services/personal-data-pdf.builder';
+import type { PersonalDataPdfData } from './types';
+import { UsersQueryService } from './services/users-query.service';
+import { UsersManageService } from './services/users-manage.service';
+import { UsersAvatarService } from './services/users-avatar.service';
+import { UsersGdprService } from './services/users-gdpr.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SetUserAvatarDto } from './dto/set-avatar.dto';
 import { PreferredLanguageDto } from './dto/preferred-language.dto';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 import { CONTROLLER_PATH } from '../../common/constants';
 
-/**
- * Static paths (`me`, `stats/...`) MUST be declared before `:id` routes.
- * Otherwise `DELETE /users/me` matches `DELETE :id` with id=me and requires ADMIN.
- */
 @ApiTags('Users')
 @Controller(CONTROLLER_PATH.users)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly queryService: UsersQueryService,
+    private readonly manageService: UsersManageService,
+    private readonly avatarService: UsersAvatarService,
+    private readonly gdprService: UsersGdprService,
+  ) {}
 
   @Get('stats/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,7 +46,7 @@ export class UsersController {
     summary: 'Получить статистику по пользователям (Admin only)',
   })
   async getStatistics() {
-    return this.usersService.getStatistics();
+    return this.queryService.getStatistics();
   }
 
   @Delete('me')
@@ -49,7 +56,7 @@ export class UsersController {
     summary: 'Удалить собственный аккаунт (GDPR Art. 17 — Right to Erasure)',
   })
   async removeSelf(@Req() req: RequestWithUser) {
-    return this.usersService.removeSelf(req.user.id);
+    return this.gdprService.removeSelf(req.user.id);
   }
 
   @Get('me/export')
@@ -69,7 +76,15 @@ export class UsersController {
       : locale?.toLowerCase().startsWith('ro')
         ? 'ro'
         : 'en';
-    await this.usersService.exportPersonalDataPdf(req.user.id, res, lang);
+    const data: PersonalDataPdfData =
+      await this.gdprService.getPersonalDataForPdf(req.user.id);
+    const filename = `my-data-${new Date().toISOString().split('T')[0]}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    const doc = new PDFDocument({ margin: 50 });
+    doc.pipe(res);
+    buildPersonalDataPdf(doc, data, lang);
+    doc.end();
   }
 
   @Patch('me/preferred-language')
@@ -82,7 +97,8 @@ export class UsersController {
     @Req() req: RequestWithUser,
     @Body() dto: PreferredLanguageDto,
   ) {
-    return this.usersService.setPreferredLanguage(req.user.id, dto.lang);
+    await this.manageService.setPreferredLanguage(req.user.id, dto.lang);
+    return { preferredLanguage: dto.lang };
   }
 
   @Put('me/avatar')
@@ -97,7 +113,7 @@ export class UsersController {
     @Req() req: RequestWithUser,
     @Body() dto: SetUserAvatarDto,
   ) {
-    return this.usersService.setAvatar(req.user.id, dto.fileId);
+    return this.avatarService.setAvatar(req.user.id, dto.fileId);
   }
 
   @Get('me/photos')
@@ -106,7 +122,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить мои фотографии (только для роли CLIENT)' })
   async getMyPhotos(@Req() req: RequestWithUser) {
-    return this.usersService.getMyPhotos(req.user.id);
+    return this.queryService.getMyPhotos(req.user.id);
   }
 
   @Delete('me/photos/:fileId')
@@ -118,7 +134,7 @@ export class UsersController {
     @Req() req: RequestWithUser,
     @Param('fileId') fileId: string,
   ) {
-    return this.usersService.removeMyPhoto(req.user.id, fileId);
+    return this.avatarService.removeMyPhoto(req.user.id, fileId);
   }
 
   @Get(':id')
@@ -127,7 +143,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить данные пользователя по ID (Admin only)' })
   async findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+    return this.queryService.findOne(id);
   }
 
   @Put(':id')
@@ -136,7 +152,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Обновить данные пользователя (Admin only)' })
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+    return this.manageService.update(id, updateUserDto);
   }
 
   @Delete(':id')
@@ -145,7 +161,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Удалить пользователя (Admin only)' })
   async remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+    return this.manageService.remove(id);
   }
 
   @Put(':id/ban')
@@ -156,7 +172,7 @@ export class UsersController {
     summary: 'Заблокировать/разблокировать пользователя (Admin only)',
   })
   async toggleBan(@Param('id') id: string) {
-    return this.usersService.toggleBan(id);
+    return this.manageService.toggleBan(id);
   }
 
   @Put(':id/verify')
@@ -167,6 +183,6 @@ export class UsersController {
     summary: 'Верифицировать/снять верификацию пользователя (Admin only)',
   })
   async toggleVerify(@Param('id') id: string) {
-    return this.usersService.toggleVerify(id);
+    return this.manageService.toggleVerify(id);
   }
 }
