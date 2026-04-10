@@ -53,7 +53,7 @@ export class PaymentsWebhookController {
     const orderId = body?.orderId;
     if (!orderId)
       throw AppErrors.badRequest(AppErrorMessages.ORDER_ID_REQUIRED);
-      
+
     await this.webhookService.completeMiaTariffPayment(orderId);
     return { received: true };
   }

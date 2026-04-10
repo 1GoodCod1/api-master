@@ -52,9 +52,6 @@ export class PaymentsMiaController {
   ) {
     if (!body?.paymentId)
       throw AppErrors.badRequest(AppErrorMessages.PAYMENT_ID_REQUIRED);
-    return this.miaService.simulateSandboxPayment(
-      body.paymentId,
-      user.id,
-    );
+    return this.miaService.simulateSandboxPayment(body.paymentId, user.id);
   }
 }
