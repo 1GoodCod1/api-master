@@ -4,6 +4,7 @@ import { CacheService } from '../../../shared/cache/cache.service';
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { NotificationCategory, SenderType } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class ChatLeadTransitionService {
@@ -84,21 +85,19 @@ export class ChatLeadTransitionService {
       const clientId = conversation.lead?.clientId ?? null;
 
       if (master) {
-        this.inAppNotifications
-          .notifyLeadStatusUpdated(master.userId, {
+        fireAndForget(
+          this.inAppNotifications.notifyLeadStatusUpdated(master.userId, {
             leadId: conversation.leadId,
             status: LeadStatus.IN_PROGRESS,
             clientName,
-          })
-          .catch((err) =>
-            this.logger.warn(
-              `Failed to notify master of lead status: ${String(err)}`,
-            ),
-          );
+          }),
+          this.logger,
+          'notifyLeadStatusUpdated (master)',
+        );
       }
       if (clientId) {
-        this.inAppNotifications
-          .notify({
+        fireAndForget(
+          this.inAppNotifications.notify({
             userId: clientId,
             category: NotificationCategory.LEAD_STATUS_UPDATED,
             title: 'Статус заявки обновлён',
@@ -109,12 +108,10 @@ export class ChatLeadTransitionService {
               leadId: conversation.leadId,
               status: LeadStatus.IN_PROGRESS,
             },
-          })
-          .catch((err) =>
-            this.logger.warn(
-              `Failed to notify client of lead status: ${String(err)}`,
-            ),
-          );
+          }),
+          this.logger,
+          'notifyLeadStatusUpdated (client)',
+        );
       }
     } catch (error) {
       this.logger.error(

@@ -17,6 +17,7 @@ import {
   ReviewStatus,
 } from '../../../../common/constants';
 import { UserRole } from '@prisma/client';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class ReviewsActionService {
@@ -249,8 +250,8 @@ export class ReviewsActionService {
             : status === ReviewStatus.REPORTED
               ? 'На модерации'
               : String(status);
-      this.inAppNotifications
-        .notify({
+      fireAndForget(
+        this.inAppNotifications.notify({
           userId: master.userId,
           category: NotificationCategory.NEW_REVIEW,
           title: 'Статус отзыва обновлён',
@@ -258,12 +259,10 @@ export class ReviewsActionService {
           messageKey: 'notifications.messages.reviewStatusUpdated',
           messageParams: { status: statusMsg },
           metadata: { reviewId: id, status },
-        })
-        .catch((err) =>
-          this.logger.warn(
-            `Failed to notify master of review status: ${String(err)}`,
-          ),
-        );
+        }),
+        this.logger,
+        'reviewStatusUpdated notification',
+      );
     }
 
     return updatedReview;

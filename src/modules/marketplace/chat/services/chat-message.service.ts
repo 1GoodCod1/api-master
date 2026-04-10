@@ -18,6 +18,7 @@ import { isOutOfHours } from '../utils/is-out-of-hours.util';
 import { ChatBroadcastService } from '../chat-broadcast.service';
 import { ChatLeadTransitionService } from './chat-lead-transition.service';
 import { MESSAGE_INCLUDE_FILES } from '../../../../common/constants';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class ChatMessageService {
@@ -184,9 +185,11 @@ export class ChatMessageService {
       `Message sent in conversation ${conversationId} by ${senderType}`,
     );
 
-    void this.leadTransition
-      .checkAndTransition(conversationId)
-      .catch((e) => this.logger.error('checkLeadTransition failed', e));
+    fireAndForget(
+      this.leadTransition.checkAndTransition(conversationId),
+      this.logger,
+      'checkLeadTransition',
+    );
 
     const conversationInfo = this.buildConversationInfo(conversation);
     const primary: OutgoingChatMessage = {
@@ -324,9 +327,11 @@ export class ChatMessageService {
       data: { lastMessageAt: new Date() },
     });
 
-    void this.leadTransition
-      .checkAndTransition(conversationId)
-      .catch((e) => this.logger.error('checkLeadTransition failed', e));
+    fireAndForget(
+      this.leadTransition.checkAndTransition(conversationId),
+      this.logger,
+      'checkLeadTransition',
+    );
 
     return { ...message, conversation: conversationInfo };
   }

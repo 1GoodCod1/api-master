@@ -24,6 +24,7 @@ import {
 } from './dto/portfolio.dto';
 import { JwtAuthGuard, PlansGuard, RolesGuard } from '../../../common/guards';
 import { GetUser, Plans, Roles } from '../../../common/decorators';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import { CONTROLLER_PATH, TariffType } from '../../../common/constants';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
@@ -67,7 +68,7 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Create portfolio item (VIP+ only)' })
   async create(@GetUser() user: JwtUser, @Body() dto: CreatePortfolioItemDto) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw new Error('Master profile not found');
+    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.create(masterId, dto);
   }
 
@@ -83,7 +84,7 @@ export class PortfolioController {
     @Body() dto: UpdatePortfolioItemDto,
   ) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw new Error('Master profile not found');
+    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.update(id, masterId, dto);
   }
 
@@ -95,7 +96,7 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Reorder portfolio items (VIP+ only)' })
   async reorder(@GetUser() user: JwtUser, @Body() dto: ReorderPortfolioDto) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw new Error('Master profile not found');
+    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.reorder(masterId, dto);
   }
 
@@ -107,7 +108,7 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Delete portfolio item (VIP+ only)' })
   async remove(@Param('id') id: string, @GetUser() user: JwtUser) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw new Error('Master profile not found');
+    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.remove(id, masterId);
   }
 }

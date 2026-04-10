@@ -13,6 +13,7 @@ import { CacheService } from '../../../shared/cache/cache.service';
 import { sanitizePublicMaster } from '../../../../common/helpers/plans';
 import { resolvePublicMasterAvatarPath } from '../../../../common/helpers/master-public-avatar';
 import type { CachedMaster } from '../types';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class MastersProfileService {
@@ -50,15 +51,19 @@ export class MastersProfileService {
     if (cachedResult) {
       // Если есть кеш, инкрементируем просмотры асинхронно (не блокируем ответ)
       if (incrementViews && onViewIncrement) {
-        onViewIncrement(
-          cachedResult.id,
-          userId,
-          sessionId,
-          ipAddress,
-          userAgent,
-          cachedResult.categoryId ?? undefined,
-          cachedResult.cityId ?? undefined,
-        ).catch((err) => this.logger.error('View increment failed', err));
+        fireAndForget(
+          onViewIncrement(
+            cachedResult.id,
+            userId,
+            sessionId,
+            ipAddress,
+            userAgent,
+            cachedResult.categoryId ?? undefined,
+            cachedResult.cityId ?? undefined,
+          ),
+          this.logger,
+          'View increment (cached)',
+        );
       }
       return cachedResult;
     }
@@ -213,15 +218,19 @@ export class MastersProfileService {
 
     if (incrementViews && onViewIncrement) {
       // Обновляем счетчик просмотров асинхронно
-      onViewIncrement(
-        master.id,
-        userId,
-        sessionId,
-        ipAddress,
-        userAgent,
-        master.categoryId,
-        master.cityId,
-      ).catch((err) => this.logger.error('View increment failed', err));
+      fireAndForget(
+        onViewIncrement(
+          master.id,
+          userId,
+          sessionId,
+          ipAddress,
+          userAgent,
+          master.categoryId,
+          master.cityId,
+        ),
+        this.logger,
+        'View increment (db)',
+      );
     }
 
     return result;

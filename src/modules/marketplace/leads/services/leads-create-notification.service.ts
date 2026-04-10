@@ -3,6 +3,7 @@ import { NotificationsService } from '../../../notifications/notifications/notif
 import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class LeadsCreateNotificationService {
@@ -63,21 +64,19 @@ export class LeadsCreateNotificationService {
         master.user.lastName,
         'мастеру',
       );
-      try {
-        await this.inAppNotifications
-          .notifyLeadSentToClient(clientId, { leadId: lead.id, masterName })
-          .catch(() => {});
-      } catch (err) {
-        this.logger.error(
-          'Failed to send lead-sent notification to client',
-          err,
-        );
-      }
-      this.emailDripService
-        .startChain(clientId, 'lead_created')
-        .catch((err) => {
-          this.logger.error('Failed to start lead_created drip chain', err);
-        });
+      fireAndForget(
+        this.inAppNotifications.notifyLeadSentToClient(clientId, {
+          leadId: lead.id,
+          masterName,
+        }),
+        this.logger,
+        'notifyLeadSentToClient',
+      );
+      fireAndForget(
+        this.emailDripService.startChain(clientId, 'lead_created'),
+        this.logger,
+        'lead_created drip',
+      );
     }
 
     try {

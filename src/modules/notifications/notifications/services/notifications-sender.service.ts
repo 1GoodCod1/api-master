@@ -5,6 +5,7 @@ import type { Queue, Job } from 'bull';
 import Twilio from 'twilio';
 import axios from 'axios';
 import { NotificationType, NotificationStatus } from '@prisma/client';
+import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import {
   SMSJobData,
   TelegramJobData,
@@ -271,7 +272,9 @@ export class NotificationsSenderService {
         options?.chatId || this.configService.get('telegram.chatId');
 
       if (!botToken || !chatId) {
-        throw new Error('Telegram bot token or chat ID not configured');
+        throw AppErrors.serviceUnavailable(
+          AppErrorMessages.TELEGRAM_BOT_NOT_CONFIGURED,
+        );
       }
 
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {

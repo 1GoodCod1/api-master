@@ -81,7 +81,7 @@ export class NotificationsActionService {
       });
     } catch (error) {
       this.logger.error('Failed to save notification to database:', error);
-      throw error;
+      throw AppErrors.internal('Failed to save notification');
     }
   }
 

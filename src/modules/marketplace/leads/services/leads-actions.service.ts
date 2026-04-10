@@ -20,6 +20,7 @@ import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
 import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 /**
  * Допустимые переходы статусов лида.
@@ -150,8 +151,8 @@ export class LeadsActionsService {
         formatUserName(master?.user?.firstName, master?.user?.lastName) ||
         'Мастер';
 
-      await this.inAppNotifications
-        .notify({
+      fireAndForget(
+        this.inAppNotifications.notify({
           userId: lead.clientId,
           category: NotificationCategory.LEAD_CLOSE_REQUESTED,
           title: 'Запрос на закрытие заявки',
@@ -159,10 +160,10 @@ export class LeadsActionsService {
           messageKey: 'notifications.messages.leadCloseRequested',
           messageParams: { masterName },
           metadata: { leadId: updated.id, status: updated.status },
-        })
-        .catch((e) =>
-          this.logger.error('leadCloseRequested notification failed', e),
-        );
+        }),
+        this.logger,
+        'leadCloseRequested notification',
+      );
     }
 
     // Обновление счётчика активных лидов при закрытии (Через централизованный сервис)
@@ -173,8 +174,10 @@ export class LeadsActionsService {
 
       // Если статус перешёл в AVAILABLE — отправляем уведомления
       if (updatedMaster?.availabilityStatus === 'AVAILABLE') {
-        void this.notifySubscribersAboutAvailability(lead.masterId).catch((e) =>
-          this.logger.error('notifySubscribersAboutAvailability failed', e),
+        fireAndForget(
+          this.notifySubscribersAboutAvailability(lead.masterId),
+          this.logger,
+          'notifySubscribersAboutAvailability',
         );
       }
 
@@ -188,12 +191,16 @@ export class LeadsActionsService {
           formatUserName(master?.user?.firstName, master?.user?.lastName) ||
           undefined;
 
-        this.referralsService
-          .qualifyReferral(lead.clientId)
-          .catch((e) => this.logger.error('qualifyReferral failed', e));
-        this.emailDripService
-          .startChain(lead.clientId, 'lead_closed', { masterName })
-          .catch((e) => this.logger.error('lead_closed drip failed', e));
+        fireAndForget(
+          this.referralsService.qualifyReferral(lead.clientId),
+          this.logger,
+          'qualifyReferral',
+        );
+        fireAndForget(
+          this.emailDripService.startChain(lead.clientId, 'lead_closed', { masterName }),
+          this.logger,
+          'lead_closed drip',
+        );
       }
     }
 
@@ -275,10 +282,10 @@ export class LeadsActionsService {
             masterId,
             masterName: masterName || undefined,
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             this.logger.error(
-              `Failed to send master-available notification to client ${subscription.clientId}`,
-              err,
+              `[side-effect] notifyMasterAvailable(${subscription.clientId}) failed`,
+              err instanceof Error ? err.stack : undefined,
             );
           });
 

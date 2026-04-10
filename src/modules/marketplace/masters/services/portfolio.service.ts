@@ -7,6 +7,7 @@ import {
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { StorageService } from '../../../infrastructure/files/services/storage.service';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
 import {
   CreatePortfolioItemDto,
@@ -182,9 +183,11 @@ export class PortfolioService {
 
     // Удаляем файлы из хранилища если они больше нигде не используются
     for (const fid of fileIds) {
-      this.storageService.deleteOrphanedFile(fid).catch((err) => {
-        this.logger.warn(`Failed to cleanup orphaned file ${fid}`, err);
-      });
+      fireAndForget(
+        this.storageService.deleteOrphanedFile(fid),
+        this.logger,
+        `deleteOrphanedFile(${fid})`,
+      );
     }
 
     return { deleted: true };

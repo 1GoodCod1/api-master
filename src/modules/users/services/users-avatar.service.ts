@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { StorageService } from '../../infrastructure/files/services/storage.service';
+import { fireAndForget } from '../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class UsersAvatarService {
@@ -108,9 +109,11 @@ export class UsersAvatarService {
     }
 
     // Удаляем файл из хранилища если он больше нигде не используется
-    this.storageService.deleteOrphanedFile(fileId).catch((err) => {
-      this.logger.warn(`Failed to cleanup orphaned file ${fileId}`, err);
-    });
+    fireAndForget(
+      this.storageService.deleteOrphanedFile(fileId),
+      this.logger,
+      `deleteOrphanedFile(${fileId})`,
+    );
 
     return { ok: true };
   }

@@ -26,6 +26,7 @@ import { SendMessageWsDto, ChatTypingDto } from './dto';
 import { getChatUserFromSocket } from './utils/chat-gateway.utils';
 import { ChatGatewayNotificationService } from './services/chat-gateway-notification.service';
 import { getCorsOrigins } from '../../../config';
+import { fireAndForget } from '../../../common/utils/fire-and-forget';
 
 @WebSocketGateway({
   cors: {
@@ -223,9 +224,11 @@ export class ChatGateway
   }
 
   notifyNewMessage(message: OutgoingChatMessage, conversationId: string) {
-    void this.notificationService
-      .notifyOfflineUser(message, conversationId)
-      .catch((e) => this.logger.error('notifyOfflineUser failed', e));
+    fireAndForget(
+      this.notificationService.notifyOfflineUser(message, conversationId),
+      this.logger,
+      'notifyOfflineUser',
+    );
   }
 
   private extractToken(client: Socket): string | undefined {

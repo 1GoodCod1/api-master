@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { SORT_ASC } from '../../../common/constants';
 import { decimalToNumber } from '../../shared/utils/decimal.utils';
 import {
@@ -179,7 +180,7 @@ export class AnalyticsMasterService {
     });
 
     if (!master) {
-      throw new Error('Master not found');
+      throw AppErrors.notFound(AppErrorMessages.MASTER_NOT_FOUND);
     }
 
     const bookingsCount = await this.prisma.booking.count({

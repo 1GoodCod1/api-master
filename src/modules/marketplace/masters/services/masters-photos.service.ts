@@ -8,6 +8,7 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { StorageService } from '../../../infrastructure/files/services/storage.service';
 import { SORT_ASC, SORT_DESC } from '../../../../common/constants';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 @Injectable()
 export class MastersPhotosService {
@@ -127,9 +128,11 @@ export class MastersPhotosService {
       }
 
       // Удаляем файл из хранилища если он больше нигде не используется
-      this.storageService.deleteOrphanedFile(fileId).catch((err) => {
-        this.logger.warn(`Failed to cleanup orphaned file ${fileId}`, err);
-      });
+      fireAndForget(
+        this.storageService.deleteOrphanedFile(fileId),
+        this.logger,
+        `deleteOrphanedFile(${fileId})`,
+      );
 
       return { ok: true };
     } catch (err) {

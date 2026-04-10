@@ -13,6 +13,7 @@ import type { BookingsAuthUser } from '../types/bookings-auth-user.types';
 import { BookingsValidationService } from './bookings-validation.service';
 import { BookingsLeadSyncService } from './bookings-lead-sync.service';
 import { BookingsNotificationService } from './bookings-notification.service';
+import { fireAndForget } from '../../../../common/utils/fire-and-forget';
 
 const VALID_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   [BookingStatus.PENDING]: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
@@ -307,9 +308,11 @@ export class BookingsActionService {
       },
     });
 
-    void this.leadSync
-      .updateLeadOnStatusChange(booking, newStatus)
-      .catch((e) => this.logger.error('updateLeadOnStatusChange failed', e));
+    fireAndForget(
+      this.leadSync.updateLeadOnStatusChange(booking, newStatus),
+      this.logger,
+      'updateLeadOnStatusChange',
+    );
 
     if (newStatus === BookingStatus.CONFIRMED) {
       this.notifications.notifyBookingConfirmed(
