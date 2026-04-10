@@ -5,7 +5,6 @@ import { PaymentsWebhookController } from './payments-webhook.controller';
 import { PaymentsQueryController } from './payments-query.controller';
 import { PaymentsUpgradeController } from './payments-upgrade.controller';
 import { PrismaModule } from '../shared/database/prisma.module';
-import { MastersModule } from '../marketplace/masters/masters.module';
 import { TariffsModule } from '../marketplace/tariffs/tariffs.module';
 import { PaymentsMiaService } from './services/payments-mia.service';
 import { PaymentsWebhookService } from './services/payments-webhook.service';
@@ -17,7 +16,6 @@ import { AuditModule } from '../audit/audit.module';
   imports: [
     ConfigModule,
     PrismaModule,
-    MastersModule,
     TariffsModule,
     AuditModule,
   ],

@@ -6,8 +6,8 @@ import {
 } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../../common/constants';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 
 @Injectable()
 export class TasksTariffService {
@@ -15,8 +15,8 @@ export class TasksTariffService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationsService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
+    private readonly inAppNotifications: NotificationsInAppFacade,
   ) {}
 
   /**
@@ -95,7 +95,7 @@ export class TasksTariffService {
       const smsEnabled =
         (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
       if (smsEnabled) {
-        await this.notifications.sendSMS(
+        await this.notificationsOutbound.sendSMS(
           master.user.phone,
           `Ваш тариф истек. Текущий тариф: BASIC. Для продления посетите личный кабинет.`,
           { userId: master.userId },
@@ -163,7 +163,7 @@ export class TasksTariffService {
         : `Ваш запрос на обновление до PREMIUM истек (12 часов). Тариф изменен на BASIC.`;
 
       if ((master as { notifyTariffSms?: boolean }).notifyTariffSms !== false) {
-        await this.notifications.sendSMS(master.user.phone, message, {
+        await this.notificationsOutbound.sendSMS(master.user.phone, message, {
           userId: master.userId,
         });
       }
@@ -231,7 +231,7 @@ export class TasksTariffService {
       const smsEnabled =
         (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
       if (smsEnabled) {
-        await this.notifications.sendSMS(master.user.phone, message, {
+        await this.notificationsOutbound.sendSMS(master.user.phone, message, {
           userId: master.userId,
           metadata: {
             masterId: master.id,
@@ -242,12 +242,12 @@ export class TasksTariffService {
         });
       }
       if (master.telegramChatId) {
-        await this.notifications.sendTelegram(`⏰ ${message}`, {
+        await this.notificationsOutbound.sendTelegram(`⏰ ${message}`, {
           chatId: master.telegramChatId,
         });
       }
       if (master.whatsappPhone) {
-        await this.notifications.sendWhatsApp(
+        await this.notificationsOutbound.sendWhatsApp(
           master.whatsappPhone,
           `⏰ ${message}`,
         );

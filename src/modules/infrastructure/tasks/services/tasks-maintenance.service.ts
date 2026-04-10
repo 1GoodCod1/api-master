@@ -4,7 +4,7 @@ import { LeadStatus, ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type Redis from 'ioredis';
 import { RedisService } from '../../../shared/redis/redis.service';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
 import { VerificationDocumentsPurgeService } from '../../../verification/services/verification-documents-purge.service';
 import type { QueueStats } from '../../../shared/types/redis.types';
 
@@ -15,7 +15,7 @@ export class TasksMaintenanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly notifications: NotificationsService,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
     private readonly configService: ConfigService,
     private readonly verificationDocumentsPurge: VerificationDocumentsPurgeService,
   ) {}
@@ -73,7 +73,9 @@ export class TasksMaintenanceService {
 
     if (redisPing !== 'PONG') {
       this.logger.error('Redis health check failed');
-      await this.notifications.sendTelegram('🚨 Redis health check failed!');
+      await this.notificationsOutbound.sendTelegram(
+        '🚨 Redis health check failed!',
+      );
     }
 
     for (const [queue, stats] of Object.entries(queueStats)) {

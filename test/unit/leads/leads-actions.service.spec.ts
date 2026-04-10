@@ -16,8 +16,8 @@ jest.mock(
 import { LeadsActionsService } from '../../../src/modules/marketplace/leads/services/leads-actions.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
-import type { MastersAvailabilityService } from '../../../src/modules/marketplace/masters/services/masters-availability.service';
+import type { NotificationsInAppFacade } from '../../../src/modules/notifications/notifications/facades/notifications-in-app.facade';
+import type { MastersAvailabilityFacade } from '../../../src/modules/marketplace/masters/facades/masters-availability.facade';
 import type { EmailDripService } from '../../../src/modules/email/email-drip.service';
 import type { ReferralsService } from '../../../src/modules/engagement/referrals/referrals.service';
 import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';
@@ -58,11 +58,11 @@ describe('LeadsActionsService', () => {
     notifyMasterAvailable: jest.fn(),
     notifyLeadStatusUpdated: jest.fn().mockResolvedValue(undefined),
     notify: jest.fn().mockResolvedValue(undefined),
-  } as unknown as jest.Mocked<InAppNotificationService>;
+  } as unknown as jest.Mocked<NotificationsInAppFacade>;
 
-  const availabilityService = {
+  const mastersAvailability = {
     decrementActiveLeads: jest.fn(),
-  } as unknown as jest.Mocked<MastersAvailabilityService>;
+  } as unknown as jest.Mocked<MastersAvailabilityFacade>;
 
   const emailDripService = {
     startChain: jest.fn().mockResolvedValue(undefined),
@@ -97,7 +97,7 @@ describe('LeadsActionsService', () => {
       prisma as unknown as PrismaService,
       cache,
       inAppNotifications,
-      availabilityService,
+      mastersAvailability,
       emailDripService,
       referralsService,
     );
@@ -149,7 +149,7 @@ describe('LeadsActionsService', () => {
       clientId: 'c1',
       status: 'CLOSED',
     } as never);
-    availabilityService.decrementActiveLeads.mockResolvedValue({
+    mastersAvailability.decrementActiveLeads.mockResolvedValue({
       id: 'm1',
       availabilityStatus: 'AVAILABLE',
     } as never);
@@ -165,7 +165,7 @@ describe('LeadsActionsService', () => {
 
     await service.updateStatus('lead-1', clientUser, { status: 'CLOSED' });
 
-    expect(availabilityService.decrementActiveLeads).toHaveBeenCalledWith('m1');
+    expect(mastersAvailability.decrementActiveLeads).toHaveBeenCalledWith('m1');
     expect(cache.invalidateMasterData).toHaveBeenCalledWith('m1');
     expect(inAppNotifications.notifyMasterAvailable).toHaveBeenCalledWith(
       'c1',
@@ -196,7 +196,7 @@ describe('LeadsActionsService', () => {
       clientId: 'client-1',
       status: 'CLOSED',
     } as never);
-    availabilityService.decrementActiveLeads.mockResolvedValue({
+    mastersAvailability.decrementActiveLeads.mockResolvedValue({
       id: 'm1',
       availabilityStatus: 'BUSY',
     } as never);

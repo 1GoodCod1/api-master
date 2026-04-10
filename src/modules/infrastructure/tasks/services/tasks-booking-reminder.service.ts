@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { NotificationCategory } from '@prisma/client';
 import { ACTIVE_BOOKING_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 
 /**
  * TasksBookingReminderService — автоматические напоминания о бронированиях
@@ -16,7 +16,7 @@ export class TasksBookingReminderService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly inAppNotifications: NotificationsInAppFacade,
   ) {}
 
   /**

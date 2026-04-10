@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus, LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
+import { MastersAvailabilityFacade } from '../../masters/facades/masters-availability.facade';
 
 @Injectable()
 export class BookingsLeadSyncService {
@@ -9,7 +9,7 @@ export class BookingsLeadSyncService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly availabilityService: MastersAvailabilityService,
+    private readonly mastersAvailability: MastersAvailabilityFacade,
   ) {}
 
   async updateLeadStatusOnCreate(leadId: string | null): Promise<void> {
@@ -44,7 +44,7 @@ export class BookingsLeadSyncService {
             where: { id: booking.leadId! },
             data: { status: LeadStatus.NEW, updatedAt: new Date() },
           });
-          await this.availabilityService.decrementActiveLeads(booking.masterId);
+          await this.mastersAvailability.decrementActiveLeads(booking.masterId);
         });
       } else if (newStatus === BookingStatus.COMPLETED) {
         await this.prisma.$transaction(async (tx) => {
@@ -58,7 +58,7 @@ export class BookingsLeadSyncService {
               where: { id: booking.leadId! },
               data: { status: LeadStatus.CLOSED, updatedAt: new Date() },
             });
-            await this.availabilityService.decrementActiveLeads(lead.masterId);
+            await this.mastersAvailability.decrementActiveLeads(lead.masterId);
           }
         });
       }

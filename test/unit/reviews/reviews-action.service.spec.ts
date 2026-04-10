@@ -7,8 +7,8 @@ import { ReviewStatus } from '@prisma/client';
 import { ReviewsActionService } from '../../../src/modules/marketplace/reviews/services/reviews-action.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
-import type { InAppNotificationService } from '../../../src/modules/notifications/notifications/services/in-app-notification.service';
-import type { NotificationsService } from '../../../src/modules/notifications/notifications/notifications.service';
+import type { NotificationsInAppFacade } from '../../../src/modules/notifications/notifications/facades/notifications-in-app.facade';
+import type { NotificationsOutboundFacade } from '../../../src/modules/notifications/notifications/facades/notifications-outbound.facade';
 
 type PrismaReviewsActionMock = {
   user: { findUnique: jest.Mock };
@@ -71,13 +71,13 @@ describe('ReviewsActionService', () => {
   const inAppNotifications = {
     notifyNewReview: jest.fn(),
     notify: jest.fn().mockResolvedValue(undefined),
-  } as unknown as jest.Mocked<InAppNotificationService>;
+  } as unknown as jest.Mocked<NotificationsInAppFacade>;
 
-  const notifications = {
+  const notificationsOutbound = {
     sendSMS: jest.fn(),
     sendTelegram: jest.fn(),
     sendWhatsApp: jest.fn(),
-  } as unknown as jest.Mocked<NotificationsService>;
+  } as unknown as jest.Mocked<NotificationsOutboundFacade>;
 
   let service: ReviewsActionService;
 
@@ -87,7 +87,7 @@ describe('ReviewsActionService', () => {
       prisma as unknown as PrismaService,
       cache,
       inAppNotifications,
-      notifications,
+      notificationsOutbound,
     );
   });
 

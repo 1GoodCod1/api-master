@@ -11,7 +11,7 @@ import { LeadsSpamService } from './services/leads-spam.service';
 import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsCreateNotificationService } from './services/leads-create-notification.service';
 import { LeadsConversationService } from './services/leads-conversation.service';
-import { MastersAvailabilityService } from '../masters/services/masters-availability.service';
+import { MastersAvailabilityFacade } from '../masters/facades/masters-availability.facade';
 
 @Injectable()
 export class LeadsService {
@@ -23,7 +23,7 @@ export class LeadsService {
     private readonly analyticsService: LeadsAnalyticsService,
     private readonly createNotificationService: LeadsCreateNotificationService,
     private readonly conversationService: LeadsConversationService,
-    private readonly availabilityService: MastersAvailabilityService,
+    private readonly mastersAvailability: MastersAvailabilityFacade,
   ) {}
 
   async create(
@@ -84,7 +84,7 @@ export class LeadsService {
       },
     });
 
-    await this.availabilityService.incrementActiveLeads(masterId);
+    await this.mastersAvailability.incrementActiveLeads(masterId);
     await this.analyticsService.handlePostCreation(masterId);
 
     await this.conversationService.createForLead(lead);

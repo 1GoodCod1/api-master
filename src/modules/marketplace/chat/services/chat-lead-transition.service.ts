@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 import { NotificationCategory, SenderType } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
 import { fireAndForget } from '../../../../common/utils/fire-and-forget';
@@ -13,7 +13,7 @@ export class ChatLeadTransitionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly inAppNotifications: NotificationsInAppFacade,
   ) {}
 
   /**

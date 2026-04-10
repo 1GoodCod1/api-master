@@ -14,7 +14,7 @@ import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { GetUser, Roles } from '../../../common/decorators';
 import { encodeId } from '../../shared/utils/id-encoder';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
-import { TelegramConnectService } from '../../notifications/notifications/services/telegram-connect.service';
+import { TelegramConnectFacade } from '../../notifications/notifications/facades/telegram-connect.facade';
 import { MastersAvailabilityService } from './services/masters-availability.service';
 import { MastersNotificationSettingsService } from './services/masters-notification-settings.service';
 import { MastersScheduleService } from './services/masters-schedule.service';
@@ -38,7 +38,7 @@ export class MastersSettingsController {
     private readonly notificationSettingsService: MastersNotificationSettingsService,
     private readonly scheduleService: MastersScheduleService,
     private readonly quickRepliesService: MastersQuickRepliesService,
-    private readonly telegramConnect: TelegramConnectService,
+    private readonly telegramConnect: TelegramConnectFacade,
   ) {}
 
   private onInvalidate(masterId: string, slug?: string | null) {

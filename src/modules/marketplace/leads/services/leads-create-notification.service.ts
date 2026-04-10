@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 import { fireAndForget } from '../../../../common/utils/fire-and-forget';
@@ -10,8 +10,8 @@ export class LeadsCreateNotificationService {
   private readonly logger = new Logger(LeadsCreateNotificationService.name);
 
   constructor(
-    private readonly notificationsService: NotificationsService,
-    private readonly inAppNotifications: InAppNotificationService,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
+    private readonly inAppNotifications: NotificationsInAppFacade,
     private readonly emailDripService: EmailDripService,
   ) {}
 
@@ -46,7 +46,7 @@ export class LeadsCreateNotificationService {
     } = params;
 
     const notificationOptions = this.buildNotificationOptions(master);
-    await this.notificationsService.sendLeadNotification(
+    await this.notificationsOutbound.sendLeadNotification(
       master.user.phone,
       {
         leadId: lead.id,

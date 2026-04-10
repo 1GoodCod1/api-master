@@ -15,9 +15,9 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { decodeId } from '../../../shared/utils/id-encoder';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
-import { MastersAvailabilityService } from '../../masters/services/masters-availability.service';
+import { MastersAvailabilityFacade } from '../../masters/facades/masters-availability.facade';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
 import { fireAndForget } from '../../../../common/utils/fire-and-forget';
@@ -65,8 +65,8 @@ export class LeadsActionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly inAppNotifications: InAppNotificationService,
-    private readonly availabilityService: MastersAvailabilityService,
+    private readonly inAppNotifications: NotificationsInAppFacade,
+    private readonly mastersAvailability: MastersAvailabilityFacade,
     private readonly emailDripService: EmailDripService,
     private readonly referralsService: ReferralsService,
   ) {}
@@ -168,7 +168,7 @@ export class LeadsActionsService {
 
     // Обновление счётчика активных лидов при закрытии (Через централизованный сервис)
     if (oldStatus !== LeadStatus.CLOSED && newStatus === LeadStatus.CLOSED) {
-      const updatedMaster = await this.availabilityService.decrementActiveLeads(
+      const updatedMaster = await this.mastersAvailability.decrementActiveLeads(
         lead.masterId,
       );
 

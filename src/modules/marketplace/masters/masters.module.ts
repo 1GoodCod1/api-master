@@ -27,6 +27,9 @@ import { MastersNotificationSettingsService } from './services/masters-notificat
 import { MastersScheduleService } from './services/masters-schedule.service';
 import { MastersQuickRepliesService } from './services/masters-quick-replies.service';
 import { MastersLandingStatsService } from './services/masters-landing-stats.service';
+import { MastersAvailabilityFacade } from './facades/masters-availability.facade';
+import { MastersReferralsFacade } from './facades/masters-referrals.facade';
+import { MastersCacheWarmingFacade } from './facades/masters-cache-warming.facade';
 
 @Module({
   imports: [
@@ -62,22 +65,15 @@ import { MastersLandingStatsService } from './services/masters-landing-stats.ser
     MastersScheduleService,
     MastersQuickRepliesService,
     MastersLandingStatsService,
+    MastersAvailabilityFacade,
+    MastersReferralsFacade,
+    MastersCacheWarmingFacade,
   ],
   exports: [
     MastersService,
-    MastersAvailabilityService,
-    MastersSearchService,
-    MastersSuggestService,
-    MastersListingService,
-    MastersProfileService,
-    MastersPublicProfileService,
-    MastersPhotosService,
-    MastersStatsService,
-    MastersTariffService,
-    MastersNotificationSettingsService,
-    MastersScheduleService,
-    MastersQuickRepliesService,
-    MastersLandingStatsService,
+    MastersAvailabilityFacade,
+    MastersReferralsFacade,
+    MastersCacheWarmingFacade,
   ],
 })
 export class MastersModule {}

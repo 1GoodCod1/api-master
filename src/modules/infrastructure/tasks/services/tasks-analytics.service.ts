@@ -3,7 +3,7 @@ import { ReviewStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../../common/constants';
 import { RedisService } from '../../../shared/redis/redis.service';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
 import { getStartOfTodayInMoldova } from '../../../shared/utils/timezone.util';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class TasksAnalyticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly notifications: NotificationsService,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
   ) {}
 
   /**
@@ -180,7 +180,7 @@ export class TasksAnalyticsService {
         `Заявки: ${stats.totalLeads}\n` +
         `Отзывы: ${stats.totalReviews}\n`;
 
-      await this.notifications.sendTelegram(message);
+      await this.notificationsOutbound.sendTelegram(message);
     }
   }
 }

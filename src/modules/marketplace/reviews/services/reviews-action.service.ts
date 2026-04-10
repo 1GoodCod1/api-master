@@ -7,8 +7,8 @@ import {
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CacheService } from '../../../shared/cache/cache.service';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import type { ReviewCriteriaDto } from '../dto/review-criteria.dto';
 import {
@@ -26,8 +26,8 @@ export class ReviewsActionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly inAppNotifications: InAppNotificationService,
-    private readonly notifications: NotificationsService,
+    private readonly inAppNotifications: NotificationsInAppFacade,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
   ) {}
 
   /**
@@ -180,7 +180,7 @@ export class ReviewsActionService {
     const comment = createReviewDto.comment ?? '';
     const reviewMsg = `Новый отзыв от ${displayName || 'клиента'}: ${rating}/5. ${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}`;
     if (master.user?.phone) {
-      await this.notifications
+      await this.notificationsOutbound
         .sendSMS(master.user.phone, reviewMsg)
         .catch((e) => {
           this.logger.warn(
@@ -189,7 +189,7 @@ export class ReviewsActionService {
         });
     }
     if (master.telegramChatId) {
-      await this.notifications
+      await this.notificationsOutbound
         .sendTelegram(`⭐ ${reviewMsg}`, { chatId: master.telegramChatId })
         .catch((e) => {
           this.logger.warn(
@@ -198,7 +198,7 @@ export class ReviewsActionService {
         });
     }
     if (master.whatsappPhone) {
-      await this.notifications
+      await this.notificationsOutbound
         .sendWhatsApp(master.whatsappPhone, `⭐ ${reviewMsg}`)
         .catch((e) => {
           this.logger.warn(

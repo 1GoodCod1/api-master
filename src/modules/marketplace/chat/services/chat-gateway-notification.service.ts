@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SenderType } from '@prisma/client';
 import type { OutgoingChatMessage } from '../chat.types';
-import { InAppNotificationService } from '../../../notifications/notifications/services/in-app-notification.service';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
 
 @Injectable()
 export class ChatGatewayNotificationService {
   private readonly logger = new Logger(ChatGatewayNotificationService.name);
 
   constructor(
-    private readonly inAppNotifications: InAppNotificationService,
-    private readonly notifications: NotificationsService,
+    private readonly inAppNotifications: NotificationsInAppFacade,
+    private readonly notifications: NotificationsOutboundFacade,
   ) {}
 
   /**

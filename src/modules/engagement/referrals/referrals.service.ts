@@ -8,9 +8,7 @@ import {
   ReferralStatus,
   UserRole,
 } from '@prisma/client';
-import { MastersTariffService } from '../../marketplace/masters/services/masters-tariff.service';
-import { MastersProfileService } from '../../marketplace/masters/services/masters-profile.service';
-import { encodeId } from '../../shared/utils/id-encoder';
+import { MastersReferralsFacade } from '../../marketplace/masters/facades/masters-referrals.facade';
 import { NotificationEventEmitter } from '../../notifications/events';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
 
@@ -20,8 +18,7 @@ export class ReferralsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tariffService: MastersTariffService,
-    private readonly masterProfileService: MastersProfileService,
+    private readonly mastersReferrals: MastersReferralsFacade,
     private readonly notificationEvents: NotificationEventEmitter,
     private readonly appSettings: AppSettingsService,
   ) {}
@@ -237,11 +234,9 @@ export class ReferralsService {
 
     try {
       if (referrer.role === UserRole.MASTER && referrer.masterProfile) {
-        await this.tariffService.extendTariffByDays(
+        await this.mastersReferrals.extendTariffByDaysForReferralReward(
           referrer.masterProfile.id,
           REFERRAL_REWARD_DAYS,
-          (m, s) =>
-            this.masterProfileService.invalidateMasterCache(m, s, encodeId(m)),
         );
         this.logger.log(
           `Granted ${REFERRAL_REWARD_DAYS} days tariff extension to master ${referrer.masterProfile.id}`,

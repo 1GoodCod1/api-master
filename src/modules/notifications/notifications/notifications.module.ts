@@ -18,6 +18,9 @@ import { WebSocketModule } from '../../infrastructure/websocket/websocket.module
 import { WebPushModule } from '../web-push/web-push.module';
 import { createBullOptions } from '../../../config/bull.config';
 import { NotificationEventListener } from '../events/notification-event.listener';
+import { NotificationsInAppFacade } from './facades/notifications-in-app.facade';
+import { NotificationsOutboundFacade } from './facades/notifications-outbound.facade';
+import { TelegramConnectFacade } from './facades/telegram-connect.facade';
 
 @Module({
   imports: [
@@ -55,11 +58,14 @@ import { NotificationEventListener } from '../events/notification-event.listener
     TelegramConnectService,
     TelegramWebhookSecretGuard,
     NotificationEventListener,
+    NotificationsInAppFacade,
+    NotificationsOutboundFacade,
+    TelegramConnectFacade,
   ],
   exports: [
-    NotificationsService,
-    InAppNotificationService,
-    TelegramConnectService,
+    NotificationsInAppFacade,
+    NotificationsOutboundFacade,
+    TelegramConnectFacade,
   ],
 })
 export class NotificationsModule {}

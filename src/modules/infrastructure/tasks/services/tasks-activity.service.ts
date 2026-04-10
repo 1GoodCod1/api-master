@@ -3,7 +3,7 @@ import { NotificationStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { RedisService } from '../../../shared/redis/redis.service';
 import type { MasterWithUser } from '../types';
-import { NotificationsService } from '../../../notifications/notifications/notifications.service';
+import { NotificationsOutboundFacade } from '../../../notifications/notifications/facades/notifications-outbound.facade';
 import { EmailDripService } from '../../../email/email-drip.service';
 
 /**
@@ -39,7 +39,7 @@ export class TasksActivityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly notifications: NotificationsService,
+    private readonly notificationsOutbound: NotificationsOutboundFacade,
     private readonly emailDripService: EmailDripService,
   ) {}
 
@@ -231,7 +231,7 @@ export class TasksActivityService {
         this.INACTIVITY_THRESHOLD_DAYS - this.WARNING_THRESHOLD_DAYS;
 
       // Отправляем SMS уведомление
-      await this.notifications.sendSMS(
+      await this.notificationsOutbound.sendSMS(
         master.user.phone,
         `Внимание! Ваш профиль на faber.md не обновлялся ${this.WARNING_THRESHOLD_DAYS} дней. ` +
           `Через ${daysRemaining} дней ваш рейтинг будет снижен на ${this.RATING_PENALTY}, и профиль скрыт. ` +
@@ -239,7 +239,7 @@ export class TasksActivityService {
       );
 
       // Сохраняем уведомление в БД
-      await this.notifications.saveNotification({
+      await this.notificationsOutbound.saveNotification({
         userId: master.user.id,
         type: 'SMS',
         recipient: master.user.phone,
@@ -275,14 +275,14 @@ export class TasksActivityService {
   ): Promise<void> {
     try {
       // SMS уведомление
-      await this.notifications.sendSMS(
+      await this.notificationsOutbound.sendSMS(
         master.user.phone,
         `Ваш профиль на faber.md был деактивирован из-за отсутствия активности более ${this.INACTIVITY_THRESHOLD_DAYS} дней. ` +
           `Рейтинг снижен на ${this.RATING_PENALTY}. Войдите в личный кабинет для повторной активации.`,
       );
 
       // Сохраняем уведомление в БД
-      await this.notifications.saveNotification({
+      await this.notificationsOutbound.saveNotification({
         userId: master.user.id,
         type: 'SMS',
         recipient: master.user.phone,
