@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SharedJwtModule } from '../../shared/jwt/shared-jwt.module';
 import { WebsocketGateway } from './websocket.gateway';
 import { RedisModule } from '../../shared/redis/redis.module';
 import { PrismaModule } from '../../shared/database/prisma.module';
@@ -10,17 +9,7 @@ import { WebsocketMessagingService } from './services/websocket-messaging.servic
 import { WebsocketErrorHandlerService } from './services/websocket-error-handler.service';
 
 @Module({
-  imports: [
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('jwt.accessSecret'),
-      }),
-      inject: [ConfigService],
-    }),
-    RedisModule,
-    PrismaModule,
-  ],
+  imports: [SharedJwtModule.forVerify(), RedisModule, PrismaModule],
   providers: [
     WebsocketGateway,
     WebsocketService,

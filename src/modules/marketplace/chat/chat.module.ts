@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SharedJwtModule } from '../../shared/jwt/shared-jwt.module';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
@@ -19,13 +18,7 @@ import { CacheModule } from '../../shared/cache/cache.module';
     PrismaModule,
     RedisModule,
     CacheModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('jwt.accessSecret'),
-      }),
-      inject: [ConfigService],
-    }),
+    SharedJwtModule.forVerify(),
     NotificationsModule,
   ],
   controllers: [ChatController],
