@@ -13,7 +13,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { ApiPaginationQueries, GetUser, Roles } from '../../common/decorators';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
