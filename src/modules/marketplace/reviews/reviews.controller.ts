@@ -17,7 +17,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Roles, type RequestWithUser } from '../../../common/decorators';
+import {
+  ApiPaginationQueries,
+  Roles,
+  type RequestWithUser,
+} from '../../../common/decorators';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewStatusDto } from './dto/update-review-status.dto';
@@ -59,9 +63,7 @@ export class ReviewsController {
   @Get('master/:masterId')
   @ApiOperation({ summary: 'Get reviews for master (cursor-paginated)' })
   @ApiQuery({ name: 'status', required: false, enum: ReviewStatus })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiPaginationQueries()
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   async findAllForMaster(
     @Param('masterId') masterId: string,
@@ -117,9 +119,7 @@ export class ReviewsController {
     summary:
       'List reviews for the current user (master: received; client: written by them)',
   })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiPaginationQueries()
   async getMyReviews(
     @Req() req: RequestWithUser,
     @Query('limit') limit?: string,

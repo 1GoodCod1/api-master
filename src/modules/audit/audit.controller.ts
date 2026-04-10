@@ -10,7 +10,7 @@ import { ANALYTICS_TIMEFRAMES, CONTROLLER_PATH } from '../../common/constants';
 import { AuditService } from './audit.service';
 import { AuditCleanupDto } from './dto/audit-cleanup.dto';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
-import { Roles } from '../../common/decorators';
+import { ApiPaginationQueries, Roles } from '../../common/decorators';
 import { UseGuards } from '@nestjs/common';
 
 @ApiTags('Audit')
@@ -28,8 +28,7 @@ export class AuditController {
   @ApiQuery({ name: 'entityType', required: false })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiPaginationQueries({ cursor: false })
   async getLogs(
     @Query('userId') userId?: string,
     @Query('action') action?: string,

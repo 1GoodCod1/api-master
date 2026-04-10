@@ -24,6 +24,7 @@ import { UpdateLeadStatusDto } from './dto/update-lead-status.dto';
 import { SubscribeToAvailabilityDto } from './dto/subscribe-to-availability.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import {
+  ApiPaginationQueries,
   GetUser,
   Roles,
   type RequestWithUser,
@@ -77,9 +78,7 @@ export class LeadsController {
     summary: 'Get leads for authenticated user (cursor-paginated)',
   })
   @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiPaginationQueries()
   async findAll(
     @GetUser() user: JwtUser,
     @Query('status') status?: string,

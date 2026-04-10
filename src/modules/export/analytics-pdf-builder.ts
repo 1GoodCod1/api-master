@@ -1,63 +1,15 @@
-import path from 'path';
-import type PDFDocument from 'pdfkit';
+import {
+  type Doc,
+  COLORS,
+  PAGE,
+  registerPdfFont,
+  drawSectionHeader,
+  drawKeyValue,
+  resolveLocale,
+  getLocaleString,
+} from '../shared/pdf/pdf-shared';
 import { getAnalyticsPdfTranslations } from './analytics-pdf-translations';
 import type { AnalyticsPdfData } from './types';
-
-/** Цветовая палитра PDF */
-const COLORS = {
-  primary: '#0f766e',
-  primaryLight: '#e6f7f6',
-  accent: '#f59e0b',
-  text: '#1f2937',
-  textMuted: '#6b7280',
-  border: '#e5e7eb',
-  white: '#ffffff',
-} as const;
-
-type Doc = InstanceType<typeof PDFDocument>;
-
-/**
- * Подключить шрифт Roboto для кириллицы.
- * Если файла нет — Helvetica.
- */
-function registerPdfFont(doc: Doc): void {
-  const fontPath = path.join(
-    process.cwd(),
-    'assets',
-    'fonts',
-    'Roboto-Regular.ttf',
-  );
-  try {
-    doc.registerFont('Roboto', fontPath);
-    doc.font('Roboto');
-  } catch {
-    doc.font('Helvetica');
-  }
-}
-
-function drawSectionHeader(doc: Doc, text: string, y: number): number {
-  doc
-    .fontSize(14)
-    .fillColor(COLORS.primary)
-    .text(text, 50, y, { continued: false });
-  doc.moveDown(0.5);
-  return doc.y;
-}
-
-function drawKeyValue(
-  doc: Doc,
-  label: string,
-  value: string | number,
-  x: number,
-  y: number,
-): number {
-  doc.fontSize(10).fillColor(COLORS.textMuted).text(`${label}: `, x, y, {
-    continued: true,
-    width: 120,
-  });
-  doc.fillColor(COLORS.text).text(String(value));
-  return doc.y;
-}
 
 function drawStatBox(
   doc: Doc,
@@ -85,9 +37,6 @@ function drawStatBox(
     });
 }
 
-/**
- * Построение содержимого PDF-отчёта аналитики с улучшенным дизайном и переводами.
- */
 export function buildAnalyticsPdf(
   doc: Doc,
   data: AnalyticsPdfData,
@@ -98,12 +47,10 @@ export function buildAnalyticsPdf(
 
   registerPdfFont(doc);
 
-  const margin = 50;
-  const pageWidth = 595;
-  const contentWidth = pageWidth - margin * 2;
+  const { margin, contentWidth, width: pageWidth } = PAGE;
+  const localeStr = getLocaleString(resolveLocale(locale));
   let y = 110;
 
-  // Заголовок с акцентной полосой
   doc.rect(0, 0, pageWidth, 80).fill(COLORS.primary);
   doc.fontSize(24).fillColor(COLORS.white).text(t.title, margin, 28, {
     align: 'center',
@@ -117,13 +64,12 @@ export function buildAnalyticsPdf(
       width: contentWidth,
     });
   doc.text(
-    `${t.generated}: ${new Date().toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US')}`,
+    `${t.generated}: ${new Date().toLocaleString(localeStr)}`,
     margin,
     64,
     { align: 'center', width: contentWidth },
   );
 
-  // Секция информации о профиле
   y = drawSectionHeader(doc, t.profileInfo, y);
   doc.fontSize(10);
 
@@ -137,16 +83,14 @@ export function buildAnalyticsPdf(
 
   let rowY = y;
   for (const [label, value] of profileItems) {
-    rowY = drawKeyValue(doc, label, value, margin, rowY);
+    rowY = drawKeyValue(doc, label, value, margin, rowY, 120);
     rowY += 6;
   }
   y = rowY + 16;
 
-  // Stats in boxes (3 columns)
   const boxWidth = (contentWidth - 40) / 3;
   const boxHeight = 52;
 
-  // Статистика лидов
   y = drawSectionHeader(doc, t.leadsStats, y);
   if (data.leadsStats.length > 0) {
     let col = 0;
@@ -169,7 +113,6 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Статистика отзывов
   y = drawSectionHeader(doc, t.reviewsStats, y);
   if (data.reviewsStats.length > 0) {
     let col = 0;
@@ -192,7 +135,6 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Статистика записей
   y = drawSectionHeader(doc, t.bookingsStats, y);
   if (data.bookingsStats.length > 0) {
     let col = 0;
@@ -215,11 +157,9 @@ export function buildAnalyticsPdf(
     y += 24;
   }
 
-  // Таблица последней аналитики
   if (data.analytics.length > 0) {
     y = drawSectionHeader(doc, t.recentAnalytics, y);
 
-    const localeStr = locale === 'ru' ? 'ru-RU' : 'en-US';
     const dateOpts: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: '2-digit',

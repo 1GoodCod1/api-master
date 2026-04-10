@@ -15,7 +15,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { GetUser, Roles } from '../../common/decorators';
+import { ApiPaginationQueries, GetUser, Roles } from '../../common/decorators';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
 import { VerificationService } from './verification.service';
 import { SubmitVerificationDto } from './dto/submit-verification.dto';
@@ -72,8 +72,7 @@ export class VerificationController {
   @ApiOperation({
     summary: 'Получить список заявок на верификацию (Admin only)',
   })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiPaginationQueries({ cursor: false })
   async getPendingVerifications(
     @Query('page') page?: string,
     @Query('limit') limit?: string,

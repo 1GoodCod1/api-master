@@ -27,7 +27,11 @@ import {
 } from '../../../common/constants';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { Roles, type RequestWithUser } from '../../../common/decorators';
+import {
+  ApiPaginationQueries,
+  Roles,
+  type RequestWithUser,
+} from '../../../common/decorators';
 import type { SystemStats } from './types';
 import { AdminUpdateUserDto } from './dto/update-user.dto';
 import { AdminUpdateMasterDto } from './dto/update-master.dto';
@@ -100,9 +104,7 @@ export class AdminController {
   @ApiQuery({ name: 'role', required: false })
   @ApiQuery({ name: 'verified', required: false, type: Boolean })
   @ApiQuery({ name: 'banned', required: false, type: Boolean })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getUsers(
     @Query('role') role?: string,
     @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
@@ -147,8 +149,7 @@ export class AdminController {
 
   @Get('users/:id/audit-logs')
   @ApiOperation({ summary: 'Get user audit log history' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiPaginationQueries({ cursor: false })
   async getUserAuditLogs(
     @Param('id') id: string,
     @Query('page') page?: string,
@@ -185,9 +186,7 @@ export class AdminController {
   @ApiQuery({ name: 'verified', required: false, type: Boolean })
   @ApiQuery({ name: 'featured', required: false, type: Boolean })
   @ApiQuery({ name: 'tariff', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getMasters(
     @Query('verified', OptionalQueryBoolPipe) verified?: boolean,
     @Query('featured', OptionalQueryBoolPipe) featured?: boolean,
@@ -262,9 +261,7 @@ export class AdminController {
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'dateFrom', required: false, type: String })
   @ApiQuery({ name: 'dateTo', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getLeads(
     @Query('status') status?: string,
     @Query('dateFrom') dateFrom?: string,
@@ -303,9 +300,7 @@ export class AdminController {
   @Get('reviews')
   @ApiOperation({ summary: 'Get reviews list' })
   @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getReviews(
     @Query('status') status?: string,
     @Query('page') page = 1,
@@ -350,9 +345,7 @@ export class AdminController {
   @Get('payments')
   @ApiOperation({ summary: 'Get payments list' })
   @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getPayments(
     @Query('status') status?: string,
     @Query('page') page = 1,
@@ -482,8 +475,7 @@ export class AdminController {
 
   @Get('digest/subscribers')
   @ApiOperation({ summary: 'List digest subscribers (paginated)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiPaginationQueries({ cursor: false })
   getDigestSubscribers(
     @Query('page') page?: number,
     @Query('limit') limit?: number,

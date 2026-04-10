@@ -20,7 +20,7 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { Roles } from '../../../common/decorators';
+import { ApiPaginationQueries, Roles } from '../../../common/decorators';
 import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Categories')
@@ -43,9 +43,7 @@ export class CategoriesController {
 
   @Get(':id/masters')
   @ApiOperation({ summary: 'Get masters in category (cursor-paginated)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   async getMasters(
     @Param('id') id: string,
     @Query('page') page?: string,

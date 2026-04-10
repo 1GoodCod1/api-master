@@ -1,21 +1,17 @@
-import path from 'path';
-import type PDFDocument from 'pdfkit';
+import {
+  type Doc,
+  COLORS,
+  PAGE,
+  registerPdfFont,
+  drawSectionHeader,
+  drawKeyValue,
+  formatDateFromIso,
+  ensureSpace,
+} from '../../shared/pdf/pdf-shared';
 import { formatUserName } from '../../shared/utils/format-name.util';
 import type { PersonalDataPdfData } from '../types';
 
-type Doc = InstanceType<typeof PDFDocument>;
 export type { PersonalDataPdfData } from '../types';
-
-/** PDF color palette — professional, GDPR-friendly */
-const COLORS = {
-  primary: '#0f766e',
-  primaryLight: '#e6f7f6',
-  accent: '#f59e0b',
-  text: '#1f2937',
-  textMuted: '#6b7280',
-  border: '#e5e7eb',
-  white: '#ffffff',
-} as const;
 
 const LABELS: Record<string, Record<string, string>> = {
   en: {
@@ -197,65 +193,6 @@ function getLabels(locale: string): (typeof LABELS)['en'] {
   return LABELS[lang] ?? LABELS.en;
 }
 
-function registerPdfFont(doc: Doc): void {
-  const fontPath = path.join(
-    process.cwd(),
-    'assets',
-    'fonts',
-    'Roboto-Regular.ttf',
-  );
-  try {
-    doc.registerFont('Roboto', fontPath);
-    doc.font('Roboto');
-  } catch {
-    doc.font('Helvetica');
-  }
-}
-
-function drawSectionHeader(doc: Doc, text: string, y: number): number {
-  doc
-    .fontSize(14)
-    .fillColor(COLORS.primary)
-    .text(text, 50, y, { continued: false });
-  doc.moveDown(0.5);
-  return doc.y;
-}
-
-function drawKeyValue(
-  doc: Doc,
-  label: string,
-  value: string | number | null | undefined,
-  x: number,
-  y: number,
-): number {
-  const val = value == null ? '—' : String(value);
-  doc.fontSize(10).fillColor(COLORS.textMuted).text(`${label}: `, x, y, {
-    continued: true,
-    width: 140,
-  });
-  doc.fillColor(COLORS.text).text(val);
-  return doc.y;
-}
-
-function formatDate(iso: string, locale: string): string {
-  try {
-    const d = new Date(iso);
-    const opts: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    };
-    return d.toLocaleString(
-      locale === 'ru' ? 'ru-RU' : locale === 'ro' ? 'ro-RO' : 'en-US',
-      opts,
-    );
-  } catch {
-    return iso;
-  }
-}
-
 export function buildPersonalDataPdf(
   doc: Doc,
   data: PersonalDataPdfData,
@@ -266,12 +203,9 @@ export function buildPersonalDataPdf(
 
   registerPdfFont(doc);
 
-  const margin = 50;
-  const pageWidth = 595;
-  const contentWidth = pageWidth - margin * 2;
+  const { margin, contentWidth, width: pageWidth } = PAGE;
   let y = 110;
 
-  // Шапка
   doc.rect(0, 0, pageWidth, 90).fill(COLORS.primary);
   doc.fontSize(22).fillColor(COLORS.white).text(t.title, margin, 28, {
     align: 'center',
@@ -285,13 +219,12 @@ export function buildPersonalDataPdf(
     .fontSize(10)
     .fillColor('rgba(255,255,255,0.85)')
     .text(
-      `${t.generated}: ${formatDate(data.exportDate, locale)}`,
+      `${t.generated}: ${formatDateFromIso(data.exportDate, locale)}`,
       margin,
       68,
       { align: 'center', width: contentWidth },
     );
 
-  // Раздел профиля
   y = drawSectionHeader(doc, t.profile, y);
   const fullName = formatUserName(data.user.firstName, data.user.lastName, '—');
   const profileItems: [string, string | number | null | undefined][] = [
@@ -301,10 +234,12 @@ export function buildPersonalDataPdf(
     [t.role, data.user.role],
     [t.verified, data.user.isVerified ? t.yes : t.no],
     [t.language, data.user.preferredLanguage ?? '—'],
-    [t.registered, formatDate(data.user.createdAt, locale)],
+    [t.registered, formatDateFromIso(data.user.createdAt, locale)],
     [
       t.lastLogin,
-      data.user.lastLoginAt ? formatDate(data.user.lastLoginAt, locale) : '—',
+      data.user.lastLoginAt
+        ? formatDateFromIso(data.user.lastLoginAt, locale)
+        : '—',
     ],
   ];
   for (const [label, value] of profileItems) {
@@ -313,7 +248,6 @@ export function buildPersonalDataPdf(
   }
   y += 12;
 
-  // Профиль мастера (если есть)
   if (data.masterProfile) {
     y = drawSectionHeader(doc, t.masterProfile, y);
     const mp = data.masterProfile;
@@ -323,7 +257,7 @@ export function buildPersonalDataPdf(
       [t.city, mp.cityName ?? '—'],
       [t.category, mp.categoryName ?? '—'],
       [t.whatsapp, mp.whatsappPhone ?? '—'],
-      [t.date, formatDate(mp.createdAt, locale)],
+      [t.date, formatDateFromIso(mp.createdAt, locale)],
     ];
     for (const [label, value] of mpItems) {
       y = drawKeyValue(doc, label, value, margin, y);
@@ -332,17 +266,17 @@ export function buildPersonalDataPdf(
     y += 12;
   }
 
-  // Заявки (лиды)
   y = drawSectionHeader(doc, t.leads, y);
   if (data.leads.length > 0) {
     for (let i = 0; i < data.leads.length; i++) {
       const lead = data.leads[i];
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 42);
       doc.fontSize(10).fillColor(COLORS.text);
-      doc.text(`#${i + 1} — ${formatDate(lead.createdAt, locale)}`, margin, y);
+      doc.text(
+        `#${i + 1} — ${formatDateFromIso(lead.createdAt, locale)}`,
+        margin,
+        y,
+      );
       y += 12;
       doc.fontSize(9).fillColor(COLORS.textMuted);
       doc.text(
@@ -361,18 +295,14 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Отзывы
   y = drawSectionHeader(doc, t.reviews, y);
   if (data.reviews.length > 0) {
     for (let i = 0; i < data.reviews.length; i++) {
       const r = data.reviews[i];
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 28);
       doc.fontSize(10).fillColor(COLORS.text);
       doc.text(
-        `#${i + 1} — ${t.rating}: ${r.rating} | ${formatDate(r.createdAt, locale)}`,
+        `#${i + 1} — ${t.rating}: ${r.rating} | ${formatDateFromIso(r.createdAt, locale)}`,
         margin,
         y,
       );
@@ -386,18 +316,14 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Бронирования
   y = drawSectionHeader(doc, t.bookings, y);
   if (data.bookings.length > 0) {
     for (let i = 0; i < data.bookings.length; i++) {
       const b = data.bookings[i];
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 12);
       doc.fontSize(10).fillColor(COLORS.text);
       doc.text(
-        `#${i + 1} — ${formatDate(b.startTime, locale)} — ${translateStatus(b.status)}`,
+        `#${i + 1} — ${formatDateFromIso(b.startTime, locale)} — ${translateStatus(b.status)}`,
         margin,
         y,
         { width: contentWidth },
@@ -409,18 +335,14 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // История входов
   y = drawSectionHeader(doc, t.loginHistory, y);
   if (data.loginHistory.length > 0) {
     for (let i = 0; i < data.loginHistory.length; i++) {
       const h = data.loginHistory[i];
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 12);
       doc.fontSize(9).fillColor(COLORS.text);
       doc.text(
-        `${formatDate(h.createdAt, locale)} | ${t.ip}: ${h.ipAddress ?? '—'} | ${t.success}: ${h.success ? t.yes : t.no}`,
+        `${formatDateFromIso(h.createdAt, locale)} | ${t.ip}: ${h.ipAddress ?? '—'} | ${t.success}: ${h.success ? t.yes : t.no}`,
         margin,
         y,
         { width: contentWidth },
@@ -432,18 +354,14 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Уведомления
   y = drawSectionHeader(doc, t.notifications, y);
   if (data.notifications.length > 0) {
     for (let i = 0; i < Math.min(data.notifications.length, 50); i++) {
       const n = data.notifications[i];
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 11);
       doc.fontSize(9).fillColor(COLORS.text);
       doc.text(
-        `${formatDate(n.createdAt, locale)} [${translateStatus(n.type)}]: ${n.message}`,
+        `${formatDateFromIso(n.createdAt, locale)} [${translateStatus(n.type)}]: ${n.message}`,
         margin,
         y,
         { width: contentWidth },
@@ -465,26 +383,21 @@ export function buildPersonalDataPdf(
     y += 20;
   }
 
-  // Согласия
   y = drawSectionHeader(doc, t.consents ?? 'Consents', y);
   if (data.consents && data.consents.length > 0) {
     for (const c of data.consents) {
-      if (y > 750) {
-        doc.addPage();
-        y = margin;
-      }
+      y = ensureSpace(doc, 12);
       const grantedLabel = c.granted ? (t.yes ?? 'Yes') : (t.no ?? 'No');
       const revokedLabel = c.revokedAt
-        ? `${t.consentRevoked ?? 'Revoked'}: ${formatDate(c.revokedAt, locale)}`
+        ? `${t.consentRevoked ?? 'Revoked'}: ${formatDateFromIso(c.revokedAt, locale)}`
         : '';
       doc.fontSize(9).fillColor(COLORS.text);
       doc.text(
-        `${formatDate(c.createdAt, locale)} — ${c.consentType} (v${c.version}) — ${t.consentGranted ?? 'Granted'}: ${grantedLabel}${revokedLabel ? ` | ${revokedLabel}` : ''}`,
+        `${formatDateFromIso(c.createdAt, locale)} — ${c.consentType} (v${c.version}) — ${t.consentGranted ?? 'Granted'}: ${grantedLabel}${revokedLabel ? ` | ${revokedLabel}` : ''}`,
         margin,
         y,
         { width: contentWidth },
       );
-      y += 12;
     }
   } else {
     doc.fontSize(10).fillColor(COLORS.textMuted).text(t.noData, margin, y);

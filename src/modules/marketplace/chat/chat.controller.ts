@@ -21,7 +21,11 @@ import { Throttle } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { CreateConversationDto, SendMessageDto } from './dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { Roles, type RequestWithUser } from '../../../common/decorators';
+import {
+  ApiPaginationQueries,
+  Roles,
+  type RequestWithUser,
+} from '../../../common/decorators';
 import { CONTROLLER_PATH } from '../../../common/constants';
 
 @ApiTags('Chat')
@@ -70,15 +74,7 @@ export class ChatController {
   @Get(':id/messages')
   @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get messages for a conversation' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({
-    name: 'cursor',
-    required: false,
-    type: String,
-    description:
-      'Cursor-based pagination: pass message id to fetch older messages',
-  })
+  @ApiPaginationQueries()
   @ApiResponse({ status: 200, description: 'List of messages with pagination' })
   async getMessages(
     @Param('id') id: string,

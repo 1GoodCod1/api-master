@@ -15,7 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { GetUser } from '../../../common/decorators';
+import { ApiPaginationQueries, GetUser } from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import type { NotificationCategory, NotificationType } from '@prisma/client';
 import { CONTROLLER_PATH } from '../../../common/constants';
@@ -31,9 +31,7 @@ export class NotificationsController {
   @ApiOperation({
     summary: 'Получить уведомления пользователя (cursor-paginated)',
   })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiPaginationQueries()
   @ApiQuery({ name: 'unreadOnly', required: false, type: Boolean })
   @ApiQuery({
     name: 'category',

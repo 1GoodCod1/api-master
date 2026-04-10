@@ -1,3 +1,4 @@
+export { ApiPaginationQueries } from './api-pagination.decorator';
 export {
   GetUser,
   type RequestWithOptionalUser,
