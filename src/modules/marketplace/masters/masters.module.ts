@@ -41,9 +41,9 @@ import { MastersCacheWarmingFacade } from './facades/masters-cache-warming.facad
     FilesModule,
   ],
   controllers: [
+    MastersStatsController,
     MastersController,
     MastersSettingsController,
-    MastersStatsController,
     MastersMediaController,
     SearchController,
     PortfolioController,
