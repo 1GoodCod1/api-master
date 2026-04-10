@@ -197,7 +197,9 @@ export class LeadsActionsService {
           'qualifyReferral',
         );
         fireAndForget(
-          this.emailDripService.startChain(lead.clientId, 'lead_closed', { masterName }),
+          this.emailDripService.startChain(lead.clientId, 'lead_closed', {
+            masterName,
+          }),
           this.logger,
           'lead_closed drip',
         );

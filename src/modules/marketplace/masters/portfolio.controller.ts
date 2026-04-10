@@ -68,7 +68,8 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Create portfolio item (VIP+ only)' })
   async create(@GetUser() user: JwtUser, @Body() dto: CreatePortfolioItemDto) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
+    if (!masterId)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.create(masterId, dto);
   }
 
@@ -84,7 +85,8 @@ export class PortfolioController {
     @Body() dto: UpdatePortfolioItemDto,
   ) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
+    if (!masterId)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.update(id, masterId, dto);
   }
 
@@ -96,7 +98,8 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Reorder portfolio items (VIP+ only)' })
   async reorder(@GetUser() user: JwtUser, @Body() dto: ReorderPortfolioDto) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
+    if (!masterId)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.reorder(masterId, dto);
   }
 
@@ -108,7 +111,8 @@ export class PortfolioController {
   @ApiOperation({ summary: 'Delete portfolio item (VIP+ only)' })
   async remove(@Param('id') id: string, @GetUser() user: JwtUser) {
     const masterId = user.masterProfile?.id;
-    if (!masterId) throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
+    if (!masterId)
+      throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
     return this.portfolioService.remove(id, masterId);
   }
 }
