@@ -13,12 +13,7 @@ import { PaymentsUpgradeService } from './services/payments-upgrade.service';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    PrismaModule,
-    TariffsModule,
-    AuditModule,
-  ],
+  imports: [ConfigModule, PrismaModule, TariffsModule, AuditModule],
   controllers: [
     PaymentsMiaController,
     PaymentsWebhookController,
