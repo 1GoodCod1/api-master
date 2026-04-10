@@ -362,15 +362,28 @@ export class NotificationsSenderService {
   }
 
   private isQuietHours(): boolean {
-    const now = new Date();
-    const hour = now.getHours();
-    return hour >= 23 || hour < 8;
+    const hour = new Date().getHours();
+    const start = this.configService.get<number>(
+      'notifications.quietHoursStart',
+      23,
+    );
+    const end = this.configService.get<number>(
+      'notifications.quietHoursEnd',
+      8,
+    );
+    return start > end
+      ? hour >= start || hour < end
+      : hour >= start && hour < end;
   }
 
   private async delayUntilMorning(job: Job<SMSJobData>) {
+    const end = this.configService.get<number>(
+      'notifications.quietHoursEnd',
+      8,
+    );
     const now = new Date();
     const morning = new Date();
-    morning.setHours(8, 0, 0, 0);
+    morning.setHours(end, 0, 0, 0);
     if (now > morning) morning.setDate(morning.getDate() + 1);
     await (
       job as Job<SMSJobData> & {

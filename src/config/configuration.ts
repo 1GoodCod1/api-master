@@ -122,10 +122,16 @@ export default () => ({
   },
 
   notifications: {
-    telegramEnabled: 'true',
-    smsEnabled: 'true',
-    quietHoursStart: 23, // 23:00
-    quietHoursEnd: 8, // 08:00
+    telegramEnabled: process.env.NOTIFICATIONS_TELEGRAM_ENABLED !== 'false',
+    smsEnabled: process.env.NOTIFICATIONS_SMS_ENABLED !== 'false',
+    quietHoursStart: parseInt(
+      process.env.NOTIFICATIONS_QUIET_HOURS_START || '23',
+      10,
+    ),
+    quietHoursEnd: parseInt(
+      process.env.NOTIFICATIONS_QUIET_HOURS_END || '8',
+      10,
+    ),
   },
 
   email: {
