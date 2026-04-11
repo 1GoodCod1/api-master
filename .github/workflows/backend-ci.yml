@@ -103,6 +103,9 @@ jobs:
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+      - run: npm run seed
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
       - run: npm run test:api
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
