@@ -2,8 +2,8 @@
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "phone" TEXT,
-    "password" TEXT,
+    "phone" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
     "firstName" TEXT,
     "lastName" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'CLIENT',
