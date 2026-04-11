@@ -149,7 +149,7 @@ export class NotificationsSenderService {
    * Уведомление о новом лиде: SMS на телефон мастера, Telegram и WhatsApp — по привязанным каналам (premium).
    */
   async sendLeadNotification(
-    to: string,
+    to: string | null | undefined,
     leadData: LeadNotificationData,
     options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {
@@ -180,7 +180,9 @@ export class NotificationsSenderService {
       .filter(Boolean)
       .join('\n');
 
-    await this.sendSMS(to, text);
+    if (to) {
+      await this.sendSMS(to, text);
+    }
 
     // Telegram: отправляем только в личный chatId мастера (если привязан).
     // Глобальный TELEGRAM_CHAT_ID используется только как fallback для системных уведомлений,

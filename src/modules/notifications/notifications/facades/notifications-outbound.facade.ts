@@ -25,7 +25,7 @@ export class NotificationsOutboundFacade {
   }
 
   sendLeadNotification(
-    to: string,
+    to: string | null | undefined,
     leadData: LeadNotificationData,
     options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {

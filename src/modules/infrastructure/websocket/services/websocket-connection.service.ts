@@ -32,11 +32,14 @@ export class WebsocketConnectionService
     private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * On server startup, reset all masters to offline (clean slate).
-   * Real online status will be set when masters reconnect via WebSocket.
-   */
-  async onModuleInit() {
+  /** После старта сбрасываем isOnline у мастеров (в фоне). */
+  onModuleInit(): void {
+    setImmediate(() => {
+      void this.resetMastersOfflineOnStartup();
+    });
+  }
+
+  private async resetMastersOfflineOnStartup(): Promise<void> {
     try {
       const { count } = await this.prisma.master.updateMany({
         where: { isOnline: true },

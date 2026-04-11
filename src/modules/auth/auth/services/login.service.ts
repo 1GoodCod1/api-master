@@ -84,7 +84,7 @@ export class LoginService {
       await this.checkIpBlacklist(ipAddress);
     }
 
-    if (!user || !(await argon2.verify(user.password, password))) {
+    if (!user?.password || !(await argon2.verify(user.password, password))) {
       if (user) {
         await this.lockout.recordFailed(email, ipAddress);
         await this.logLoginAttempt(
@@ -246,7 +246,7 @@ export class LoginService {
     try {
       const user = await this.prisma.user.findUnique({ where: { email } });
 
-      if (user && (await argon2.verify(user.password, password))) {
+      if (user?.password && (await argon2.verify(user.password, password))) {
         const { password: _pwd, ...result } = user;
         void _pwd;
         return result;

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ReportStatus } from '../../../common/constants';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -24,16 +25,21 @@ export class ReportsValidationService {
     const user = await this.prisma.user.findUnique({ where: { id: clientId } });
     if (!user) throw AppErrors.notFound(AppErrorMessages.USER_NOT_FOUND);
 
+    const leadOr: Prisma.LeadWhereInput[] = [{ clientId }];
+    if (user.phone) {
+      leadOr.push({ clientPhone: user.phone });
+    }
+
     const validLead = leadId
       ? await this.prisma.lead.findFirst({
           where: {
             id: leadId,
             masterId,
-            OR: [{ clientId }, { clientPhone: user.phone }],
+            OR: leadOr,
           },
         })
       : await this.prisma.lead.findFirst({
-          where: { masterId, OR: [{ clientId }, { clientPhone: user.phone }] },
+          where: { masterId, OR: leadOr },
         });
 
     if (!validLead) {

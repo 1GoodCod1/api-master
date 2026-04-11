@@ -23,7 +23,7 @@ export class LeadsCreateNotificationService {
     master: {
       userId: string;
       user: {
-        phone: string;
+        phone: string | null;
         firstName?: string | null;
         lastName?: string | null;
       };

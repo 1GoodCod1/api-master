@@ -283,6 +283,8 @@ export class AppErrorMessages {
   static readonly PHONE_CODE_EXPIRED = 'Verification code expired or not found';
   static readonly PHONE_TOO_MANY_ATTEMPTS =
     'Too many attempts. Please request a new code';
+  static readonly PHONE_REQUIRED_TO_SEND_CODE =
+    'Add a phone number to your profile before requesting a verification code.';
 
   // --- Telegram ---
   static readonly TELEGRAM_PREMIUM_ONLY =

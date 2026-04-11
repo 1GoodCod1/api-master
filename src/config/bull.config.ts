@@ -33,6 +33,7 @@ export function createBullOptions(configService: ConfigService) {
 
   return {
     redis: redisOptions,
+    skipVersionCheck: true,
     defaultJobOptions: {
       removeOnComplete: true,
       attempts: 3,

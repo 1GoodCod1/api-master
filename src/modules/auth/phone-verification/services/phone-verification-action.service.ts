@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma, UserRole } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +21,7 @@ import {
  */
 @Injectable()
 export class PhoneVerificationActionService {
+  private readonly logger = new Logger(PhoneVerificationActionService.name);
   private readonly twilioClient: Twilio | null = null;
 
   constructor(
@@ -42,6 +43,9 @@ export class PhoneVerificationActionService {
     userId: string,
   ): Promise<{ message: string; expiresAt: Date }> {
     const user = await this.validationService.assertCanSendCode(userId);
+    if (!user.phone) {
+      throw AppErrors.badRequest(AppErrorMessages.PHONE_REQUIRED_TO_SEND_CODE);
+    }
 
     const code = this.encryption.generateCode(PHONE_VERIFICATION_CODE_LENGTH);
     const expiresAt = new Date(Date.now() + PHONE_VERIFICATION_CODE_TTL_MS);
@@ -114,12 +118,14 @@ export class PhoneVerificationActionService {
 
   private async sendSMS(phone: string, message: string): Promise<void> {
     if (this.configService.get<string>('NODE_ENV') === 'development') {
-      console.log(`[SMS] To: ${phone}, Message: ${message}`);
+      this.logger.debug(
+        'Development: SMS not sent (Twilio used in production).',
+      );
       return;
     }
 
     if (!this.twilioClient) {
-      console.warn('Twilio not configured. SMS not sent.');
+      this.logger.warn('Twilio not configured. SMS not sent.');
       return;
     }
 
@@ -131,7 +137,10 @@ export class PhoneVerificationActionService {
         to: phone,
       });
     } catch (error) {
-      console.error('Failed to send SMS:', error);
+      this.logger.error(
+        'Failed to send SMS',
+        error instanceof Error ? error.stack : error,
+      );
       throw AppErrors.badRequest(AppErrorMessages.PHONE_SMS_FAILED);
     }
   }

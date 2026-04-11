@@ -30,9 +30,6 @@ const isShuttingDownRef = { current: false };
 async function bootstrap() {
   try {
     const isProd = process.env.NODE_ENV === 'production';
-    const useHttpOnlyCookie =
-      process.env.USE_HTTPONLY_COOKIE === 'true' ||
-      (process.env.USE_HTTPONLY_COOKIE === undefined && isProd);
 
     const app = await NestFactory.create(AppModule, {
       logger: false,
@@ -40,7 +37,7 @@ async function bootstrap() {
       rawBody: true,
       cors: {
         origin: getCorsOrigins(),
-        credentials: useHttpOnlyCookie,
+        credentials: true,
       },
     });
 
@@ -48,9 +45,8 @@ async function bootstrap() {
 
     app.use(requestIdMiddleware);
 
-    if (useHttpOnlyCookie) {
-      app.use(cookieParser());
-    }
+    // Always enable cookie parser: needed for OAuth state cookies regardless of httpOnly mode
+    app.use(cookieParser());
 
     const nestLogger = WinstonModule.createLogger(winstonConfig);
     app.useLogger(nestLogger);

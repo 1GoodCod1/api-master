@@ -264,7 +264,11 @@ export async function seedDemoMastersClientsReviews(
       },
       select: { id: true, phone: true, firstName: true },
     });
-    clientUsers.push(u);
+    clientUsers.push({
+      id: u.id,
+      phone: u.phone ?? phone,
+      firstName: u.firstName,
+    });
   }
   console.log(
     `👥 Created ${DEMO_CLIENT_COUNT} demo clients (password: demo123)`,

@@ -1,5 +1,5 @@
 # Build stage
-FROM node:25-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ COPY package*.json ./
 # Install only production dependencies + prisma CLI for migrations
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --only=production --prefer-offline --no-audit --ignore-scripts && \
-    npm install prisma@latest --save-optional --no-audit
+    npm install prisma --no-audit --ignore-scripts
 
 # Copy prisma for production
 COPY prisma ./prisma
@@ -41,10 +41,10 @@ COPY prisma ./prisma
 RUN npm run prisma:generate
 
 # Production stage
-FROM node:25-alpine AS production
+FROM node:22-alpine AS production
 
-# Security: Install dumb-init (better than tini for signal handling)
-RUN apk add --no-cache dumb-init
+# dumb-init + CA bundle (OAuth/passport → https://oauth2.googleapis.com; иначе UNABLE_TO_VERIFY_LEAF_SIGNATURE в Alpine)
+RUN apk add --no-cache dumb-init ca-certificates && update-ca-certificates
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -54,6 +54,9 @@ WORKDIR /app
 
 # Security: Set proper ownership
 RUN chown -R nodejs:nodejs /app
+
+# Node 20+: доверять системному хранилищу CA (вместе с ca-certificates выше)
+ENV NODE_OPTIONS="--use-system-ca"
 
 # Switch to non-root user
 USER nodejs
@@ -79,10 +82,18 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 CMD ["node", "dist/main.js"]
 
-# Development stage (kept separate for convenience)
-FROM node:25-alpine AS development
+# Development: Debian slim — стабильный TLS к Google OAuth.
+# Alpine + Node нередко даёт UNABLE_TO_VERIFY_LEAF_SIGNATURE при запросе к oauth2.googleapis.com из контейнера.
+FROM node:25-bookworm-slim AS development
 
-RUN apk add --no-cache dumb-init
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends dumb-init ca-certificates wget \
+  && rm -rf /var/lib/apt/lists/* \
+  && update-ca-certificates
+
+# Явный bundle для OpenSSL (иногда помогает при UNABLE_TO_VERIFY_LEAF_SIGNATURE за прокси)
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV NODE_OPTIONS="--use-system-ca"
 
 WORKDIR /app
 

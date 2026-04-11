@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
+import { CompleteOAuthDto } from '../dto/complete-oauth.dto';
+
+const OAUTH_STATE_COOKIE = 'oauth_state';
 
 @Injectable()
 export class RefreshCookieService {
@@ -13,6 +16,45 @@ export class RefreshCookieService {
 
   private get cookieName(): string {
     return this.configService.get<string>('auth.refreshCookieName') || 'rt';
+  }
+
+  /** Общие опции для httpOnly auth-кук (refresh, oauth_state, oauth_pending). */
+  private authCookieEnv(): {
+    setBase: {
+      httpOnly: true;
+      secure: boolean;
+      sameSite: 'lax';
+      path: '/';
+      domain?: string;
+    };
+    clearBase: {
+      path: '/';
+      httpOnly: true;
+      secure: boolean;
+      sameSite: 'lax';
+      domain?: string;
+    };
+  } {
+    const isProd = this.configService.get<string>('nodeEnv') === 'production';
+    const domain =
+      this.configService.get<string>('auth.cookieDomain') || undefined;
+    const withDomain = domain ? { domain } : {};
+    return {
+      setBase: {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        ...withDomain,
+      },
+      clearBase: {
+        path: '/',
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        ...withDomain,
+      },
+    };
   }
 
   /**
@@ -50,29 +92,18 @@ export class RefreshCookieService {
    */
   attachIfEnabled(res: Response, token: string, rememberMe?: boolean): void {
     if (!this.isEnabled || !token) return;
-    const isProd = this.configService.get<string>('nodeEnv') === 'production';
-    const domain =
-      this.configService.get<string>('auth.cookieDomain') || undefined;
-
-    const baseOptions = {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax' as const,
-      path: '/',
-      ...(domain ? { domain } : {}),
-    };
+    const { setBase } = this.authCookieEnv();
 
     if (rememberMe) {
       const maxAgeMs =
         RefreshCookieService.REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000;
       res.cookie(this.cookieName, token, {
-        ...baseOptions,
+        ...setBase,
         maxAge: maxAgeMs,
         expires: new Date(Date.now() + maxAgeMs),
       });
     } else {
-      // Сессионная кука — без maxAge и expires, умирает при закрытии браузера
-      res.cookie(this.cookieName, token, baseOptions);
+      res.cookie(this.cookieName, token, setBase);
     }
   }
 
@@ -81,16 +112,57 @@ export class RefreshCookieService {
    */
   clearIfEnabled(res: Response): void {
     if (!this.isEnabled) return;
-    const isProd = this.configService.get<string>('nodeEnv') === 'production';
-    const domain =
-      this.configService.get<string>('auth.cookieDomain') || undefined;
-    res.clearCookie(this.cookieName, {
-      path: '/',
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'lax',
-      ...(domain ? { domain } : {}),
+    const { clearBase } = this.authCookieEnv();
+    res.clearCookie(this.cookieName, clearBase);
+  }
+
+  setOAuthStateCookie(res: Response, state: string): void {
+    const { setBase } = this.authCookieEnv();
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      ...setBase,
+      maxAge: 30 * 60 * 1000,
     });
+  }
+
+  clearOAuthStateCookie(res: Response): void {
+    const { clearBase } = this.authCookieEnv();
+    res.clearCookie(OAUTH_STATE_COOKIE, clearBase);
+  }
+
+  attachOAuthPendingToken(res: Response, token: string): void {
+    if (!token || res.headersSent) return;
+    const { setBase } = this.authCookieEnv();
+    const name =
+      this.configService.get<string>('auth.oauthPendingCookieName') ||
+      'oauth_pending';
+    const maxAge =
+      this.configService.get<number>('auth.oauthPendingCookieMaxMs') ??
+      15 * 60 * 1000;
+    res.cookie(name, token, {
+      ...setBase,
+      maxAge,
+      expires: new Date(Date.now() + maxAge),
+    });
+  }
+
+  clearOAuthPendingToken(res: Response): void {
+    const { clearBase } = this.authCookieEnv();
+    const name =
+      this.configService.get<string>('auth.oauthPendingCookieName') ||
+      'oauth_pending';
+    res.clearCookie(name, clearBase);
+  }
+
+  mergeCompleteOAuthDto(req: Request, dto: CompleteOAuthDto): CompleteOAuthDto {
+    const pendingName =
+      this.configService.get<string>('auth.oauthPendingCookieName') ||
+      'oauth_pending';
+    const cookieJar = req.cookies as Record<string, unknown> | undefined;
+    const rawPending = cookieJar?.[pendingName];
+    const fromCookie = typeof rawPending === 'string' ? rawPending.trim() : '';
+    const fromBody = dto.pendingToken?.trim() ?? '';
+    const pendingToken = fromBody || fromCookie;
+    return { ...dto, pendingToken };
   }
 
   /**

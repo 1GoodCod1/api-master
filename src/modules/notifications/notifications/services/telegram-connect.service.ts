@@ -26,8 +26,11 @@ export class TelegramConnectService implements OnModuleInit {
     private readonly configService: ConfigService,
   ) {}
 
-  async onModuleInit(): Promise<void> {
-    await this.registerWebhook();
+  onModuleInit(): void {
+    void this.registerWebhook().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Telegram registerWebhook failed: ${msg}`);
+    });
   }
 
   private async registerWebhook(): Promise<void> {
@@ -57,9 +60,31 @@ export class TelegramConnectService implements OnModuleInit {
         { timeout: 10000 },
       );
       this.logger.log(`Telegram webhook registered: ${webhookUrl}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Failed to register Telegram webhook: ${msg}`);
+    } catch (err: unknown) {
+      const parts: string[] = [];
+      if (axios.isAxiosError(err)) {
+        parts.push(err.message);
+        const status = err.response?.status;
+        const data: unknown = err.response?.data;
+        if (status != null) {
+          parts.push(`HTTP ${status}`);
+        }
+        if (data !== undefined) {
+          parts.push(typeof data === 'string' ? data : JSON.stringify(data));
+        }
+        if (status === 401) {
+          parts.push(
+            'Invalid or revoked TELEGRAM_BOT_TOKEN — use token from @BotFather',
+          );
+        }
+      } else if (err instanceof Error) {
+        parts.push(err.message);
+      } else {
+        parts.push(String(err));
+      }
+      this.logger.error(
+        `Failed to register Telegram webhook: ${parts.join(' | ')}`,
+      );
     }
   }
 

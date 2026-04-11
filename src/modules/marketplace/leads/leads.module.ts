@@ -32,8 +32,8 @@ import { ReferralsModule } from '../../engagement/referrals/referrals.module';
     ReferralsModule,
   ],
   controllers: [
-    LeadsController,
     LeadsQueryController,
+    LeadsController,
     LeadsSubscriptionController,
   ],
   providers: [

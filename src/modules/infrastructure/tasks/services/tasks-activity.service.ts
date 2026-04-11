@@ -230,9 +230,14 @@ export class TasksActivityService {
       const daysRemaining =
         this.INACTIVITY_THRESHOLD_DAYS - this.WARNING_THRESHOLD_DAYS;
 
+      const phone = master.user.phone;
+      if (!phone) {
+        return;
+      }
+
       // Отправляем SMS уведомление
       await this.notificationsOutbound.sendSMS(
-        master.user.phone,
+        phone,
         `Внимание! Ваш профиль на faber.md не обновлялся ${this.WARNING_THRESHOLD_DAYS} дней. ` +
           `Через ${daysRemaining} дней ваш рейтинг будет снижен на ${this.RATING_PENALTY}, и профиль скрыт. ` +
           `Зайдите в личный кабинет для сохранения активности.`,
@@ -242,7 +247,7 @@ export class TasksActivityService {
       await this.notificationsOutbound.saveNotification({
         userId: master.user.id,
         type: 'SMS',
-        recipient: master.user.phone,
+        recipient: phone,
         status: NotificationStatus.SENT,
         title: 'Предупреждение о неактивности профиля',
         message:
@@ -274,9 +279,14 @@ export class TasksActivityService {
     master: MasterWithUser,
   ): Promise<void> {
     try {
+      const phone = master.user.phone;
+      if (!phone) {
+        return;
+      }
+
       // SMS уведомление
       await this.notificationsOutbound.sendSMS(
-        master.user.phone,
+        phone,
         `Ваш профиль на faber.md был деактивирован из-за отсутствия активности более ${this.INACTIVITY_THRESHOLD_DAYS} дней. ` +
           `Рейтинг снижен на ${this.RATING_PENALTY}. Войдите в личный кабинет для повторной активации.`,
       );
@@ -285,7 +295,7 @@ export class TasksActivityService {
       await this.notificationsOutbound.saveNotification({
         userId: master.user.id,
         type: 'SMS',
-        recipient: master.user.phone,
+        recipient: phone,
         status: NotificationStatus.SENT,
         title: 'Ваш профиль деактивирован',
         message:

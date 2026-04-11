@@ -16,6 +16,7 @@ const vapidKeys = webpush.generateVAPIDKeys();
 
 const secrets = {
   JWT_ACCESS_SECRET: crypto.randomBytes(32).toString('hex'),
+  JWT_OAUTH_PENDING_SECRET: crypto.randomBytes(32).toString('hex'),
   JWT_REFRESH_SECRET: crypto.randomBytes(32).toString('hex'),
   ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex'),
   ID_ENCRYPTION_SECRET: crypto.randomBytes(32).toString('hex'),

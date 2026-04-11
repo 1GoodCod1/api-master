@@ -94,7 +94,7 @@ export class TasksTariffService {
 
       const smsEnabled =
         (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
-      if (smsEnabled) {
+      if (smsEnabled && master.user.phone) {
         await this.notificationsOutbound.sendSMS(
           master.user.phone,
           `Ваш тариф истек. Текущий тариф: BASIC. Для продления посетите личный кабинет.`,
@@ -162,7 +162,10 @@ export class TasksTariffService {
         ? `Ваш запрос на обновление до PREMIUM истек (12 часов). Вы остаетесь на текущем тарифе ${master.tariffType}.`
         : `Ваш запрос на обновление до PREMIUM истек (12 часов). Тариф изменен на BASIC.`;
 
-      if ((master as { notifyTariffSms?: boolean }).notifyTariffSms !== false) {
+      if (
+        (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false &&
+        master.user.phone
+      ) {
         await this.notificationsOutbound.sendSMS(master.user.phone, message, {
           userId: master.userId,
         });
@@ -230,7 +233,7 @@ export class TasksTariffService {
 
       const smsEnabled =
         (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false;
-      if (smsEnabled) {
+      if (smsEnabled && master.user.phone) {
         await this.notificationsOutbound.sendSMS(master.user.phone, message, {
           userId: master.userId,
           metadata: {

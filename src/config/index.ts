@@ -10,3 +10,4 @@ export { getHelmetConfig } from './helmet.config';
 export { createShutdownHandler } from './shutdown.config';
 export { validateProductionSecrets } from './validation.config';
 export { winstonConfig } from './winston.config';
+export { resolveUseHttpOnlyCookie } from './http-only-cookie';

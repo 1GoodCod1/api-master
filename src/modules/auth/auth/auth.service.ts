@@ -40,7 +40,6 @@ export class AuthService {
   }
 
   getEarlyBirdStatus() {
-    // Баннер «первые 100» отключён — тарифы бесплатны после верификации
     return {
       isActive: false,
       remainingSlots: 0,

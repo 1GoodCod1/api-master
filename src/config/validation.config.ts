@@ -11,6 +11,7 @@ export function validateProductionSecrets(config: ConfigService): void {
 
   const access = config.get<string>('jwt.accessSecret', '');
   const refresh = config.get<string>('jwt.refreshSecret', '');
+  const oauthPending = config.get<string>('jwt.oauthPendingSecret', '');
   const enc = config.get<string>('idEncryption.secret', '');
   const frontendUrl = config.get<string>('frontendUrl', '');
 
@@ -32,6 +33,16 @@ export function validateProductionSecrets(config: ConfigService): void {
     missing.push(
       `JWT_REFRESH_SECRET (min ${MIN_JWT_SECRET_LENGTH} chars, no 'change-me')`,
     );
+  if (
+    oauthPending === access ||
+    !oauthPending ||
+    oauthPending.includes('change-me') ||
+    oauthPending.length < MIN_JWT_SECRET_LENGTH
+  ) {
+    missing.push(
+      `JWT_OAUTH_PENDING_SECRET (min ${MIN_JWT_SECRET_LENGTH} chars, must differ from JWT_ACCESS_SECRET — OAuth «pending profile» JWT only)`,
+    );
+  }
   if (!enc || enc === 'mm-secret-2024') missing.push('ID_ENCRYPTION_SECRET');
   if (!frontendUrl) missing.push('FRONTEND_URL');
   else if (!frontendUrl.startsWith('https://'))

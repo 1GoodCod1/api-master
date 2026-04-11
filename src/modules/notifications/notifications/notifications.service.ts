@@ -110,7 +110,7 @@ export class NotificationsService {
    * Уведомление о новом лиде (SMS на to, Telegram и WhatsApp — по привязанным каналам premium)
    */
   async sendLeadNotification(
-    to: string,
+    to: string | null | undefined,
     leadData: LeadNotificationData,
     options?: { telegramChatId?: string; whatsappPhone?: string },
   ) {

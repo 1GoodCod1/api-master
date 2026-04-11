@@ -80,6 +80,7 @@ services:
       - "4000:4000"
     environment:
       TZ: Europe/Chisinau
+      NODE_OPTIONS: "--use-system-ca"
     env_file:
       - .env.docker
     volumes:
@@ -87,6 +88,7 @@ services:
       - ./prisma:/app/prisma
       - ./logs:/app/logs
       - ./uploads:/app/uploads
+      - ./docker/certs:/app/docker/certs:ro
       - /app/node_modules
     depends_on:
       postgres:
