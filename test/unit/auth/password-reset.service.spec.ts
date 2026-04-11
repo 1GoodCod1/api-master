@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { AppErrorMessages } from '../../../src/common/errors';
 import { PasswordResetService } from '../../../src/modules/auth/auth/services/password-reset.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
@@ -115,27 +115,34 @@ describe('PasswordResetService', () => {
     });
 
     it('throws when production and frontendUrl missing', async () => {
-      configService.get.mockImplementation((key: string, def?: string) => {
-        if (key === 'frontendUrl') return '';
-        if (key === 'nodeEnv') return 'production';
-        return def;
-      });
-      prisma.user.findUnique.mockResolvedValue({
-        id: 'u1',
-        email: 'a@b.com',
-        isBanned: false,
-        preferredLanguage: 'en',
-      });
-      prisma.passwordResetToken.deleteMany.mockResolvedValue({ count: 0 });
-      prisma.passwordResetToken.create.mockResolvedValue({});
+      const errLog = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+      try {
+        configService.get.mockImplementation((key: string, def?: string) => {
+          if (key === 'frontendUrl') return '';
+          if (key === 'nodeEnv') return 'production';
+          return def;
+        });
+        prisma.user.findUnique.mockResolvedValue({
+          id: 'u1',
+          email: 'a@b.com',
+          isBanned: false,
+          preferredLanguage: 'en',
+        });
+        prisma.passwordResetToken.deleteMany.mockResolvedValue({ count: 0 });
+        prisma.passwordResetToken.create.mockResolvedValue({});
 
-      await expect(
-        service.forgotPassword({ email: 'a@b.com' }),
-      ).rejects.toMatchObject({
-        response: expect.objectContaining({
-          message: AppErrorMessages.RESET_UNAVAILABLE,
-        }),
-      });
+        await expect(
+          service.forgotPassword({ email: 'a@b.com' }),
+        ).rejects.toMatchObject({
+          response: expect.objectContaining({
+            message: AppErrorMessages.RESET_UNAVAILABLE,
+          }),
+        });
+      } finally {
+        errLog.mockRestore();
+      }
     });
   });
 

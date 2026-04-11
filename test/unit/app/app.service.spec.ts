@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { AppService } from '../../../src/app/app.service';
 import type { ConfigService } from '@nestjs/config';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
@@ -74,18 +75,27 @@ describe('AppService', () => {
   });
 
   it('getStatus returns 503 when database check fails', async () => {
-    prisma.$queryRaw.mockReset();
-    prisma.$queryRaw.mockRejectedValue(new Error('db down'));
-    redisClient.ping.mockResolvedValue('PONG');
-    redisClient.info.mockResolvedValue('');
-    redisClient.setex.mockResolvedValue('OK');
-    redisClient.get.mockResolvedValue('test_value');
-    redisClient.del.mockResolvedValue(1);
+    const errLog = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => {});
+    try {
+      prisma.$queryRaw.mockReset();
+      prisma.$queryRaw.mockRejectedValue(new Error('db down'));
+      redisClient.ping.mockResolvedValue('PONG');
+      redisClient.info.mockResolvedValue('');
+      redisClient.setex.mockResolvedValue('OK');
+      redisClient.get.mockResolvedValue('test_value');
+      redisClient.del.mockResolvedValue(1);
 
-    const s = await service.getStatus();
-    expect(s.success).toBe(false);
-    expect(s.code).toBe(503);
-    expect(s.services.find((x) => x.name === 'Database')?.status).toBe('down');
+      const s = await service.getStatus();
+      expect(s.success).toBe(false);
+      expect(s.code).toBe(503);
+      expect(s.services.find((x) => x.name === 'Database')?.status).toBe(
+        'down',
+      );
+    } finally {
+      errLog.mockRestore();
+    }
   });
 
   it('getStatus returns 206 when Redis is degraded (unexpected ping)', async () => {
