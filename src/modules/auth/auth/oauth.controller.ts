@@ -13,14 +13,20 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RefreshCookieService } from './services/refresh-cookie.service';
 import { OAuthService } from './services/oauth.service';
 import { CompleteOAuthDto } from './dto/complete-oauth.dto';
 import { Public } from '../../../common/decorators';
-import { CONTROLLER_PATH } from '../../../common/constants';
+import {
+  CONTROLLER_PATH,
+  AUTH_THROTTLER_NAME,
+} from '../../../common/constants';
 import { OAuthPassportFlowService } from './services/oauth-passport-flow.service';
 
+/** OAuth routes use the global `default` throttler only; skip the login `auth` bucket. */
+@SkipThrottle({ [AUTH_THROTTLER_NAME]: true })
 @ApiTags('Authentication')
 @Controller(CONTROLLER_PATH.auth)
 export class OAuthController {
