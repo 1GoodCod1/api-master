@@ -3,8 +3,10 @@
  * Eliminates duplicate parseLimit/parsePage logic across services.
  */
 
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+} from '../constants/pagination.constants';
 
 /**
  * Parse and clamp a limit query parameter.
@@ -14,8 +16,8 @@ const MAX_LIMIT = 100;
  */
 export function parseLimit(
   raw?: string | number,
-  defaultVal = DEFAULT_LIMIT,
-  max = MAX_LIMIT,
+  defaultVal = DEFAULT_PAGE_SIZE,
+  max = MAX_PAGE_SIZE,
 ): number {
   if (raw === undefined || raw === null) return defaultVal;
   const num = typeof raw === 'number' ? raw : Number(raw) || defaultVal;

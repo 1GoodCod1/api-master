@@ -30,7 +30,12 @@ import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 import { Throttle } from '@nestjs/throttler';
 import { extractRequestContext } from '../../shared/utils/request-context.util';
 import { AUTH_LOGIN_INVALID_CREDENTIALS } from './auth-login.messages';
-import { CONTROLLER_PATH } from '../../../common/constants';
+import {
+  AUTH_LOGIN_THROTTLE_LIMIT,
+  AUTH_LOGIN_THROTTLE_TTL_MS,
+  AUTH_THROTTLER_NAME,
+  CONTROLLER_PATH,
+} from '../../../common/constants';
 
 @ApiTags('Authentication')
 @Controller(CONTROLLER_PATH.auth)
@@ -75,7 +80,12 @@ export class AuthController {
   }
 
   @Post('login')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({
+    [AUTH_THROTTLER_NAME]: {
+      limit: AUTH_LOGIN_THROTTLE_LIMIT,
+      ttl: AUTH_LOGIN_THROTTLE_TTL_MS,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Login successful' })

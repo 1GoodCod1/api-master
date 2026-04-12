@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { Pool, PoolClient } from 'pg';
@@ -84,6 +89,7 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(PrismaService.name);
   private readonly pool: Pool;
   private readonly replicaPools: Pool[] = [];
   private readonly replicaClients: PrismaClient[] = [];
@@ -149,8 +155,8 @@ export class PrismaService
       if (this.nodeEnv === 'production') {
         throw error;
       }
-      console.warn(
-        '⚠️ Continuing without database connection (development mode)',
+      this.logger.warn(
+        'Continuing without database connection (development mode)',
       );
     } finally {
       if (timeoutId) clearTimeout(timeoutId);

@@ -1,4 +1,7 @@
+import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+
+const logger = new Logger('ValidateProductionSecrets');
 
 /** Минимальная длина секретов JWT (HS256 требует не менее 32 байт) */
 const MIN_JWT_SECRET_LENGTH = 32;
@@ -49,8 +52,8 @@ export function validateProductionSecrets(config: ConfigService): void {
     missing.push('FRONTEND_URL (must start with https://)');
 
   if (missing.length > 0) {
-    console.error(
-      `[FATAL] In production set secure values: ${missing.join(', ')}. Do not use defaults.`,
+    logger.fatal(
+      `In production set secure values: ${missing.join(', ')}. Do not use defaults.`,
     );
     process.exit(1);
   }

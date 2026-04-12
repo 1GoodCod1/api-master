@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NestInterceptor,
   ExecutionContext,
   CallHandler,
@@ -34,6 +35,8 @@ const SENSITIVE_FIELDS = [
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(
     private readonly auditService: AuditService,
     private readonly config: ConfigService,
@@ -92,7 +95,7 @@ export class AuditInterceptor implements NestInterceptor {
         userAgent: request.get('user-agent'),
       });
     } catch (error) {
-      console.error('Audit logging failed:', error);
+      this.logger.error('Audit logging failed', error as Error);
     }
   }
 

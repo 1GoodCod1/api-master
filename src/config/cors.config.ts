@@ -1,3 +1,7 @@
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('CorsConfig');
+
 /**
  * Источники CORS и CSP imgSrc при старте приложения.
  * Dev: разрешён localhost. Prod: обязателен FRONTEND_URL.
@@ -10,8 +14,8 @@ export function getCorsOrigins(): string | string[] {
       .map((s) => s.trim())
       .filter(Boolean);
     if (origins.length === 0) {
-      console.error(
-        '[FATAL] FRONTEND_URL is required in production. Set env FRONTEND_URL=https://your-domain.com',
+      logger.fatal(
+        'FRONTEND_URL is required in production. Set env FRONTEND_URL=https://your-domain.com',
       );
       process.exit(1);
     }

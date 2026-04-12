@@ -23,7 +23,7 @@ async function bootstrapBullBoard() {
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     process.on('SIGINT', () => void shutdown('SIGINT'));
   } catch (error) {
-    console.error('[BULL-BOARD ERROR] Failed to start:', error);
+    logger.error('Failed to start Bull Board', error as Error);
     process.exit(1);
   }
 }

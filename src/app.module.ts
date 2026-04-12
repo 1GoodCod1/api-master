@@ -16,6 +16,11 @@ import {
   AuditInterceptor,
 } from './common/interceptors';
 import { CookieOriginGuard } from './common/guards';
+import {
+  AUTH_LOGIN_THROTTLE_LIMIT,
+  AUTH_LOGIN_THROTTLE_TTL_MS,
+  AUTH_THROTTLER_NAME,
+} from './common/constants';
 
 // Общие модули
 import { PrismaModule } from './modules/shared/database/prisma.module';
@@ -115,7 +120,14 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
           false,
         );
         return {
-          throttlers: [{ ttl, limit }],
+          throttlers: [
+            { name: 'default', ttl, limit },
+            {
+              name: AUTH_THROTTLER_NAME,
+              ttl: AUTH_LOGIN_THROTTLE_TTL_MS,
+              limit: AUTH_LOGIN_THROTTLE_LIMIT,
+            },
+          ],
           ...(useRedis
             ? { storage: new ThrottlerStorageRedisService(redis.getClient()) }
             : {}),

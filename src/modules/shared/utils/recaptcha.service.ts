@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import type { RecaptchaVerifyResponse } from '../types';
 
 @Injectable()
 export class RecaptchaService {
+  private readonly logger = new Logger(RecaptchaService.name);
   private readonly secretKey: string;
   private readonly minScore = 0.5; // Минимальный score для прохождения (0.0 - 1.0)
 
@@ -22,12 +23,12 @@ export class RecaptchaService {
       this.configService.get<string>('NODE_ENV') === 'development' &&
       !this.secretKey
     ) {
-      console.log('[reCAPTCHA] Skipping verification in development mode');
+      this.logger.debug('Skipping verification in development mode');
       return true;
     }
 
     if (!this.secretKey) {
-      console.warn('reCAPTCHA secret key not configured');
+      this.logger.warn('Secret key not configured — verification skipped');
       return true; // Не блокируем если не настроен
     }
 
@@ -50,7 +51,9 @@ export class RecaptchaService {
       const data = (await response.json()) as RecaptchaVerifyResponse;
 
       if (!data.success) {
-        console.warn('reCAPTCHA verification failed:', data['error-codes']);
+        this.logger.warn(
+          `Verification failed: ${JSON.stringify(data['error-codes'])}`,
+        );
         throw AppErrors.badRequest(
           AppErrorMessages.RECAPTCHA_VERIFICATION_FAILED,
         );
@@ -58,14 +61,14 @@ export class RecaptchaService {
 
       // Проверяем score (для v3)
       if (data.score !== undefined && data.score < this.minScore) {
-        console.warn(`reCAPTCHA score too low: ${data.score}`);
+        this.logger.warn(`Score too low: ${data.score}`);
         throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_SUSPICIOUS);
       }
 
       // Проверяем action (опционально)
       if (action && data.action !== action) {
-        console.warn(
-          `reCAPTCHA action mismatch: expected ${action}, got ${data.action}`,
+        this.logger.warn(
+          `Action mismatch: expected ${action}, got ${data.action}`,
         );
         throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_INVALID_ACTION);
       }
@@ -75,7 +78,7 @@ export class RecaptchaService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      console.error('reCAPTCHA verification error:', error);
+      this.logger.error('Verification error', error as Error);
       throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_VERIFY_FAILED);
     }
   }

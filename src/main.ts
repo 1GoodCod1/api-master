@@ -26,8 +26,10 @@ import {
 import { requestIdMiddleware } from './common/request-context';
 
 const isShuttingDownRef = { current: false };
+const processLogger = new Logger('Process');
 
 async function bootstrap() {
+  const bootstrapLogger = new Logger('Bootstrap');
   try {
     const isProd = process.env.NODE_ENV === 'production';
 
@@ -89,44 +91,42 @@ async function bootstrap() {
     const port = configService.get<number>('port', 4000);
     await app.listen(port);
 
-    const logger = new Logger('Bootstrap');
     if (isProd) {
       const apiUrl = configService.get<string>('apiUrl', '');
       const frontendUrl = configService.get<string>('frontendUrl', '');
-      logger.log(
+      bootstrapLogger.log(
         `[PRODUCTION] NODE_ENV=production | API=${apiUrl || '(not set)'} | FRONTEND=${frontendUrl || '(not set)'}`,
       );
     }
-    logger.log(`Application listening at: http://localhost:${port}`);
-    logger.log(`REST API base path: /api/v1`);
+    bootstrapLogger.log(`Application listening at: http://localhost:${port}`);
+    bootstrapLogger.log(`REST API base path: /api/v1`);
     if (!isProd) {
-      logger.log(`Swagger UI: http://localhost:${port}/docs`);
+      bootstrapLogger.log(`Swagger UI: http://localhost:${port}/docs`);
     }
 
     const shutdown = createShutdownHandler(app, isShuttingDownRef);
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     process.on('SIGINT', () => void shutdown('SIGINT'));
   } catch (error) {
-    console.error('[ERROR] Failed to start application:', error);
+    bootstrapLogger.error('Failed to start application', error as Error);
     process.exit(1);
   }
 }
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   if (isShuttingDownRef.current && (reason === undefined || reason === null)) {
     return;
   }
-  console.error('[UNHANDLED REJECTION] Unhandled Promise Rejection:', reason);
-  console.error('Promise:', promise);
+  processLogger.error('Unhandled Promise Rejection', reason as Error);
   if (process.env.NODE_ENV === 'production' && !isShuttingDownRef.current) {
-    console.error(
-      '[UNHANDLED REJECTION] Logged in production — not exiting to preserve uptime',
+    processLogger.warn(
+      'Logged unhandled rejection in production — not exiting to preserve uptime',
     );
   }
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('[UNCAUGHT EXCEPTION] Uncaught Exception:', error);
+  processLogger.error('Uncaught Exception', error);
   process.exit(1);
 });
 

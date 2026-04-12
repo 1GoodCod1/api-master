@@ -21,7 +21,6 @@ import { WorkerModule } from './worker.module';
  */
 async function bootstrapWorker() {
   const logger = new Logger('Worker');
-
   try {
     const app = await NestFactory.createApplicationContext(WorkerModule, {
       logger: WinstonModule.createLogger(winstonConfig),
@@ -48,7 +47,7 @@ async function bootstrapWorker() {
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     process.on('SIGINT', () => void shutdown('SIGINT'));
   } catch (error) {
-    console.error('[WORKER ERROR] Failed to start worker:', error);
+    logger.error('Failed to start worker', error as Error);
     process.exit(1);
   }
 }
