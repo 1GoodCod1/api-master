@@ -130,8 +130,9 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             cd ~/masterhub/api-master
+            git remote set-url origin git@github-api:1goodcod1/api-master.git
             git pull origin main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
-            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api
+            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api worker bull-board gateway
             # DIRECT_URL — прямое подключение к Postgres (миграции не через PgBouncer)
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml exec -T api sh -c 'DATABASE_URL="$DIRECT_URL" npx prisma migrate deploy'
