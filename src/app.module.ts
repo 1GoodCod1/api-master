@@ -3,7 +3,7 @@ import { join } from 'path';
 import type { Response } from 'express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bull';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
@@ -16,7 +16,7 @@ import {
   ActivityTrackerInterceptor,
   AuditInterceptor,
 } from './common/interceptors';
-import { CookieOriginGuard } from './common/guards';
+import { AppThrottlerGuard, CookieOriginGuard } from './common/guards';
 import {
   AUTH_LOGIN_THROTTLE_LIMIT,
   AUTH_LOGIN_THROTTLE_TTL_MS,
@@ -58,7 +58,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
     },
     {
       provide: APP_GUARD,
