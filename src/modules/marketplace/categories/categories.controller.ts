@@ -16,12 +16,24 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { ApiPaginationQueries, Roles } from '../../../common/decorators';
-import { CONTROLLER_PATH } from '../../../common/constants';
+import {
+  CONTROLLER_PATH,
+  PUBLIC_READ_THROTTLE_LIMIT,
+  PUBLIC_READ_THROTTLE_TTL_MS,
+} from '../../../common/constants';
+
+const PUBLIC_READ_THROTTLE = {
+  default: {
+    limit: PUBLIC_READ_THROTTLE_LIMIT,
+    ttl: PUBLIC_READ_THROTTLE_TTL_MS,
+  },
+};
 
 @ApiTags('Categories')
 @Controller(CONTROLLER_PATH.categories)
@@ -29,6 +41,7 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get all categories' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   async findAll(@Query('isActive') isActive?: string) {
@@ -36,12 +49,14 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get category by ID' })
   async findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Get(':id/masters')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get masters in category (cursor-paginated)' })
   @ApiPaginationQueries()
   async getMasters(

@@ -1,118 +1,81 @@
 import { ConsentService } from '../../../src/modules/consent/services/consent.service';
 import { ConsentType } from '../../../src/modules/consent/dto/grant-consent.dto';
-import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
+import type { IConsentRepository } from '../../../src/modules/consent/repositories/consent.repository';
 
 describe('ConsentService', () => {
-  const userConsent = {
-    upsert: jest.fn(),
-    update: jest.fn(),
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
+  const repo: jest.Mocked<IConsentRepository> = {
+    upsertGranted: jest.fn(),
+    markRevoked: jest.fn(),
+    findByUserAndType: jest.fn(),
+    findAllByUser: jest.fn(),
   };
 
-  const prisma = {
-    userConsent,
-  } as unknown as PrismaService;
-
-  const eventEmitter = {
-    emit: jest.fn(),
-  };
+  const eventEmitter = { emit: jest.fn() };
 
   let service: ConsentService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ConsentService(prisma, eventEmitter as never);
+    service = new ConsentService(repo, eventEmitter as never);
   });
 
   describe('grantConsent', () => {
-    it('upserts consent with meta and default version', async () => {
-      const row = {
-        id: 'c1',
-        userId: 'u1',
-        consentType: ConsentType.PRIVACY_POLICY,
-      };
-      userConsent.upsert.mockResolvedValue(row as never);
+    it('delegates to repo with normalized meta', async () => {
+      const row = { id: 'c1' } as never;
+      repo.upsertGranted.mockResolvedValue(row);
 
       const result = await service.grantConsent(
         'u1',
         ConsentType.PRIVACY_POLICY,
-        {
-          ipAddress: '1.2.3.4',
-          userAgent: 'jest',
-          version: '2.0',
-        },
+        { ipAddress: '1.2.3.4', userAgent: 'jest', version: '2.0' },
       );
 
-      expect(userConsent.upsert).toHaveBeenCalledWith({
-        where: {
-          userId_consentType: {
-            userId: 'u1',
-            consentType: ConsentType.PRIVACY_POLICY,
-          },
-        },
-        create: {
-          userId: 'u1',
-          consentType: ConsentType.PRIVACY_POLICY,
-          granted: true,
-          ipAddress: '1.2.3.4',
-          userAgent: 'jest',
-          version: '2.0',
-        },
-        update: {
-          granted: true,
-          ipAddress: '1.2.3.4',
-          userAgent: 'jest',
-          version: '2.0',
-          revokedAt: null,
-        },
+      expect(repo.upsertGranted).toHaveBeenCalledWith({
+        userId: 'u1',
+        consentType: ConsentType.PRIVACY_POLICY,
+        ipAddress: '1.2.3.4',
+        userAgent: 'jest',
+        version: '2.0',
       });
       expect(result).toBe(row);
     });
 
-    it('defaults version to 1.0 when omitted', async () => {
-      userConsent.upsert.mockResolvedValue({} as never);
+    it('defaults version to 1.0 and nulls missing meta', async () => {
+      repo.upsertGranted.mockResolvedValue({} as never);
 
       await service.grantConsent('u1', ConsentType.MARKETING, {});
 
-      expect(userConsent.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          create: expect.objectContaining({ version: '1.0' }),
-          update: expect.objectContaining({ version: '1.0' }),
-        }),
-      );
+      expect(repo.upsertGranted).toHaveBeenCalledWith({
+        userId: 'u1',
+        consentType: ConsentType.MARKETING,
+        ipAddress: null,
+        userAgent: null,
+        version: '1.0',
+      });
     });
   });
 
   describe('revokeConsent', () => {
-    it('sets granted false and revokedAt', async () => {
-      const row = { id: 'c1', granted: false };
-      userConsent.update.mockResolvedValue(row as never);
+    it('delegates to repo.markRevoked', async () => {
+      const row = { id: 'c1', granted: false } as never;
+      repo.markRevoked.mockResolvedValue(row);
 
       const result = await service.revokeConsent(
         'u1',
         ConsentType.TERMS_OF_SERVICE,
       );
 
-      expect(userConsent.update).toHaveBeenCalledWith({
-        where: {
-          userId_consentType: {
-            userId: 'u1',
-            consentType: ConsentType.TERMS_OF_SERVICE,
-          },
-        },
-        data: {
-          granted: false,
-          revokedAt: expect.any(Date),
-        },
-      });
+      expect(repo.markRevoked).toHaveBeenCalledWith(
+        'u1',
+        ConsentType.TERMS_OF_SERVICE,
+      );
       expect(result).toBe(row);
     });
   });
 
   describe('hasConsent', () => {
-    it('returns true when granted and not revoked', async () => {
-      userConsent.findUnique.mockResolvedValue({
+    it('true when granted and not revoked', async () => {
+      repo.findByUserAndType.mockResolvedValue({
         granted: true,
         revokedAt: null,
       } as never);
@@ -122,31 +85,28 @@ describe('ConsentService', () => {
       ).resolves.toBe(true);
     });
 
-    it('returns false when missing', async () => {
-      userConsent.findUnique.mockResolvedValue(null);
-
+    it('false when missing', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
       await expect(
         service.hasConsent('u1', ConsentType.PRIVACY_POLICY),
       ).resolves.toBe(false);
     });
 
-    it('returns false when revoked', async () => {
-      userConsent.findUnique.mockResolvedValue({
+    it('false when revoked', async () => {
+      repo.findByUserAndType.mockResolvedValue({
         granted: true,
         revokedAt: new Date(),
       } as never);
-
       await expect(
         service.hasConsent('u1', ConsentType.PRIVACY_POLICY),
       ).resolves.toBe(false);
     });
 
-    it('returns false when not granted', async () => {
-      userConsent.findUnique.mockResolvedValue({
+    it('false when not granted', async () => {
+      repo.findByUserAndType.mockResolvedValue({
         granted: false,
         revokedAt: null,
       } as never);
-
       await expect(
         service.hasConsent('u1', ConsentType.MARKETING),
       ).resolves.toBe(false);
@@ -154,16 +114,13 @@ describe('ConsentService', () => {
   });
 
   describe('getUserConsents', () => {
-    it('returns ordered consents', async () => {
-      const rows = [{ id: 'c1' }];
-      userConsent.findMany.mockResolvedValue(rows as never);
+    it('delegates to repo.findAllByUser', async () => {
+      const rows = [{ id: 'c1' }] as never;
+      repo.findAllByUser.mockResolvedValue(rows);
 
       const result = await service.getUserConsents('u1');
 
-      expect(userConsent.findMany).toHaveBeenCalledWith({
-        where: { userId: 'u1' },
-        orderBy: { createdAt: 'desc' },
-      });
+      expect(repo.findAllByUser).toHaveBeenCalledWith('u1');
       expect(result).toBe(rows);
     });
   });

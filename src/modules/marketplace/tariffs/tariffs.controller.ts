@@ -17,12 +17,24 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Roles, type RequestWithUser } from '../../../common/decorators';
 import { TariffsService } from './tariffs.service';
 import { CreateTariffDto } from './dto/create-tariff.dto';
 import { UpdateTariffDto } from './dto/update-tariff.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
-import { CONTROLLER_PATH } from '../../../common/constants';
+import {
+  CONTROLLER_PATH,
+  PUBLIC_READ_THROTTLE_LIMIT,
+  PUBLIC_READ_THROTTLE_TTL_MS,
+} from '../../../common/constants';
+
+const PUBLIC_READ_THROTTLE = {
+  default: {
+    limit: PUBLIC_READ_THROTTLE_LIMIT,
+    ttl: PUBLIC_READ_THROTTLE_TTL_MS,
+  },
+};
 
 @ApiTags('Tariffs')
 @Controller(CONTROLLER_PATH.tariffs)
@@ -30,6 +42,7 @@ export class TariffsController {
   constructor(private readonly tariffsService: TariffsService) {}
 
   @Get()
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Получить все тарифы (публично)' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   async findAll(@Query('isActive') isActive?: string) {
@@ -41,12 +54,14 @@ export class TariffsController {
   }
 
   @Get('active')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Получить только активные тарифы' })
   async getActiveTariffs() {
     return this.tariffsService.getActiveTariffs();
   }
 
   @Get(':id')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Получить информацию о тарифе по ID' })
   async findOne(@Param('id') id: string) {
     return this.tariffsService.findOne(id);

@@ -16,12 +16,24 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CitiesService } from './cities.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
 import { JwtAuthGuard, RolesGuard } from '../../../common/guards';
 import { Roles } from '../../../common/decorators';
-import { CONTROLLER_PATH } from '../../../common/constants';
+import {
+  CONTROLLER_PATH,
+  PUBLIC_READ_THROTTLE_LIMIT,
+  PUBLIC_READ_THROTTLE_TTL_MS,
+} from '../../../common/constants';
+
+const PUBLIC_READ_THROTTLE = {
+  default: {
+    limit: PUBLIC_READ_THROTTLE_LIMIT,
+    ttl: PUBLIC_READ_THROTTLE_TTL_MS,
+  },
+};
 
 @ApiTags('Cities')
 @Controller(CONTROLLER_PATH.cities)
@@ -29,6 +41,7 @@ export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
 
   @Get()
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get all cities' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   async findAll(@Query('isActive') isActive?: string) {
@@ -36,12 +49,14 @@ export class CitiesController {
   }
 
   @Get(':id')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get city by ID' })
   async findOne(@Param('id') id: string) {
     return this.citiesService.findOne(id);
   }
 
   @Get(':id/masters')
+  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get masters in city' })
   async getMasters(@Param('id') id: string) {
     return this.citiesService.getMasters(id);

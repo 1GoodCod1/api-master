@@ -94,6 +94,13 @@ export {
 } from './auth-lockout.constants';
 
 export {
+  PUBLIC_READ_THROTTLE_LIMIT,
+  PUBLIC_READ_THROTTLE_TTL_MS,
+  SEARCH_THROTTLE_LIMIT,
+  SEARCH_THROTTLE_TTL_MS,
+} from './throttle.constants';
+
+export {
   FILES_CLIENT_PHOTO_LIMIT,
   FILES_MAX_FILES_PER_BATCH,
 } from './files-limits.constants';

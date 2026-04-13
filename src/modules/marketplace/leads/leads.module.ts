@@ -21,6 +21,8 @@ import { MasterAvailableListener } from './listeners/master-available.listener';
 import { MastersModule } from '../masters/masters.module';
 import { EmailModule } from '../../email/email.module';
 import { ReferralsModule } from '../../engagement/referrals/referrals.module';
+import { LEAD_REPOSITORY } from './repositories/lead.repository';
+import { PrismaLeadRepository } from './repositories/prisma-lead.repository';
 
 @Module({
   imports: [
@@ -50,6 +52,7 @@ import { ReferralsModule } from '../../engagement/referrals/referrals.module';
     LeadsConversationService,
     LeadsAvailabilitySubscriptionService,
     MasterAvailableListener,
+    { provide: LEAD_REPOSITORY, useClass: PrismaLeadRepository },
   ],
   exports: [LeadsService],
 })

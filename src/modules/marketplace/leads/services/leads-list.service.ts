@@ -1,8 +1,12 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { type Prisma, UserRole } from '@prisma/client';
 import { LeadStatus } from '../../../../common/constants';
-import { PrismaService } from '../../../shared/database/prisma.service';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { CacheService } from '../../../shared/cache/cache.service';
 import { decodeId, encodeId } from '../../../shared/utils/id-encoder';
@@ -11,19 +15,21 @@ import {
   buildPaginatedResponse,
   type PaginatedResult,
 } from '../../../shared/pagination/cursor-pagination';
+import {
+  LEAD_REPOSITORY,
+  type ILeadRepository,
+} from '../repositories/lead.repository';
 
 @Injectable()
 export class LeadsListService {
   private readonly logger = new Logger(LeadsListService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(LEAD_REPOSITORY)
+    private readonly leadRepo: ILeadRepository,
     private readonly cache: CacheService,
   ) {}
 
-  /**
-   * Получение лидов в зависимости от роли с cursor-based пагинацией.
-   */
   async findAll(
     authUser: JwtUser,
     options: {
@@ -85,37 +91,14 @@ export class LeadsListService {
         );
 
         const [rawLeads, total] = await Promise.all([
-          this.prisma.lead.findMany({
+          this.leadRepo.findPageForMaster({
             where: queryParams.where as Prisma.LeadWhereInput,
             orderBy:
               queryParams.orderBy as Prisma.LeadOrderByWithRelationInput[],
             take: queryParams.take,
             skip: queryParams.skip,
-            include: {
-              files: {
-                include: {
-                  file: {
-                    select: {
-                      id: true,
-                      path: true,
-                      mimetype: true,
-                      filename: true,
-                    },
-                  },
-                },
-              },
-              master: {
-                select: {
-                  id: true,
-                  slug: true,
-                  user: { select: { firstName: true, lastName: true } },
-                  category: { select: { id: true, name: true } },
-                  city: { select: { id: true, name: true } },
-                },
-              },
-            },
           }),
-          this.prisma.lead.count({ where: baseWhere }),
+          this.leadRepo.countByWhere(baseWhere),
         ]);
 
         const items = this.mapLeadsWithMasterEncodedId(rawLeads);
@@ -157,43 +140,13 @@ export class LeadsListService {
     );
 
     const [rawLeads, total] = await Promise.all([
-      this.prisma.lead.findMany({
+      this.leadRepo.findPageForClient({
         where: queryParams.where as Prisma.LeadWhereInput,
         orderBy: queryParams.orderBy as Prisma.LeadOrderByWithRelationInput[],
         take: queryParams.take,
         skip: queryParams.skip,
-        include: {
-          files: {
-            include: {
-              file: {
-                select: {
-                  id: true,
-                  path: true,
-                  mimetype: true,
-                  filename: true,
-                },
-              },
-            },
-          },
-          master: {
-            select: {
-              id: true,
-              slug: true,
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  phone: true,
-                  email: true,
-                },
-              },
-              category: { select: { id: true, name: true } },
-              city: { select: { id: true, name: true } },
-            },
-          },
-        },
       }),
-      this.prisma.lead.count({ where: baseWhere }),
+      this.leadRepo.countByWhere(baseWhere),
     ]);
 
     const items = this.mapLeadsWithMasterEncodedId(rawLeads);
@@ -205,37 +158,13 @@ export class LeadsListService {
     );
   }
 
-  /**
-   * Получение одного лида (MASTER/ADMIN: свой/любой; CLIENT: только свой по clientId)
-   */
   async findOne(idOrEncoded: string, authUser: JwtUser) {
     const decodedId = decodeId(idOrEncoded);
     const leadId = decodedId || idOrEncoded;
 
     const masterId = authUser.masterProfile?.id;
 
-    const lead = await this.prisma.lead.findUnique({
-      where: { id: leadId },
-      include: {
-        files: {
-          include: {
-            file: {
-              select: { id: true, path: true, mimetype: true, filename: true },
-            },
-          },
-        },
-        client: { select: { firstName: true, lastName: true } },
-        master: {
-          select: {
-            id: true,
-            slug: true,
-            user: { select: { firstName: true, lastName: true } },
-            category: { select: { id: true, name: true } },
-            city: { select: { id: true, name: true } },
-          },
-        },
-      },
-    });
+    const lead = await this.leadRepo.findDetailedById(leadId);
 
     if (!lead) throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
 

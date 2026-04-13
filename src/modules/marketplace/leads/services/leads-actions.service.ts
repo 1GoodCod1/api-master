@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AppErrors,
   AppErrorMessages,
@@ -21,6 +21,10 @@ import { MastersAvailabilityFacade } from '../../masters/facades/masters-availab
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
 import { fireAndForget } from '../../../../common/utils/fire-and-forget';
+import {
+  LEAD_REPOSITORY,
+  type ILeadRepository,
+} from '../repositories/lead.repository';
 
 /**
  * Допустимые переходы статусов лида.
@@ -64,6 +68,8 @@ export class LeadsActionsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(LEAD_REPOSITORY)
+    private readonly leadRepo: ILeadRepository,
     private readonly cache: CacheService,
     private readonly inAppNotifications: NotificationsInAppFacade,
     private readonly mastersAvailability: MastersAvailabilityFacade,
@@ -91,9 +97,7 @@ export class LeadsActionsService {
 
     const leadId = decodeId(idOrEncoded) ?? idOrEncoded;
 
-    const lead = await this.prisma.lead.findUnique({
-      where: { id: leadId },
-    });
+    const lead = await this.leadRepo.findById(leadId);
 
     if (!lead) {
       throw AppErrors.notFound(AppErrorMessages.LEAD_NOT_FOUND);
@@ -133,13 +137,7 @@ export class LeadsActionsService {
       }
     }
 
-    const updated = await this.prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        status: newStatus,
-        updatedAt: new Date(),
-      },
-    });
+    const updated = await this.leadRepo.updateStatus(leadId, newStatus);
 
     // При переходе в PENDING_CLOSE — уведомляем клиента о запросе подтверждения
     if (newStatus === LeadStatus.PENDING_CLOSE && lead.clientId) {

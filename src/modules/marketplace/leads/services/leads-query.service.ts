@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { Prisma } from '@prisma/client';
-import { ACTIVE_LEAD_STATUSES, LeadStatus } from '../../../../common/constants';
+import { LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { SORT_DESC } from '../../../../common/constants';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
+import {
+  LEAD_REPOSITORY,
+  type ILeadRepository,
+} from '../repositories/lead.repository';
 
 /**
  * Агрегация и state-lookup по лидам.
@@ -14,7 +17,11 @@ import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 export class LeadsQueryService {
   private readonly logger = new Logger(LeadsQueryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(LEAD_REPOSITORY)
+    private readonly leadRepo: ILeadRepository,
+  ) {}
 
   /**
    * Статистика лидов — groupBy вместо 5 отдельных count-запросов.
@@ -26,17 +33,13 @@ export class LeadsQueryService {
     }
 
     const [total, statusGroups] = await Promise.all([
-      this.prisma.lead.count({ where: { masterId } }),
-      this.prisma.lead.groupBy({
-        by: ['status'],
-        where: { masterId },
-        _count: true,
-      }),
+      this.leadRepo.countByMaster(masterId),
+      this.leadRepo.groupByStatus(masterId),
     ]);
 
     const statusMap: Record<string, number> = {};
     for (const g of statusGroups) {
-      statusMap[g.status] = g._count;
+      statusMap[g.status] = g.count;
     }
 
     return {
@@ -156,21 +159,10 @@ export class LeadsQueryService {
    * Проверка наличия активной заявки от клиента к мастеру
    */
   async getActiveLeadToMaster(clientId: string, masterId: string) {
-    return this.prisma.lead.findFirst({
-      where: {
-        clientId,
-        masterId,
-        status: { in: [...ACTIVE_LEAD_STATUSES] },
-      },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-        message: true,
-        conversation: { select: { id: true } },
-      },
-      orderBy: { createdAt: SORT_DESC },
-    });
+    return this.leadRepo.findLatestActiveSummaryForClientMaster(
+      clientId,
+      masterId,
+    );
   }
 
   /**
@@ -178,21 +170,10 @@ export class LeadsQueryService {
    * (для показа кнопки «Обратиться снова»)
    */
   async getCompletedLeadToMaster(clientId: string, masterId: string) {
-    const lead = await this.prisma.lead.findFirst({
-      where: {
-        clientId,
-        masterId,
-        status: LeadStatus.CLOSED,
-      },
-      select: {
-        id: true,
-        status: true,
-        createdAt: true,
-        message: true,
-      },
-      orderBy: { createdAt: SORT_DESC },
-    });
-
+    const lead = await this.leadRepo.findLatestClosedSummaryForClientMaster(
+      clientId,
+      masterId,
+    );
     return { hasCompletedLead: !!lead, lastLead: lead };
   }
 }

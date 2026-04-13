@@ -21,19 +21,15 @@ import type { MastersAvailabilityFacade } from '../../../src/modules/marketplace
 import type { EmailDripService } from '../../../src/modules/email/email-drip.service';
 import type { ReferralsService } from '../../../src/modules/engagement/referrals/referrals.service';
 import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';
+import type { ILeadRepository } from '../../../src/modules/marketplace/leads/repositories/lead.repository';
 
 type PrismaLeadsActionsMock = {
-  lead: { findUnique: jest.Mock; update: jest.Mock };
   master: { findUnique: jest.Mock };
   masterAvailabilitySubscription: { findMany: jest.Mock; update: jest.Mock };
 };
 
 describe('LeadsActionsService', () => {
   const prisma: PrismaLeadsActionsMock = {
-    lead: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
     master: {
       findUnique: jest.fn(),
     },
@@ -41,6 +37,21 @@ describe('LeadsActionsService', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+  };
+
+  const leadRepo: jest.Mocked<ILeadRepository> = {
+    createWithFiles: jest.fn(),
+    findById: jest.fn(),
+    findDetailedById: jest.fn(),
+    updateStatus: jest.fn(),
+    findActiveByClientAndMaster: jest.fn(),
+    findPageForMaster: jest.fn(),
+    findPageForClient: jest.fn(),
+    countByWhere: jest.fn(),
+    countByMaster: jest.fn(),
+    groupByStatus: jest.fn(),
+    findLatestActiveSummaryForClientMaster: jest.fn(),
+    findLatestClosedSummaryForClientMaster: jest.fn(),
   };
 
   const cache = {
@@ -95,6 +106,7 @@ describe('LeadsActionsService', () => {
     jest.clearAllMocks();
     service = new LeadsActionsService(
       prisma as unknown as PrismaService,
+      leadRepo,
       cache,
       inAppNotifications,
       mastersAvailability,
@@ -104,7 +116,7 @@ describe('LeadsActionsService', () => {
   });
 
   it('throws NotFoundException when lead does not exist', async () => {
-    prisma.lead.findUnique.mockResolvedValue(null);
+    leadRepo.findById.mockResolvedValue(null);
 
     await expect(
       service.updateStatus('lead-1', masterUser, { status: 'CLOSED' }),
@@ -112,7 +124,7 @@ describe('LeadsActionsService', () => {
   });
 
   it('throws ForbiddenException when master tries to update non-owned lead', async () => {
-    prisma.lead.findUnique.mockResolvedValue({
+    leadRepo.findById.mockResolvedValue({
       id: 'lead-1',
       masterId: 'another-master',
       status: 'NEW',
@@ -124,7 +136,7 @@ describe('LeadsActionsService', () => {
   });
 
   it('throws BadRequestException for invalid status transition', async () => {
-    prisma.lead.findUnique.mockResolvedValue({
+    leadRepo.findById.mockResolvedValue({
       id: 'lead-1',
       masterId: 'm1',
       status: 'NEW',
@@ -133,17 +145,17 @@ describe('LeadsActionsService', () => {
     await expect(
       service.updateStatus('lead-1', masterUser, { status: 'NEW' }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(prisma.lead.update).not.toHaveBeenCalled();
+    expect(leadRepo.updateStatus).not.toHaveBeenCalled();
   });
 
   it('updates status, updates availability and invalidates cache on client PENDING_CLOSE to CLOSED', async () => {
-    prisma.lead.findUnique.mockResolvedValue({
+    leadRepo.findById.mockResolvedValue({
       id: 'lead-1',
       masterId: 'm1',
       clientId: 'c1',
       status: 'PENDING_CLOSE',
     } as never);
-    prisma.lead.update.mockResolvedValue({
+    leadRepo.updateStatus.mockResolvedValue({
       id: 'lead-1',
       masterId: 'm1',
       clientId: 'c1',
@@ -165,6 +177,7 @@ describe('LeadsActionsService', () => {
 
     await service.updateStatus('lead-1', clientUser, { status: 'CLOSED' });
 
+    expect(leadRepo.updateStatus).toHaveBeenCalledWith('lead-1', 'CLOSED');
     expect(mastersAvailability.decrementActiveLeads).toHaveBeenCalledWith('m1');
     expect(cache.invalidateMasterData).toHaveBeenCalledWith('m1');
     expect(inAppNotifications.notifyMasterAvailable).toHaveBeenCalledWith(
@@ -184,13 +197,13 @@ describe('LeadsActionsService', () => {
       isVerified: true,
       masterProfile: null,
     };
-    prisma.lead.findUnique.mockResolvedValue({
+    leadRepo.findById.mockResolvedValue({
       id: 'lead-2',
       masterId: 'm1',
       clientId: 'client-1',
       status: 'PENDING_CLOSE',
     } as never);
-    prisma.lead.update.mockResolvedValue({
+    leadRepo.updateStatus.mockResolvedValue({
       id: 'lead-2',
       masterId: 'm1',
       clientId: 'client-1',

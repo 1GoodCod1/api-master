@@ -147,7 +147,7 @@ export default () => ({
 
   rateLimit: {
     ttl: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10),
-    limit: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    limit: parseInt(process.env.RATE_LIMIT_MAX || '300', 10),
     useRedisStorage:
       process.env.RATE_LIMIT_REDIS_STORAGE === 'true'
         ? true

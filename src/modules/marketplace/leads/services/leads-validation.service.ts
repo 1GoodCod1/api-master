@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -11,16 +12,23 @@ import {
   AppErrorTemplates,
 } from '../../../../common/errors';
 import { UserRole } from '@prisma/client';
-import { ACTIVE_LEAD_STATUSES } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import type { MasterLeadsFields } from '../types';
+import {
+  LEAD_REPOSITORY,
+  type ILeadRepository,
+} from '../repositories/lead.repository';
 
 @Injectable()
 export class LeadsValidationService {
   private readonly logger = new Logger(LeadsValidationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(LEAD_REPOSITORY)
+    private readonly leadRepo: ILeadRepository,
+  ) {}
 
   /**
    * Сброс счетчика лидов за день если прошло больше суток
@@ -117,13 +125,8 @@ export class LeadsValidationService {
       // Проверка на существующую открытую заявку от этого клиента к этому мастеру
       const clientId = authUser?.role === UserRole.CLIENT ? authUser.id : null;
       if (clientId) {
-        const existingOpenLead = await this.prisma.lead.findFirst({
-          where: {
-            clientId,
-            masterId,
-            status: { in: [...ACTIVE_LEAD_STATUSES] },
-          },
-        });
+        const existingOpenLead =
+          await this.leadRepo.findActiveByClientAndMaster(clientId, masterId);
         if (existingOpenLead) {
           throw AppErrors.badRequest(
             AppErrorMessages.LEAD_ACTIVE_DUPLICATE_TO_MASTER,

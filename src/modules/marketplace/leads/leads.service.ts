@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import { UserRole } from '@prisma/client';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
-import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { generateShortId } from '../../shared/utils/generate-id';
 import { LeadsValidationService } from './services/leads-validation.service';
@@ -12,11 +11,16 @@ import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsCreateNotificationService } from './services/leads-create-notification.service';
 import { LeadsConversationService } from './services/leads-conversation.service';
 import { MastersAvailabilityFacade } from '../masters/facades/masters-availability.facade';
+import {
+  LEAD_REPOSITORY,
+  type ILeadRepository,
+} from './repositories/lead.repository';
 
 @Injectable()
 export class LeadsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(LEAD_REPOSITORY)
+    private readonly leadRepo: ILeadRepository,
     private readonly validationService: LeadsValidationService,
     private readonly clientDataService: LeadsClientDataService,
     private readonly spamService: LeadsSpamService,
@@ -60,28 +64,15 @@ export class LeadsService {
     await this.spamService.checkProtection(createLeadDto, ipAddress);
     const spamScore = this.spamService.calculateSpamScore(createLeadDto);
 
-    const lead = await this.prisma.lead.create({
-      data: {
-        id: generateShortId(),
-        masterId,
-        clientPhone: resolvedClientPhone,
-        clientName: resolvedClientName,
-        clientId,
-        message,
-        spamScore,
-        isPremium: false,
-        files: fileIds?.length
-          ? {
-              createMany: {
-                data: fileIds.map((id) => ({ fileId: id })),
-                skipDuplicates: true,
-              },
-            }
-          : undefined,
-      },
-      include: {
-        files: { include: { file: true } },
-      },
+    const lead = await this.leadRepo.createWithFiles({
+      id: generateShortId(),
+      masterId,
+      clientPhone: resolvedClientPhone,
+      clientName: resolvedClientName,
+      clientId,
+      message,
+      spamScore,
+      fileIds,
     });
 
     await this.mastersAvailability.incrementActiveLeads(masterId);

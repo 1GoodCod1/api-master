@@ -5,18 +5,32 @@ import {
 } from '@nestjs/common';
 import { LeadsValidationService } from '../../../src/modules/marketplace/leads/services/leads-validation.service';
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
+import type { ILeadRepository } from '../../../src/modules/marketplace/leads/repositories/lead.repository';
 
 type PrismaLeadsValidationMock = {
   master: { findUnique: jest.Mock; update: jest.Mock };
-  lead: { findFirst: jest.Mock };
   file: { findMany: jest.Mock };
 };
 
 describe('LeadsValidationService', () => {
   const prisma: PrismaLeadsValidationMock = {
     master: { findUnique: jest.fn(), update: jest.fn() },
-    lead: { findFirst: jest.fn() },
     file: { findMany: jest.fn() },
+  };
+
+  const leadRepo: jest.Mocked<ILeadRepository> = {
+    createWithFiles: jest.fn(),
+    findById: jest.fn(),
+    findDetailedById: jest.fn(),
+    updateStatus: jest.fn(),
+    findActiveByClientAndMaster: jest.fn(),
+    findPageForMaster: jest.fn(),
+    findPageForClient: jest.fn(),
+    countByWhere: jest.fn(),
+    countByMaster: jest.fn(),
+    groupByStatus: jest.fn(),
+    findLatestActiveSummaryForClientMaster: jest.fn(),
+    findLatestClosedSummaryForClientMaster: jest.fn(),
   };
 
   let service: LeadsValidationService;
@@ -35,7 +49,10 @@ describe('LeadsValidationService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new LeadsValidationService(prisma as unknown as PrismaService);
+    service = new LeadsValidationService(
+      prisma as unknown as PrismaService,
+      leadRepo,
+    );
   });
 
   describe('validateCreate', () => {
@@ -120,7 +137,10 @@ describe('LeadsValidationService', () => {
     it('throws BadRequestException when client has existing open lead', async () => {
       prisma.master.findUnique.mockResolvedValue(validMaster);
       prisma.master.update.mockResolvedValue(validMaster);
-      prisma.lead.findFirst.mockResolvedValue({ id: 'l1', status: 'NEW' });
+      leadRepo.findActiveByClientAndMaster.mockResolvedValue({
+        id: 'l1',
+        status: 'NEW',
+      } as never);
 
       await expect(
         service.validateCreate('m1', {
@@ -134,7 +154,7 @@ describe('LeadsValidationService', () => {
     it('returns master when validation passes', async () => {
       prisma.master.findUnique.mockResolvedValue(validMaster);
       prisma.master.update.mockResolvedValue(validMaster);
-      prisma.lead.findFirst.mockResolvedValue(null);
+      leadRepo.findActiveByClientAndMaster.mockResolvedValue(null);
 
       const result = await service.validateCreate('m1', {
         id: 'c1',
@@ -148,7 +168,7 @@ describe('LeadsValidationService', () => {
     it('throws BadRequestException when too many files', async () => {
       prisma.master.findUnique.mockResolvedValue(validMaster);
       prisma.master.update.mockResolvedValue(validMaster);
-      prisma.lead.findFirst.mockResolvedValue(null);
+      leadRepo.findActiveByClientAndMaster.mockResolvedValue(null);
 
       await expect(
         service.validateCreate(
