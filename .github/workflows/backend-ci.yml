@@ -129,12 +129,8 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            set -eu
             cd ~/masterhub/api-master
-            git remote set-url origin git@github.com:1goodcod1/api-master.git
-            export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new'
-            git fetch origin
-            git checkout -B main origin/main
+            git pull origin main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api
             # DIRECT_URL — прямое подключение к Postgres (миграции не через PgBouncer)
