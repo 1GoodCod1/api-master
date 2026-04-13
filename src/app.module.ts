@@ -7,6 +7,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bull';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { CustomPrometheusController } from './app/prometheus.controller';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -144,6 +145,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
 
     // Мониторинг
     PrometheusModule.register({
+      controller: CustomPrometheusController,
       defaultMetrics: {
         enabled: true,
       },

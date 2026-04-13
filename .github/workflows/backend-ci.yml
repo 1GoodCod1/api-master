@@ -132,8 +132,11 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           envs: GH_PAT
           script: |
+            set -eu
             cd ~/masterhub/api-master
-            git pull https://x-access-token:${GH_PAT}@github.com/1goodcod1/api-master.git main
+            git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/1goodcod1/api-master.git"
+            git fetch origin
+            git checkout -B main origin/main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d api
             # DIRECT_URL — прямое подключение к Postgres (миграции не через PgBouncer)
