@@ -124,17 +124,15 @@ jobs:
     environment: production
     steps:
       - uses: appleboy/ssh-action@v1.0.3
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          envs: GH_PAT
           script: |
             set -eu
             cd ~/masterhub/api-master
-            git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/1goodcod1/api-master.git"
+            git remote set-url origin git@github.com:1goodcod1/api-master.git
+            export GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new'
             git fetch origin
             git checkout -B main origin/main
             docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull api
