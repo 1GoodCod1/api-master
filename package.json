@@ -77,7 +77,7 @@
     "docker:dev:create": "npm run docker:dev:build && npm run docker:dev:up && npm run docker:migrate:reset && npm run docker:migrate:dev && npm run docker:generate && npm run docker:seed"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1021.0",
+    "@aws-sdk/client-s3": "^3.1029.0",
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@bull-board/nestjs": "^6.20.6",
