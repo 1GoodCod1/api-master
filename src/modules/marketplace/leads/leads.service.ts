@@ -10,7 +10,7 @@ import { LeadsSpamService } from './services/leads-spam.service';
 import { LeadsAnalyticsService } from './services/leads-analytics.service';
 import { LeadsCreateNotificationService } from './services/leads-create-notification.service';
 import { LeadsConversationService } from './services/leads-conversation.service';
-import { MastersAvailabilityFacade } from '../masters/facades/masters-availability.facade';
+import { MastersAvailabilityFacade } from '../masters/facades';
 import {
   LEAD_REPOSITORY,
   type ILeadRepository,

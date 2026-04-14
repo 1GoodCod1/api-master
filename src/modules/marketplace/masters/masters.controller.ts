@@ -19,13 +19,6 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
-import {
-  PUBLIC_READ_THROTTLE_LIMIT,
-  PUBLIC_READ_THROTTLE_TTL_MS,
-  SEARCH_THROTTLE_LIMIT,
-  SEARCH_THROTTLE_TTL_MS,
-} from '../../../common/constants';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersSuggestService } from './services/masters-suggest.service';
 import { MastersListingService } from './services/masters-listing.service';
@@ -52,17 +45,6 @@ import {
 } from '../../../common/decorators';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
 
-const PUBLIC_READ_THROTTLE = {
-  default: {
-    limit: PUBLIC_READ_THROTTLE_LIMIT,
-    ttl: PUBLIC_READ_THROTTLE_TTL_MS,
-  },
-};
-
-const SEARCH_THROTTLE = {
-  default: { limit: SEARCH_THROTTLE_LIMIT, ttl: SEARCH_THROTTLE_TTL_MS },
-};
-
 @ApiTags('Masters')
 @Controller(CONTROLLER_PATH.masters)
 export class MastersController {
@@ -85,14 +67,12 @@ export class MastersController {
   }
 
   @Get()
-  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Search masters with filters' })
   async findAll(@Query() searchDto: SearchMastersDto) {
     return this.searchService.findAll(searchDto);
   }
 
   @Get('suggest')
-  @Throttle(SEARCH_THROTTLE)
   @ApiOperation({
     summary:
       'Smart search suggestions (categories, masters, services) with fuzzy matching',
@@ -102,14 +82,12 @@ export class MastersController {
   }
 
   @Get('filters')
-  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get available search filters' })
   async getFilters() {
     return this.listingService.getSearchFilters();
   }
 
   @Get('popular')
-  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get popular masters' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getPopularMasters(
@@ -119,7 +97,6 @@ export class MastersController {
   }
 
   @Get('new')
-  @Throttle(PUBLIC_READ_THROTTLE)
   @ApiOperation({ summary: 'Get new masters' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getNewMasters(
@@ -204,7 +181,6 @@ export class MastersController {
   }
 
   @Get(':slug')
-  @Throttle(PUBLIC_READ_THROTTLE)
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get master by slug or ID' })
   async findOne(

@@ -27,9 +27,11 @@ import { MastersNotificationSettingsService } from './services/masters-notificat
 import { MastersScheduleService } from './services/masters-schedule.service';
 import { MastersQuickRepliesService } from './services/masters-quick-replies.service';
 import { MastersLandingStatsService } from './services/masters-landing-stats.service';
-import { MastersAvailabilityFacade } from './facades/masters-availability.facade';
-import { MastersReferralsFacade } from './facades/masters-referrals.facade';
-import { MastersCacheWarmingFacade } from './facades/masters-cache-warming.facade';
+import {
+  MastersAvailabilityFacade,
+  MastersCacheWarmingFacade,
+  MastersReferralsFacade,
+} from './facades';
 
 @Module({
   imports: [

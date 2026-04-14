@@ -17,7 +17,7 @@ import { LeadsActionsService } from '../../../src/modules/marketplace/leads/serv
 import type { PrismaService } from '../../../src/modules/shared/database/prisma.service';
 import type { CacheService } from '../../../src/modules/shared/cache/cache.service';
 import type { NotificationsInAppFacade } from '../../../src/modules/notifications/notifications/facades/notifications-in-app.facade';
-import type { MastersAvailabilityFacade } from '../../../src/modules/marketplace/masters/facades/masters-availability.facade';
+import type { MastersAvailabilityFacade } from '../../../src/modules/marketplace/masters/facades';
 import type { EmailDripService } from '../../../src/modules/email/email-drip.service';
 import type { ReferralsService } from '../../../src/modules/engagement/referrals/referrals.service';
 import type { JwtUser } from '../../../src/common/interfaces/jwt-user.interface';

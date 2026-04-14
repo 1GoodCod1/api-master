@@ -17,7 +17,7 @@ import { CacheService } from '../../../shared/cache/cache.service';
 import { formatUserName } from '../../../shared/utils/format-name.util';
 import { NotificationsInAppFacade } from '../../../notifications/notifications/facades/notifications-in-app.facade';
 import { UpdateLeadStatusDto } from '../dto/update-lead-status.dto';
-import { MastersAvailabilityFacade } from '../../masters/facades/masters-availability.facade';
+import { MastersAvailabilityFacade } from '../../masters/facades';
 import { EmailDripService } from '../../../email/email-drip.service';
 import { ReferralsService } from '../../../engagement/referrals/referrals.service';
 import { fireAndForget } from '../../../../common/utils/fire-and-forget';

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BookingStatus, LeadStatus } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
-import { MastersAvailabilityFacade } from '../../masters/facades/masters-availability.facade';
+import { MastersAvailabilityFacade } from '../../masters/facades';
 
 @Injectable()
 export class BookingsLeadSyncService {

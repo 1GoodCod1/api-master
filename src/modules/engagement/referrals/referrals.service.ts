@@ -8,7 +8,7 @@ import {
   ReferralStatus,
   UserRole,
 } from '@prisma/client';
-import { MastersReferralsFacade } from '../../marketplace/masters/facades/masters-referrals.facade';
+import { MastersReferralsFacade } from '../../marketplace/masters/facades';
 import { NotificationEventEmitter } from '../../notifications/events';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
 

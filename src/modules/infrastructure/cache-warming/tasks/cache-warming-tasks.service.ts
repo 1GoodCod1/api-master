@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MastersCacheWarmingFacade } from '../../../marketplace/masters/facades/masters-cache-warming.facade';
+import { MastersCacheWarmingFacade } from '../../../marketplace/masters/facades';
 import { CategoriesService } from '../../../marketplace/categories/categories.service';
 import { CitiesService } from '../../../marketplace/cities/cities.service';
 import { TariffsService } from '../../../marketplace/tariffs/tariffs.service';
