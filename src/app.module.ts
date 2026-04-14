@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, type ExecutionContext } from '@nestjs/common';
 import { join } from 'path';
 import type { Response } from 'express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,7 +11,7 @@ import { CustomPrometheusController } from './app/prometheus.controller';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import configuration, { createBullOptions } from './config';
+import configuration, { API_GLOBAL_PREFIX, createBullOptions } from './config';
 import {
   ActivityTrackerInterceptor,
   AuditInterceptor,
@@ -21,6 +21,7 @@ import {
   AUTH_LOGIN_THROTTLE_LIMIT,
   AUTH_LOGIN_THROTTLE_TTL_MS,
   AUTH_THROTTLER_NAME,
+  CONTROLLER_PATH,
 } from './common/constants';
 
 // Общие модули
@@ -120,6 +121,8 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
           'rateLimit.useRedisStorage',
           false,
         );
+        /** Только этот маршрут должен учитывать бакет `auth` (см. ThrottlerGuard — иначе лимит 5/15мин на весь API). */
+        const authLoginPath = `/${API_GLOBAL_PREFIX}/${CONTROLLER_PATH.auth}/login`;
         return {
           throttlers: [
             { name: 'default', ttl, limit },
@@ -127,6 +130,13 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
               name: AUTH_THROTTLER_NAME,
               ttl: AUTH_LOGIN_THROTTLE_TTL_MS,
               limit: AUTH_LOGIN_THROTTLE_LIMIT,
+              skipIf: (context: ExecutionContext) => {
+                const req = context
+                  .switchToHttp()
+                  .getRequest<{ path?: string; method?: string }>();
+                const path = req.path ?? '';
+                return !(req.method === 'POST' && path === authLoginPath);
+              },
             },
           ],
           ...(useRedis
