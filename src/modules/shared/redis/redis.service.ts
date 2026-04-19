@@ -36,10 +36,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       retryStrategy: (times: number) => {
         if (times > 10) {
           this.logger.error('Redis retry limit exceeded');
-          return null;
         }
-        const delay = Math.min(times * 50, 2000);
-        return delay;
+        // Never return null — that permanently kills the connection.
+        // Cap at 5s backoff and keep retrying indefinitely.
+        return Math.min(times * 50, 5000);
       },
     };
 
