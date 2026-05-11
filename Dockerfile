@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ COPY . .
 RUN npm run build
 
 # Production dependencies stage
-FROM node:25-alpine AS dependencies
+FROM node:26-alpine AS dependencies
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ COPY prisma ./prisma
 RUN npm run prisma:generate
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:26-alpine AS production
 
 # dumb-init + CA bundle (OAuth/passport → https://oauth2.googleapis.com; иначе UNABLE_TO_VERIFY_LEAF_SIGNATURE в Alpine)
 RUN apk add --no-cache dumb-init ca-certificates && update-ca-certificates
@@ -84,7 +84,7 @@ CMD ["node", "dist/main.js"]
 
 # Development: Debian slim — стабильный TLS к Google OAuth.
 # Alpine + Node нередко даёт UNABLE_TO_VERIFY_LEAF_SIGNATURE при запросе к oauth2.googleapis.com из контейнера.
-FROM node:25-bookworm-slim AS development
+FROM node:26-bookworm-slim AS development
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends dumb-init ca-certificates wget \
