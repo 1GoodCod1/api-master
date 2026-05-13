@@ -11,6 +11,8 @@ import {
   IsPositive,
   Min,
   Max,
+  ValidateIf,
+  IsDefined,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { JobType } from '@prisma/client';
@@ -41,16 +43,21 @@ export class CreateJobDto {
 
   @ApiProperty({
     required: false,
-    description: 'Budget in MDL for fixed price jobs',
+    description: 'Budget in MDL — required for FIXED_PRICE jobs',
   })
-  @IsOptional()
+  @ValidateIf((o: CreateJobDto) => o.type === JobType.FIXED_PRICE)
+  @IsDefined({ message: 'budget is required for FIXED_PRICE jobs' })
   @IsNumber()
   @IsPositive()
   @Type(() => Number)
   budget?: number;
 
-  @ApiProperty({ required: false, description: 'Hourly rate in MDL' })
-  @IsOptional()
+  @ApiProperty({
+    required: false,
+    description: 'Hourly rate in MDL — required for HOURLY jobs',
+  })
+  @ValidateIf((o: CreateJobDto) => o.type === JobType.HOURLY)
+  @IsDefined({ message: 'hourlyRate is required for HOURLY jobs' })
   @IsNumber()
   @IsPositive()
   @Type(() => Number)

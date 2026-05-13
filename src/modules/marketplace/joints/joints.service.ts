@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { JointsTransactionType, TariffType } from '@prisma/client';
+import { JointsTransactionType, Prisma, TariffType } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { AppErrors, AppErrorMessages } from '../../../common/errors';
 import type { JwtUser } from '../../../common/interfaces/jwt-user.interface';
+
+type PrismaTx = Prisma.TransactionClient | PrismaService;
 
 export const JOINTS_BY_TARIFF: Record<TariffType, number> = {
   [TariffType.BASIC]: 20,
@@ -74,35 +76,40 @@ export class JointsService {
     ]);
   }
 
+  /**
+   * Атомарно списывает joints. Безопасно при параллельных вызовах:
+   * single-statement update с условием jointsBalance >= amount.
+   * Можно передать tx — тогда работает в существующей транзакции.
+   */
   async spendJoints(
     masterId: string,
     amount: number,
     _description: string,
     _applicationId: string | undefined,
+    tx?: PrismaTx,
   ): Promise<void> {
     if (amount <= 0)
       throw AppErrors.badRequest(AppErrorMessages.JOINTS_AMOUNT_INVALID);
 
-    const master = await this.prisma.master.findUnique({
-      where: { id: masterId },
-      select: { jointsBalance: true },
-    });
-
-    if (!master || master.jointsBalance < amount)
-      throw AppErrors.badRequest(AppErrorMessages.JOINTS_INSUFFICIENT);
-
-    await this.prisma.master.update({
-      where: { id: masterId },
+    const client = tx ?? this.prisma;
+    const res = await client.master.updateMany({
+      where: { id: masterId, jointsBalance: { gte: amount } },
       data: { jointsBalance: { decrement: amount } },
     });
+
+    if (res.count === 0) {
+      throw AppErrors.badRequest(AppErrorMessages.JOINTS_INSUFFICIENT);
+    }
   }
 
   async recordApplicationId(
     masterId: string,
     applicationId: string,
     amount: number,
+    tx?: PrismaTx,
   ): Promise<void> {
-    await this.prisma.jointsTransaction.create({
+    const client = tx ?? this.prisma;
+    await client.jointsTransaction.create({
       data: {
         masterId,
         amount: -amount,

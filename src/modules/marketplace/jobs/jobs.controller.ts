@@ -74,6 +74,15 @@ export class JobsController {
     return this.jobsService.getJobById(id, user);
   }
 
+  @Get(':id/my-application')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MASTER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check whether current master applied to this job' })
+  myApplication(@Param('id') id: string, @GetUser() user: JwtUser) {
+    return this.jobsService.getMyApplicationForJob(id, user);
+  }
+
   @Get(':id/applications')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLIENT)
