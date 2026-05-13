@@ -62,6 +62,10 @@ export class ChatService {
     );
   }
 
+  async getOrCreateJobConversation(jobId: string, user: ChatUser) {
+    return this.conversationService.getOrCreateJobConversation(jobId, user);
+  }
+
   async closeConversation(conversationId: string, user: ChatUser) {
     return this.conversationService.closeConversation(conversationId, user);
   }

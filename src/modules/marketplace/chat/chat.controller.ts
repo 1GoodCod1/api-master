@@ -62,6 +62,17 @@ export class ChatController {
     return this.chatService.getConversationByLeadId(leadId, req.user);
   }
 
+  @Post('job-chat/:jobId')
+  @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get or create conversation for a job (by job ID)' })
+  @ApiResponse({ status: 201, description: 'Conversation found or created' })
+  async getOrCreateJobConversation(
+    @Param('jobId') jobId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.chatService.getOrCreateJobConversation(jobId, req.user);
+  }
+
   @Get(':id')
   @Roles(UserRole.CLIENT, UserRole.MASTER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get conversation details' })

@@ -7,6 +7,7 @@ import { PaymentStatus, TariffType } from '../../../common/constants';
 import { AuditService } from '../../audit/audit.service';
 import { AuditAction } from '../../audit/audit-action.enum';
 import { AuditEntityType } from '../../audit/audit-entity-type.enum';
+import { JointsService } from '../../marketplace/joints/joints.service';
 
 @Injectable()
 export class PaymentsWebhookService {
@@ -17,6 +18,7 @@ export class PaymentsWebhookService {
     private readonly notificationEvents: NotificationEventEmitter,
     private readonly cache: CacheService,
     private readonly auditService: AuditService,
+    private readonly jointsService: JointsService,
   ) {}
 
   /**
@@ -143,6 +145,7 @@ export class PaymentsWebhookService {
       select: { userId: true },
     });
 
+    await this.jointsService.creditSubscription(masterId, tariffType);
     await this.invalidateCachesForTariffChange(masterId, master.userId);
   }
 

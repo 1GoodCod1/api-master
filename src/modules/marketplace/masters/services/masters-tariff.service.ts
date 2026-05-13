@@ -13,6 +13,7 @@ import { CacheService } from '../../../shared/cache/cache.service';
 import { AuditService } from '../../../audit/audit.service';
 import { AuditAction } from '../../../audit/audit-action.enum';
 import { AuditEntityType } from '../../../audit/audit-entity-type.enum';
+import { JointsService } from '../../joints/joints.service';
 import type { GetTariffResult, InvalidateMasterCacheFn } from '../types';
 
 export type { GetTariffResult, InvalidateMasterCacheFn };
@@ -27,6 +28,7 @@ export class MastersTariffService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly auditService: AuditService,
+    private readonly jointsService: JointsService,
   ) {}
 
   async getTariff(userId: string): Promise<GetTariffResult> {
@@ -129,6 +131,9 @@ export class MastersTariffService {
           isFeatured: isVipOrPremiumTariff(tariffType),
         },
       });
+
+      // Credit joints for the new plan
+      await this.jointsService.creditSubscription(masterId, tariffType);
 
       // Инвалидируем кеш (тариф влияет на поиск и сортировку)
       if (onCacheInvalidate) {

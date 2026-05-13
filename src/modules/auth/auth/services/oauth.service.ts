@@ -241,53 +241,70 @@ export class OAuthService {
       [payload.firstName, payload.lastName].filter(Boolean).join(' ').trim() ||
       'master';
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email:
-            payload.email ??
-            `oauth_${payload.provider}_${payload.providerId}@noemail.local`,
-          phone: dto.phone,
-          password: null,
-          role: UserRole.MASTER,
-          isVerified: false,
-          firstName: payload.firstName ?? null,
-          lastName: payload.lastName ?? null,
-          oauthAccounts: {
-            create: {
-              provider: payload.provider,
-              providerId: payload.providerId,
+    const result = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const user = await tx.user.create({
+          data: {
+            email:
+              payload.email ??
+              `oauth_${payload.provider}_${payload.providerId}@noemail.local`,
+            phone: dto.phone,
+            password: null,
+            role: UserRole.MASTER,
+            isVerified: false,
+            firstName: payload.firstName ?? null,
+            lastName: payload.lastName ?? null,
+            oauthAccounts: {
+              create: {
+                provider: payload.provider,
+                providerId: payload.providerId,
+              },
             },
           },
-        },
-      });
-
-      const slug = await generateUniqueSlugWithDb(fullName, async (prefix) => {
-        const rows = await tx.master.findMany({
-          where: { slug: { startsWith: prefix } },
-          select: { slug: true },
         });
-        return rows.map((m) => m.slug).filter((s): s is string => s != null);
-      });
 
-      const master = await tx.master.create({
-        data: {
-          userId: user.id,
-          slug,
-          cityId: city.id,
-          categoryId: category.id,
-          description: dto.description ?? null,
-          rating: 0,
-          totalReviews: 0,
-          experienceYears: 0,
-          tariffType: TariffType.BASIC,
-          views: 0,
-          leadsCount: 0,
-        },
-      });
+        const slug = await generateUniqueSlugWithDb(
+          fullName,
+          async (prefix) => {
+            const rows = await tx.master.findMany({
+              where: { slug: { startsWith: prefix } },
+              select: { slug: true },
+            });
+            return rows
+              .map((m) => m.slug)
+              .filter((s): s is string => s != null);
+          },
+        );
 
-      return { user, master };
-    });
+        const master = await tx.master.create({
+          data: {
+            userId: user.id,
+            slug,
+            cityId: city.id,
+            categoryId: category.id,
+            description: dto.description ?? null,
+            rating: 0,
+            totalReviews: 0,
+            experienceYears: 0,
+            tariffType: TariffType.BASIC,
+            jointsBalance: 20,
+            views: 0,
+            leadsCount: 0,
+          },
+        });
+
+        await tx.jointsTransaction.create({
+          data: {
+            masterId: master.id,
+            amount: 20,
+            type: 'SUBSCRIPTION_CREDIT',
+            description: 'Welcome bonus — BASIC plan joints',
+          },
+        });
+
+        return { user, master };
+      },
+    );
 
     await Promise.all([
       this.cache.invalidate(this.cache.patterns.mastersNew()),

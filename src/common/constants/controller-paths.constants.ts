@@ -20,6 +20,8 @@ export const CONTROLLER_PATH = {
   export: 'export',
   favorites: 'favorites',
   files: 'files',
+  jobs: 'jobs',
+  joints: 'joints',
   leads: 'leads',
   masters: 'masters',
   notifications: 'notifications',

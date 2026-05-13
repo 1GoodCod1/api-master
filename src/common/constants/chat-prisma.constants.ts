@@ -30,5 +30,7 @@ export const LEAD_SELECT_BASIC = {
 export const CLIENT_SELECT_BASIC = {
   id: true,
   email: true,
+  firstName: true,
+  lastName: true,
   avatarFile: { select: { path: true } },
 } as const;

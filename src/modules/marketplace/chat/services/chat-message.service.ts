@@ -191,7 +191,10 @@ export class ChatMessageService {
       'checkLeadTransition',
     );
 
-    const conversationInfo = this.buildConversationInfo(conversation);
+    const conversationInfo = this.buildConversationInfo({
+      ...conversation,
+      lead: conversation.lead ?? undefined,
+    });
     const primary: OutgoingChatMessage = {
       ...message,
       conversation: conversationInfo,

@@ -60,10 +60,10 @@ export class FilesActionService {
 
     try {
       if (userId && this.isImage(fileRecord.mimetype)) {
-        const master = await this.addToMasterGalleryIfPossible(
-          userId,
-          fileRecord.id,
-        );
+        const master =
+          options?.leadAttachmentOnly !== true
+            ? await this.addToMasterGalleryIfPossible(userId, fileRecord.id)
+            : null;
         if (master && !master.avatarFileId) {
           await this.prisma.master.update({
             where: { id: master.id },

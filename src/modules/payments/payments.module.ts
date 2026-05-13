@@ -11,9 +11,16 @@ import { PaymentsWebhookService } from './services/payments-webhook.service';
 import { PaymentsQueryService } from './services/payments-query.service';
 import { PaymentsUpgradeService } from './services/payments-upgrade.service';
 import { AuditModule } from '../audit/audit.module';
+import { JointsModule } from '../marketplace/joints/joints.module';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, TariffsModule, AuditModule],
+  imports: [
+    ConfigModule,
+    PrismaModule,
+    TariffsModule,
+    AuditModule,
+    JointsModule,
+  ],
   controllers: [
     PaymentsMiaController,
     PaymentsWebhookController,

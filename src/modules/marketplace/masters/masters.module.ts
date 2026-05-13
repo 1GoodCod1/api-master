@@ -12,6 +12,7 @@ import { NotificationsModule } from '../../notifications/notifications/notificat
 import { SearchController } from './search.controller';
 import { AuditModule } from '../../audit/audit.module';
 import { FilesModule } from '../../infrastructure/files/files.module';
+import { JointsModule } from '../joints/joints.module';
 import { MastersListingService } from './services/masters-listing.service';
 import { MastersSearchService } from './services/masters-search.service';
 import { MastersSearchSqlService } from './services/masters-search-sql.service';
@@ -41,6 +42,7 @@ import {
     NotificationsModule,
     AuditModule,
     FilesModule,
+    JointsModule,
   ],
   controllers: [
     MastersStatsController,

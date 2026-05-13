@@ -103,8 +103,18 @@ export class RegistrationService {
             totalReviews: 0,
             experienceYears: 0,
             tariffType: TariffType.BASIC,
+            jointsBalance: 20,
             views: 0,
             leadsCount: 0,
+          },
+        });
+
+        await tx.jointsTransaction.create({
+          data: {
+            masterId: newMaster.id,
+            amount: 20,
+            type: 'SUBSCRIPTION_CREDIT',
+            description: 'Welcome bonus — BASIC plan joints',
           },
         });
 

@@ -9,6 +9,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { ChatModule } from './chat/chat.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { JobsModule } from './jobs/jobs.module';
+import { JointsModule } from './joints/joints.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PromotionsModule } from './promotions/promotions.module';
     FavoritesModule,
     ChatModule,
     PromotionsModule,
+    JobsModule,
+    JointsModule,
   ],
 })
 export class MarketplaceGroupModule {}

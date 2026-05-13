@@ -160,6 +160,16 @@ export class AppErrorMessages {
     'Export is only available for PREMIUM tariff';
   static readonly JOB_NOT_FOUND_OR_EXPIRED = 'Job not found or expired';
   static readonly JOB_NOT_FOUND = 'Job not found';
+  static readonly JOB_ACCESS_DENIED = 'Access denied to this job';
+  static readonly JOB_NOT_OPEN = 'Job is not open for applications';
+  static readonly JOB_ALREADY_APPLIED = 'You have already applied to this job';
+  static readonly JOB_APPLICATION_NOT_FOUND = 'Application not found';
+  static readonly JOB_APPLICATION_ACCESS_DENIED =
+    'Access denied to this application';
+  static readonly JOB_APPLICATION_MIN_JOINTS =
+    'Joints spent must meet the minimum required by the client';
+  static readonly JOINTS_INSUFFICIENT = 'Insufficient joints balance';
+  static readonly JOINTS_AMOUNT_INVALID = 'Joints amount must be positive';
 
   // --- Notifications ---
   static readonly NOTIFICATION_NOT_FOUND = 'Notification not found';

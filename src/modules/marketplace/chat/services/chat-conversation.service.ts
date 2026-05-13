@@ -172,6 +172,8 @@ export class ChatConversationService {
   }
 
   async createConversation(dto: CreateConversationDto, user: ChatUser) {
+    if (!dto.leadId) throw AppErrors.badRequest('leadId is required');
+
     const leadId = decodeId(dto.leadId) || dto.leadId;
     const existing = await this.prisma.conversation.findUnique({
       where: { leadId },
@@ -229,6 +231,121 @@ export class ChatConversationService {
 
     this.logger.log(
       `Conversation created: ${conversation.id} for lead ${dto.leadId}`,
+    );
+
+    return conversation;
+  }
+
+  async getOrCreateJobConversation(jobId: string, user: ChatUser) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        clientId: true,
+        selectedApplication: { select: { masterId: true } },
+      },
+    });
+
+    if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
+
+    const clientId = job.clientId;
+    let masterId: string | null = job.selectedApplication?.masterId ?? null;
+
+    if (user.role === UserRole.MASTER) {
+      const masterProfile = await this.prisma.master.findUnique({
+        where: { userId: user.id },
+        select: { id: true },
+      });
+      if (!masterProfile)
+        throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_LEAD);
+
+      const selectedApp = await this.prisma.jobApplication.findFirst({
+        where: { jobId, masterId: masterProfile.id, status: 'SELECTED' },
+        select: { masterId: true },
+      });
+      if (!selectedApp)
+        throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_LEAD);
+      masterId = selectedApp.masterId;
+    }
+
+    if (!masterId) {
+      throw AppErrors.badRequest('No master selected for this job yet');
+    }
+
+    if (user.role === UserRole.CLIENT && user.id !== clientId) {
+      throw AppErrors.forbidden(AppErrorMessages.ACCESS_DENIED_LEAD);
+    }
+
+    const existing = await this.prisma.conversation.findUnique({
+      where: { masterId_clientId: { masterId, clientId } },
+      include: {
+        lead: { select: LEAD_SELECT_BASIC },
+        master: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
+            avatarFile: { select: { path: true } },
+          },
+        },
+        client: { select: CLIENT_SELECT_BASIC },
+      },
+    });
+    if (existing) {
+      // Reopen the conversation if it was previously closed (e.g. new job between same parties)
+      if (existing.closedAt) {
+        return this.prisma.conversation.update({
+          where: { id: existing.id },
+          data: { closedAt: null },
+          include: {
+            lead: { select: LEAD_SELECT_BASIC },
+            master: {
+              select: {
+                id: true,
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    avatarFile: { select: { path: true } },
+                  },
+                },
+                avatarFile: { select: { path: true } },
+              },
+            },
+            client: { select: CLIENT_SELECT_BASIC },
+          },
+        });
+      }
+      return existing;
+    }
+
+    const conversation = await this.prisma.conversation.create({
+      data: { masterId, clientId },
+      include: {
+        lead: { select: LEAD_SELECT_BASIC },
+        master: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                avatarFile: { select: { path: true } },
+              },
+            },
+            avatarFile: { select: { path: true } },
+          },
+        },
+        client: { select: CLIENT_SELECT_BASIC },
+      },
+    });
+
+    this.logger.log(
+      `Job conversation created: ${conversation.id} job=${jobId} master=${masterId} client=${clientId}`,
     );
 
     return conversation;

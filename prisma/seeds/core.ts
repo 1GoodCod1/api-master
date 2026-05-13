@@ -560,6 +560,7 @@ export async function seedTariffs(client: PrismaClient): Promise<void> {
       days: 0,
       description: 'Start and receive first leads',
       features: [
+        '20 joints / month',
         'Public profile',
         'Up to 5 photos',
         'Receive leads',
@@ -577,6 +578,7 @@ export async function seedTariffs(client: PrismaClient): Promise<void> {
       days: 30,
       description: 'More visibility, more clients',
       features: [
+        '100 joints / month',
         'VIP badge',
         'Higher in search results',
         'Portfolio (before/after)',
@@ -595,6 +597,7 @@ export async function seedTariffs(client: PrismaClient): Promise<void> {
       days: 30,
       description: 'Maximum exposure & leads',
       features: [
+        '200 joints / month',
         'Top positions in catalog',
         'Portfolio (before/after)',
         'Up to 15 photos',

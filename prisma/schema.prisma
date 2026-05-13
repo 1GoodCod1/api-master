@@ -79,6 +79,15 @@ enum NotificationCategory {
   NEW_PROMOTION
   PROMOTION_STARTED
 
+  // Jobs & Joints
+  JOB_APPLICATION_RECEIVED
+  JOB_APPLICATION_VIEWED
+  JOB_MASTER_SELECTED
+  JOB_NOT_SELECTED
+  JOB_STATUS_CHANGED
+  JOINTS_CREDITED
+  JOINTS_SPENT
+
   // System
   SYSTEM_MAINTENANCE
   SYSTEM_UPDATE
@@ -236,6 +245,7 @@ model User {
   emailDripStatuses               EmailDripStatus[]
   consents                        UserConsent[]
   oauthAccounts                   OAuthAccount[]
+  jobs                            Job[] @relation("ClientJobs")
 
   @@index([avatarFileId])
   @@index([phoneVerified])
@@ -318,6 +328,9 @@ model Master {
   promotions                Promotion[]
   quickReplies              QuickReply[]
   telegramConnectTokens     TelegramConnectToken[]
+  jobApplications           JobApplication[]
+  jointsTransactions        JointsTransaction[]
+  jointsBalance             Int                @default(0)
 
   @@index([cityId])
   @@index([categoryId])
@@ -481,6 +494,8 @@ model File {
   messageFiles         MessageFile[]
   portfolioBefore      PortfolioItem[]      @relation("PortfolioBefore")
   portfolioAfter       PortfolioItem[]      @relation("PortfolioAfter")
+  jobPhotos            JobPhoto[]           @relation("JobPhotos")
+  jobApplicationPhotos JobApplicationPhoto[] @relation("JobApplicationPhotos")
 
   @@index([mimetype])
   @@index([uploadedById])
@@ -518,6 +533,7 @@ model City {
   updatedAt    DateTime @updatedAt
 
   masters Master[]
+  jobs    Job[]   @relation("JobCity")
 
   @@map("cities")
 }
@@ -1004,7 +1020,7 @@ enum SenderType {
 
 model Conversation {
   id            String    @id @default(uuid())
-  leadId        String    @unique
+  leadId        String?   @unique
   masterId      String
   clientId      String?
   clientPhone   String?
@@ -1013,12 +1029,13 @@ model Conversation {
   updatedAt     DateTime  @updatedAt
   closedAt      DateTime?
 
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   master        Master    @relation(fields: [masterId], references: [id], onDelete: Cascade)
   client        User?     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: SetNull)
 
   messages      Message[]
 
+  @@unique([masterId, clientId])
   @@index([masterId])
   @@index([clientId])
   @@index([leadId])
@@ -1262,4 +1279,145 @@ model OAuthAccount {
   @@unique([provider, providerId])
   @@index([userId])
   @@map("oauth_accounts")
+}
+
+// ============================================
+// JOBS (Upwork-style job board)
+// ============================================
+
+enum JobType {
+  FIXED_PRICE
+  HOURLY
+}
+
+enum JobStatus {
+  OPEN
+  FOUND
+  PENDING_CLOSE
+  CLOSED
+}
+
+enum ApplicationPaymentType {
+  FULL
+  PARTIAL
+}
+
+enum ApplicationStatus {
+  PENDING
+  SELECTED
+  REJECTED
+}
+
+enum JointsTransactionType {
+  SUBSCRIPTION_CREDIT
+  PURCHASE
+  APPLICATION_SPEND
+  REFUND
+}
+
+model Job {
+  id                    String     @id @default(uuid())
+  clientId              String
+  cityId                String?
+  title                 String     @db.VarChar(200)
+  description           String     @db.VarChar(3000)
+  type                  JobType
+  budget                Decimal?
+  hourlyRate            Decimal?
+  minJoints             Int        @default(1)
+  status                JobStatus  @default(OPEN)
+  selectedApplicationId String?    @unique
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  client              User               @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  city                City?              @relation("JobCity", fields: [cityId], references: [id], onDelete: SetNull)
+  photos              JobPhoto[]
+  applications        JobApplication[]
+  selectedApplication JobApplication?    @relation("SelectedApplication", fields: [selectedApplicationId], references: [id])
+
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([cityId])
+  @@index([createdAt])
+  @@index([clientId, status, createdAt])
+  @@map("jobs")
+}
+
+model JobPhoto {
+  id        String   @id @default(uuid())
+  jobId     String
+  fileId    String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  file File @relation("JobPhotos", fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([jobId, order])
+  @@map("job_photos")
+}
+
+model JobApplication {
+  id           String                 @id @default(uuid())
+  jobId        String
+  masterId     String
+  jointsSpent  Int
+  description  String                 @db.VarChar(3000)
+  paymentType  ApplicationPaymentType
+  deadline     Int?
+  milestones   Json?
+  status       ApplicationStatus      @default(PENDING)
+  viewedAt     DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  job        Job                    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  master     Master                 @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  photos     JobApplicationPhoto[]
+  selectedForJob Job?               @relation("SelectedApplication")
+
+  @@unique([jobId, masterId])
+  @@index([jobId])
+  @@index([masterId])
+  @@index([jobId, jointsSpent])
+  @@index([status])
+  @@index([createdAt])
+  @@map("job_applications")
+}
+
+model JobApplicationPhoto {
+  id            String   @id @default(uuid())
+  applicationId String
+  fileId        String
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  file        File           @relation("JobApplicationPhotos", fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([applicationId, order])
+  @@map("job_application_photos")
+}
+
+model JointsTransaction {
+  id            String                @id @default(uuid())
+  masterId      String
+  amount        Int
+  type          JointsTransactionType
+  description   String?
+  applicationId String?
+  paymentId     String?
+  createdAt     DateTime              @default(now())
+
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+
+  @@index([masterId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([masterId, createdAt])
+  @@map("joints_transactions")
 }

@@ -53,6 +53,7 @@ describe('PaymentsWebhookService', () => {
       notificationEvents,
       cache,
       auditService as never,
+      { creditSubscription: jest.fn().mockResolvedValue(undefined) } as never,
     );
   });
 
