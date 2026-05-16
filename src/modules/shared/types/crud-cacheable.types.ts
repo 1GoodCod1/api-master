@@ -7,7 +7,7 @@ export interface CrudCacheableEntityConfig<
   TCreateDto,
   TUpdateDto,
 > {
-  /** Имя для логов (например CitiesActionService) */
+  /** Имя для логов */
   entityName: string;
   /** Единственное число для текстов ошибок на англ. (city, category) */
   entityNameSingular: string;

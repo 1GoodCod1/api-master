@@ -519,6 +519,7 @@ model Category {
   updatedAt    DateTime @updatedAt
 
   masters Master[]
+  jobs    Job[]   @relation("JobCategory")
 
   @@map("categories")
 }
@@ -1319,6 +1320,7 @@ model Job {
   id                    String     @id @default(uuid())
   clientId              String
   cityId                String?
+  categoryId            String?
   title                 String     @db.VarChar(200)
   description           String     @db.VarChar(3000)
   type                  JobType
@@ -1332,6 +1334,7 @@ model Job {
 
   client              User               @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
   city                City?              @relation("JobCity", fields: [cityId], references: [id], onDelete: SetNull)
+  category            Category?          @relation("JobCategory", fields: [categoryId], references: [id], onDelete: SetNull)
   photos              JobPhoto[]
   applications        JobApplication[]
   selectedApplication JobApplication?    @relation("SelectedApplication", fields: [selectedApplicationId], references: [id])
@@ -1340,6 +1343,7 @@ model Job {
   @@index([status])
   @@index([type])
   @@index([cityId])
+  @@index([categoryId])
   @@index([createdAt])
   @@index([clientId, status, createdAt])
   @@map("jobs")

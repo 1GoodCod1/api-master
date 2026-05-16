@@ -6,7 +6,7 @@ export interface SMSJobData {
   options?: {
     priority?: 'low' | 'normal' | 'high';
     retry?: boolean;
-    quietHours?: boolean; // Учитывать тихие часы
+    quietHours?: boolean;
   };
 }
 
@@ -34,5 +34,4 @@ export interface NotificationData {
   priority?: 'low' | 'normal' | 'high';
 }
 
-// Тип для общего job
 export type JobData = SMSJobData | TelegramJobData;

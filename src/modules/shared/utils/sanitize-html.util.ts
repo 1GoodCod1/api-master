@@ -5,9 +5,9 @@ import sanitizeHtml from 'sanitize-html';
  * Используется для пользовательского контента (комментарии, описания, сообщения)
  */
 const STRICT_CONFIG: sanitizeHtml.IOptions = {
-  allowedTags: [], // Не разрешаем никакие HTML теги
-  allowedAttributes: {}, // Не разрешаем никакие атрибуты
-  disallowedTagsMode: 'recursiveEscape', // Экранируем запрещенные теги вместо удаления
+  allowedTags: [],
+  allowedAttributes: {},
+  disallowedTagsMode: 'recursiveEscape',
 };
 
 /**

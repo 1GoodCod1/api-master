@@ -1,6 +1,6 @@
 export interface CacheOptions {
-  ttl?: number; // Time to live in seconds
-  prefix?: string; // Key prefix
+  ttl?: number;
+  prefix?: string;
 }
 
 /**
@@ -32,7 +32,6 @@ export interface CacheKeyBuilders {
     limit: number,
     status?: string,
   ) => string;
-  /** Reviews written by a client (user id), for client dashboard / my-reviews */
   clientWrittenReviews: (
     userId: string,
     page: number,

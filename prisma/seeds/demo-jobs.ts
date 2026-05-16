@@ -118,7 +118,7 @@ export async function seedDemoJobs(client: PrismaClient): Promise<void> {
       title: `${DEMO_JOB_PREFIX}${pick(JOB_TITLES_FIXED)}`,
       description: pick(JOB_DESCRIPTIONS_FIXED),
       type: 'FIXED_PRICE',
-      budget: (randomInt(5, 51) * 100) as number,
+      budget: randomInt(5, 51) * 100,
       minJoints: pick([3, 5, 10, 15, 20]),
       cityId,
       status: 'OPEN',
@@ -153,7 +153,7 @@ export async function seedDemoJobs(client: PrismaClient): Promise<void> {
       description: pick(JOB_DESCRIPTIONS_FIXED),
       type: isFixed ? 'FIXED_PRICE' : 'HOURLY',
       ...(isFixed
-        ? { budget: (randomInt(3, 21) * 100) as number }
+        ? { budget: randomInt(3, 21) * 100 }
         : { hourlyRate: pick([100, 120, 150]) }),
       minJoints: pick([5, 10]),
       cityId: pickOpt(cityIds, 60),
@@ -170,7 +170,7 @@ export async function seedDemoJobs(client: PrismaClient): Promise<void> {
       title: `${DEMO_JOB_PREFIX}${pick(JOB_TITLES_FIXED)}`,
       description: pick(JOB_DESCRIPTIONS_FIXED),
       type: 'FIXED_PRICE',
-      budget: (randomInt(2, 16) * 100) as number,
+      budget: randomInt(2, 16) * 100,
       minJoints: 5,
       cityId: pickOpt(cityIds, 50),
       status: 'CLOSED',

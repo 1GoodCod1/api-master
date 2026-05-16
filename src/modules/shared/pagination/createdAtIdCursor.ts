@@ -9,7 +9,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 export function encodeCreatedAtIdCursor(cursor: CreatedAtIdCursor): string {
   const json = JSON.stringify(cursor);
-  // Node поддерживает base64url — токен URL-safe без лишнего экранирования.
   return Buffer.from(json, 'utf8').toString('base64url');
 }
 
@@ -37,7 +36,6 @@ export function buildCreatedAtIdCursorWhereDesc<
   TWhere extends Record<string, unknown>,
 >(where: TWhere, cursor: CreatedAtIdCursor): TWhere {
   const dt = new Date(cursor.createdAt);
-  // Равенство createdAt в SQL допустимо; id — развязка для стабильного порядка
   return {
     AND: [
       where,

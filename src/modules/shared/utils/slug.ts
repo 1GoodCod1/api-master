@@ -8,7 +8,6 @@ export function generateSlug(text: string): string {
     text
       .toLowerCase()
       .trim()
-      // Заменяем кириллицу на латиницу
       .replace(/[а-яё]/g, (char) => {
         const map: Record<string, string> = {
           а: 'a',
@@ -47,11 +46,8 @@ export function generateSlug(text: string): string {
         };
         return map[char] || char;
       })
-      // Заменяем все не-латинские символы и пробелы на дефисы
       .replace(/[^a-z0-9]+/g, '-')
-      // Удаляем дефисы в начале и конце
       .replace(/^-+|-+$/g, '')
-      // Ограничиваем длину
       .slice(0, 100)
   );
 }

@@ -5,10 +5,6 @@ import type { CrudCacheableEntityConfig } from '../types/crud-cacheable.types';
 
 export type { CrudCacheableEntityConfig };
 
-/**
- * Базовый CRUD для сущностей с кешем (города, категории).
- * Убирает дублирование между CitiesActionService и CategoriesActionService.
- */
 @Injectable()
 export abstract class CrudCacheableEntityActionService<
   TEntity extends { id: string; isActive?: boolean },

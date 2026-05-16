@@ -1,6 +1,3 @@
-/**
- * Минимальный интерфейс для извлечения IP и User-Agent из HTTP-запроса.
- */
 export type RequestLike = {
   ip?: string;
   headers?: Record<string, string | string[] | undefined>;

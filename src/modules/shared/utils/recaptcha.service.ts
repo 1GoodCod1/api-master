@@ -7,7 +7,7 @@ import type { RecaptchaVerifyResponse } from '../types';
 export class RecaptchaService {
   private readonly logger = new Logger(RecaptchaService.name);
   private readonly secretKey: string;
-  private readonly minScore = 0.5; // Минимальный score для прохождения (0.0 - 1.0)
+  private readonly minScore = 0.5;
 
   constructor(private readonly configService: ConfigService) {
     this.secretKey =
@@ -18,7 +18,6 @@ export class RecaptchaService {
    * Верифицировать reCAPTCHA токен
    */
   async verifyToken(token: string, action?: string): Promise<boolean> {
-    // В development режиме пропускаем проверку
     if (
       this.configService.get<string>('NODE_ENV') === 'development' &&
       !this.secretKey
@@ -29,7 +28,7 @@ export class RecaptchaService {
 
     if (!this.secretKey) {
       this.logger.warn('Secret key not configured — verification skipped');
-      return true; // Не блокируем если не настроен
+      return true;
     }
 
     if (!token) {
@@ -59,13 +58,10 @@ export class RecaptchaService {
         );
       }
 
-      // Проверяем score (для v3)
       if (data.score !== undefined && data.score < this.minScore) {
         this.logger.warn(`Score too low: ${data.score}`);
         throw AppErrors.badRequest(AppErrorMessages.RECAPTCHA_SUSPICIOUS);
       }
-
-      // Проверяем action (опционально)
       if (action && data.action !== action) {
         this.logger.warn(
           `Action mismatch: expected ${action}, got ${data.action}`,

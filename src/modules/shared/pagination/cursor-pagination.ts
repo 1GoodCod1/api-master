@@ -166,11 +166,9 @@ export function buildCursorQuery(
   const orderBy = cursorOrderBy(order);
 
   if (usedCursor) {
-    // Берём limit+1, чтобы узнать hasMore
     return { where, orderBy, take: limit + 1, usedCursor };
   }
 
-  // Первая страница или без курсора — offset
   const pageNum = Math.max(1, Number(page) || 1);
   return {
     where,

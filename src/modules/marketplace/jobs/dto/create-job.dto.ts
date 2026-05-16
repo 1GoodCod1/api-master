@@ -79,6 +79,15 @@ export class CreateJobDto {
   @IsString()
   cityId?: string;
 
+  @ApiProperty({
+    required: true,
+    description:
+      'Category ID — used for matching with masters and ranking in "best matches".',
+  })
+  @IsString()
+  @IsNotEmpty()
+  categoryId: string;
+
   @ApiProperty({ required: false, type: [String], maxItems: 10 })
   @IsArray()
   @ArrayMaxSize(10)

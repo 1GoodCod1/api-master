@@ -36,6 +36,16 @@ export class QueryJobsDto {
   @Transform(({ value }) => value === 'true' || value === true)
   recommended?: boolean;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'Client only: return only jobs owned by the current user (dashboard view). Default is false — clients see all open jobs on the public marketplace.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  mine?: boolean;
+
   @ApiProperty({ required: false, default: 1, minimum: 1 })
   @IsOptional()
   @IsNumber()

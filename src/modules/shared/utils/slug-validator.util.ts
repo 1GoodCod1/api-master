@@ -1,9 +1,4 @@
 /**
- * Утилита для безопасной валидации slug и ID параметров из URL
- * Защищает от Reflected XSS и Path Traversal атак
- */
-
-/**
  * Валидирует slug - разрешены только буквы, цифры, дефисы и подчеркивания
  *
  * @param slug - Slug для валидации
@@ -19,8 +14,6 @@ export function validateSlug(slug: string | undefined | null): string | null {
     return null;
   }
 
-  // Разрешаем только буквы (латиница + кириллица), цифры, дефисы и подчеркивания
-  // Длина от 1 до 200 символов
   const slugPattern = /^[\p{L}\d_-]{1,200}$/u;
 
   if (!slugPattern.test(slug)) {
@@ -86,8 +79,6 @@ export function validateId(id: string | undefined | null): boolean {
   if (!id || typeof id !== 'string') {
     return false;
   }
-
-  // Проверяем различные форматы ID
   return validateUUID(id) || validateCUID(id) || /^\d+$/.test(id);
 }
 
