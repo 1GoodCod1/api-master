@@ -38,6 +38,7 @@ export class JobsQueryService {
       status,
       type,
       cityId,
+      categoryId,
       recommended,
       mine,
       page = 1,
@@ -71,6 +72,7 @@ export class JobsQueryService {
     }
 
     if (cityId) where.cityId = cityId;
+    if (categoryId) where.categoryId = categoryId;
 
     if (recommended && user?.role === UserRole.MASTER) {
       const master = await this.prisma.master.findUnique({
@@ -101,6 +103,7 @@ export class JobsQueryService {
       const filters: Prisma.Sql[] = [Prisma.sql`status = 'OPEN'::"JobStatus"`];
       if (type) filters.push(Prisma.sql`type = ${type}::"JobType"`);
       if (cityId) filters.push(Prisma.sql`"cityId" = ${cityId}`);
+      if (categoryId) filters.push(Prisma.sql`"categoryId" = ${categoryId}`);
       if (searchPattern)
         filters.push(
           Prisma.sql`(title ILIKE ${searchPattern} OR description ILIKE ${searchPattern})`,

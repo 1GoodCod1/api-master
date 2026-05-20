@@ -2,82 +2,262 @@ import type { PrismaClient } from '@prisma/client';
 import { randomInt } from 'crypto';
 
 const DEMO_JOB_PREFIX = 'seed-job-';
+const DEMO_EMAIL_PREFIX = 'seed-demo-';
 
-const JOB_TITLES_FIXED: string[] = [
-  'Замена труб в ванной комнате',
-  'Укладка плитки на кухне',
-  'Ремонт электрической проводки',
-  'Покраска стен в 2-комнатной квартире',
-  'Установка кондиционера сплит-системы',
-  'Сборка кухонного гарнитура',
-  'Монтаж натяжного потолка',
-  'Замена окон на пластиковые ПВХ',
-  'Ремонт стиральной машины',
-  'Установка входной двери',
-  'Поклейка обоев в спальне',
-  'Укладка ламината в гостиной',
-  'Установка видеонаблюдения',
-  'Ремонт ванной под ключ',
+type JobType = 'FIXED_PRICE' | 'HOURLY';
+type JobStatus = 'OPEN' | 'FOUND' | 'CLOSED';
+
+type JobTemplate = {
+  title: string;
+  categorySlug: string;
+  type: JobType;
+  budget?: number;
+  hourlyRate?: number;
+  minJoints: number;
+  status: JobStatus;
+};
+
+/** Titluri + categorii aliniate la seed-ul din core.ts și la CreateJobDto (categoryId obligatoriu). */
+const JOB_TEMPLATES: JobTemplate[] = [
+  // OPEN — preț fix
+  {
+    title: 'Reparație iPhone 13 — schimb ecran',
+    categorySlug: 'remont-telefonov-pk',
+    type: 'FIXED_PRICE',
+    budget: 1200,
+    minJoints: 10,
+    status: 'OPEN',
+  },
+  {
+    title: 'Conexiune mașină de spălat',
+    categorySlug: 'bytovaya-tehnika',
+    type: 'FIXED_PRICE',
+    budget: 450,
+    minJoints: 5,
+    status: 'OPEN',
+  },
+  {
+    title: 'Înlocuire țevi baie',
+    categorySlug: 'santehnika',
+    type: 'FIXED_PRICE',
+    budget: 2800,
+    minJoints: 15,
+    status: 'OPEN',
+  },
+  {
+    title: 'Montaj plăci bucătărie',
+    categorySlug: 'plitka',
+    type: 'FIXED_PRICE',
+    budget: 3500,
+    minJoints: 20,
+    status: 'OPEN',
+  },
+  {
+    title: 'Reparație instalație electrică',
+    categorySlug: 'elektrika',
+    type: 'FIXED_PRICE',
+    budget: 1800,
+    minJoints: 10,
+    status: 'OPEN',
+  },
+  {
+    title: 'Vopsire pereți apartament 2 camere',
+    categorySlug: 'otdelochnye-raboty',
+    type: 'FIXED_PRICE',
+    budget: 4200,
+    minJoints: 15,
+    status: 'OPEN',
+  },
+  {
+    title: 'Instalare aer condiționat split',
+    categorySlug: 'kondicionery-otoplenie',
+    type: 'FIXED_PRICE',
+    budget: 1500,
+    minJoints: 10,
+    status: 'OPEN',
+  },
+  {
+    title: 'Montaj mobilier bucătărie',
+    categorySlug: 'mebel',
+    type: 'FIXED_PRICE',
+    budget: 2200,
+    minJoints: 12,
+    status: 'OPEN',
+  },
+  {
+    title: 'Site vitrină pentru afacere mică',
+    categorySlug: 'it-dezvoltare',
+    type: 'FIXED_PRICE',
+    budget: 8000,
+    minJoints: 25,
+    status: 'OPEN',
+  },
+  {
+    title: 'Instalare camere video',
+    categorySlug: 'internet',
+    type: 'FIXED_PRICE',
+    budget: 1900,
+    minJoints: 10,
+    status: 'OPEN',
+  },
+  // OPEN — orar
+  {
+    title: 'Meditații matematică liceu',
+    categorySlug: 'master-na-chas',
+    type: 'HOURLY',
+    hourlyRate: 150,
+    minJoints: 5,
+    status: 'OPEN',
+  },
+  {
+    title: 'Antrenor personal acasă',
+    categorySlug: 'antrenori-fitness',
+    type: 'HOURLY',
+    hourlyRate: 200,
+    minJoints: 8,
+    status: 'OPEN',
+  },
+  {
+    title: 'Dezvoltare landing page',
+    categorySlug: 'it-dezvoltare',
+    type: 'HOURLY',
+    hourlyRate: 250,
+    minJoints: 15,
+    status: 'OPEN',
+  },
+  {
+    title: 'Curățenie birou (2× pe săptămână)',
+    categorySlug: 'uborka',
+    type: 'HOURLY',
+    hourlyRate: 120,
+    minJoints: 5,
+    status: 'OPEN',
+  },
+  {
+    title: 'Ședință foto în aer liber',
+    categorySlug: 'foto-video',
+    type: 'HOURLY',
+    hourlyRate: 180,
+    minJoints: 8,
+    status: 'OPEN',
+  },
+  {
+    title: 'Promovare SEO magazin online',
+    categorySlug: 'smm-marketing',
+    type: 'HOURLY',
+    hourlyRate: 220,
+    minJoints: 12,
+    status: 'OPEN',
+  },
+  // FOUND / CLOSED — fără aplicații demo (status închis)
+  {
+    title: 'Renovare baie la cheie',
+    categorySlug: 'santehnika',
+    type: 'FIXED_PRICE',
+    budget: 12000,
+    minJoints: 30,
+    status: 'FOUND',
+  },
+  {
+    title: 'Montaj tavan extensibil',
+    categorySlug: 'otdelochnye-raboty',
+    type: 'FIXED_PRICE',
+    budget: 2400,
+    minJoints: 12,
+    status: 'FOUND',
+  },
+  {
+    title: 'Mutare apartament 2 camere',
+    categorySlug: 'pereezdy',
+    type: 'FIXED_PRICE',
+    budget: 1600,
+    minJoints: 10,
+    status: 'FOUND',
+  },
+  {
+    title: 'Design logo și identitate vizuală',
+    categorySlug: 'design-grafic',
+    type: 'FIXED_PRICE',
+    budget: 3000,
+    minJoints: 15,
+    status: 'FOUND',
+  },
+  {
+    title: 'Înlocuire geamuri PVC',
+    categorySlug: 'okna-dveri',
+    type: 'FIXED_PRICE',
+    budget: 5100,
+    minJoints: 20,
+    status: 'CLOSED',
+  },
+  {
+    title: 'Service auto — schimb ulei',
+    categorySlug: 'avto',
+    type: 'FIXED_PRICE',
+    budget: 600,
+    minJoints: 5,
+    status: 'CLOSED',
+  },
+  {
+    title: 'Montaj panouri solare',
+    categorySlug: 'panouri-solare',
+    type: 'FIXED_PRICE',
+    budget: 18500,
+    minJoints: 40,
+    status: 'CLOSED',
+  },
 ];
 
-const JOB_TITLES_HOURLY: string[] = [
-  'Репетитор по математике для школьника',
-  'Персональный тренер (выезд на дом)',
-  'Разработка сайта-визитки',
-  'Настройка 1С для бухгалтерии',
-  'Помощь с переездом и упаковкой вещей',
-  'Уборка офиса (2–3 раза в неделю)',
-  'Выгул собаки каждый день утром',
-  'Фотосессия на природе',
-  'Ремонт ноутбука или ПК',
-  'SEO-продвижение интернет-магазина',
-];
+const CITIES_RO = ['Chișinău', 'Bălți', 'Cahul', 'Orhei', 'Ungheni', 'Soroca'] as const;
 
-const JOB_DESCRIPTIONS_FIXED: string[] = [
-  'Нужен опытный мастер. Работу выполнить аккуратно, без мусора после себя. Всё необходимое можем обсудить заранее.',
-  'Ищем профессионала с гарантией на работу. Объём небольшой, но требования к качеству высокие.',
-  'Срочно! Нужно сделать до конца недели. Готовы договориться по цене с хорошим мастером.',
-  'Квартира после ремонта, нужна финальная отделка. Смета обязательна, работы с чеком.',
-  'Частный дом, площадь небольшая. Нужен человек с инструментом и опытом аналогичных работ.',
-  'Сделали попытку сами — не вышло. Ищем мастера исправить и довести до конца.',
-  'Нужна консультация и выезд для оценки, затем работа. Предпочтительно в выходные.',
-];
+const APPLICATION_DESCRIPTIONS = [
+  'Pot prelua lucrarea în următoarele 2–3 zile. Am experiență similară și pot trimite referințe.',
+  'Bună ziua! Am instrumentele necesare și pot veni pentru evaluare mâine.',
+  'Ofertă serioasă — lucrez curat, cu garanție pe manoperă.',
+  'Disponibil și în weekend. Prețul poate fi discutat după vizită.',
+] as const;
 
-const JOB_DESCRIPTIONS_HOURLY: string[] = [
-  'Ищу специалиста для постоянного сотрудничества. Оплата почасовая, возможно увеличение часов.',
-  'Небольшой проект на несколько недель. Гибкий график, работа в основном удалённо или с выездом.',
-  'Нужна помощь 2–3 раза в неделю. Пунктуальность и ответственность обязательны.',
-  'Задача разовая, но с продолжением если всё пойдёт хорошо. Опишите опыт при отклике.',
-  'Частное лицо ищет помощника с практическим опытом. Официальное оформление по договорённости.',
-];
-
-const CITIES_RO = ['Chișinău', 'Bălți', 'Cahul', 'Orhei', 'Ungheni', 'Soroca'];
-
-function pick<T>(arr: T[]): T {
+function pick<T>(arr: readonly T[]): T {
   const el = arr[randomInt(arr.length)];
   if (el === undefined) throw new Error('pick: empty array');
   return el;
 }
 
-function pickOpt<T>(arr: T[], chancePercent = 60): T | undefined {
+function pickOpt<T>(arr: readonly T[], chancePercent = 60): T | undefined {
   return randomInt(100) < chancePercent ? pick(arr) : undefined;
+}
+
+function staggerCreatedAt(index: number, total: number): Date {
+  const minutesAgo = 15 + Math.floor((index / Math.max(total, 1)) * 180) + randomInt(0, 45);
+  return new Date(Date.now() - minutesAgo * 60_000);
 }
 
 export async function seedDemoJobs(client: PrismaClient): Promise<void> {
   console.log('💼 Demo jobs: cleaning previous seed jobs...');
 
-  await client.job.deleteMany({
-    where: { title: { startsWith: DEMO_JOB_PREFIX } },
-  });
+  const seedJobIds = (
+    await client.job.findMany({
+      where: { title: { startsWith: DEMO_JOB_PREFIX } },
+      select: { id: true },
+    })
+  ).map((j) => j.id);
 
-  // Find existing demo clients
+  if (seedJobIds.length > 0) {
+    await client.jobApplication.deleteMany({
+      where: { jobId: { in: seedJobIds } },
+    });
+    await client.job.deleteMany({
+      where: { id: { in: seedJobIds } },
+    });
+  }
+
   const clientUsers = await client.user.findMany({
     where: {
       role: 'CLIENT',
-      email: { startsWith: 'seed-demo-' },
+      email: { startsWith: DEMO_EMAIL_PREFIX },
     },
     select: { id: true },
-    take: 20,
+    take: 30,
   });
 
   if (clientUsers.length === 0) {
@@ -85,117 +265,182 @@ export async function seedDemoJobs(client: PrismaClient): Promise<void> {
     return;
   }
 
+  const categories = await client.category.findMany({
+    where: { isActive: true },
+    select: { id: true, slug: true },
+  });
+  const categoryIdBySlug = new Map(categories.map((c) => [c.slug, c.id]));
+  const fallbackCategoryId = categories[0]?.id;
+
+  if (!fallbackCategoryId) {
+    console.warn('⚠️  No categories in DB — run core seed first');
+    return;
+  }
+
+  const missingSlugs = [
+    ...new Set(
+      JOB_TEMPLATES.map((t) => t.categorySlug).filter((s) => !categoryIdBySlug.has(s)),
+    ),
+  ];
+  if (missingSlugs.length > 0) {
+    console.warn(
+      `⚠️  Job seed: missing category slugs (will use fallback): ${missingSlugs.join(', ')}`,
+    );
+  }
+
   const cities = await client.city.findMany({
     where: { isActive: true },
     select: { id: true, name: true },
   });
-
   const cityIdByName = new Map(cities.map((c) => [c.name, c.id]));
   const cityIds = cities.map((c) => c.id);
 
-  const jobs: {
-    clientId: string;
-    title: string;
-    description: string;
-    type: 'FIXED_PRICE' | 'HOURLY';
-    budget?: number;
-    hourlyRate?: number;
-    minJoints: number;
-    cityId?: string;
-    status: 'OPEN' | 'FOUND' | 'CLOSED';
-  }[] = [];
-
-  // OPEN fixed-price jobs
-  for (let i = 0; i < 8; i++) {
-    const cl = pick(clientUsers);
-    const cityName = pickOpt(CITIES_RO, 70);
-    const cityId = cityName
-      ? (cityIdByName.get(cityName) ?? pickOpt(cityIds, 60))
-      : pickOpt(cityIds, 40);
-
-    jobs.push({
-      clientId: cl.id,
-      title: `${DEMO_JOB_PREFIX}${pick(JOB_TITLES_FIXED)}`,
-      description: pick(JOB_DESCRIPTIONS_FIXED),
-      type: 'FIXED_PRICE',
-      budget: randomInt(5, 51) * 100,
-      minJoints: pick([3, 5, 10, 15, 20]),
-      cityId,
-      status: 'OPEN',
-    });
-  }
-
-  // OPEN hourly jobs
-  for (let i = 0; i < 6; i++) {
-    const cl = pick(clientUsers);
-    const cityId = pickOpt(cityIds, 50);
-
-    jobs.push({
-      clientId: cl.id,
-      title: `${DEMO_JOB_PREFIX}${pick(JOB_TITLES_HOURLY)}`,
-      description: pick(JOB_DESCRIPTIONS_HOURLY),
-      type: 'HOURLY',
-      hourlyRate: pick([80, 100, 120, 150, 180, 200, 250]),
-      minJoints: pick([3, 5, 10]),
-      cityId,
-      status: 'OPEN',
-    });
-  }
-
-  // FOUND jobs (master selected)
-  for (let i = 0; i < 4; i++) {
-    const cl = pick(clientUsers);
-    const isFixed = randomInt(2) === 0;
-
-    jobs.push({
-      clientId: cl.id,
-      title: `${DEMO_JOB_PREFIX}${isFixed ? pick(JOB_TITLES_FIXED) : pick(JOB_TITLES_HOURLY)}`,
-      description: pick(JOB_DESCRIPTIONS_FIXED),
-      type: isFixed ? 'FIXED_PRICE' : 'HOURLY',
-      ...(isFixed
-        ? { budget: randomInt(3, 21) * 100 }
-        : { hourlyRate: pick([100, 120, 150]) }),
-      minJoints: pick([5, 10]),
-      cityId: pickOpt(cityIds, 60),
-      status: 'FOUND',
-    });
-  }
-
-  // CLOSED jobs
-  for (let i = 0; i < 3; i++) {
-    const cl = pick(clientUsers);
-
-    jobs.push({
-      clientId: cl.id,
-      title: `${DEMO_JOB_PREFIX}${pick(JOB_TITLES_FIXED)}`,
-      description: pick(JOB_DESCRIPTIONS_FIXED),
-      type: 'FIXED_PRICE',
-      budget: randomInt(2, 16) * 100,
-      minJoints: 5,
-      cityId: pickOpt(cityIds, 50),
-      status: 'CLOSED',
-    });
-  }
+  const masters = await client.master.findMany({
+    where: {
+      user: { email: { startsWith: DEMO_EMAIL_PREFIX } },
+    },
+    select: { id: true, categoryId: true },
+  });
 
   let created = 0;
-  for (const job of jobs) {
-    await client.job.create({
+  let applicationsCreated = 0;
+  const openJobIds: string[] = [];
+
+  for (let i = 0; i < JOB_TEMPLATES.length; i++) {
+    const tpl = JOB_TEMPLATES[i];
+    const categoryId =
+      categoryIdBySlug.get(tpl.categorySlug) ?? fallbackCategoryId;
+    const cityName = pickOpt(CITIES_RO, 75);
+    const cityId = cityName
+      ? (cityIdByName.get(cityName) ?? pickOpt(cityIds, 50))
+      : pickOpt(cityIds, 40);
+
+    const job = await client.job.create({
       data: {
-        clientId: job.clientId,
-        title: job.title,
-        description: job.description,
-        type: job.type,
-        budget: job.budget ?? null,
-        hourlyRate: job.hourlyRate ?? null,
-        minJoints: job.minJoints,
-        cityId: job.cityId ?? null,
-        status: job.status as never,
+        clientId: pick(clientUsers).id,
+        title: `${DEMO_JOB_PREFIX}${tpl.title}`,
+        description:
+          'Lucrare demo Faber. Descriere scurtă pentru testarea listei de joburi pe homepage.',
+        type: tpl.type,
+        budget: tpl.type === 'FIXED_PRICE' ? (tpl.budget ?? null) : null,
+        hourlyRate: tpl.type === 'HOURLY' ? (tpl.hourlyRate ?? null) : null,
+        minJoints: tpl.minJoints,
+        cityId: cityId ?? null,
+        categoryId,
+        status: tpl.status,
+        createdAt: staggerCreatedAt(i, JOB_TEMPLATES.length),
       },
     });
     created++;
+
+    if (tpl.status === 'OPEN') {
+      openJobIds.push(job.id);
+    }
   }
 
-  console.log(
-    `✅ Demo jobs seeded: ${created} jobs (8 OPEN fixed, 6 OPEN hourly, 4 FOUND, 3 CLOSED)`,
+  // Oferte demo pe joburi OPEN (pentru „X oferte” pe homepage)
+  for (const jobId of openJobIds) {
+    const job = await client.job.findUnique({
+      where: { id: jobId },
+      select: { id: true, categoryId: true, minJoints: true },
+    });
+    if (!job?.categoryId) continue;
+
+    const matchingMasters = masters.filter((m) => m.categoryId === job.categoryId);
+    const pool =
+      matchingMasters.length >= 2
+        ? matchingMasters
+        : masters.length > 0
+          ? masters
+          : [];
+
+    const appCount = randomInt(1, Math.min(5, pool.length + 1));
+    const usedMasterIds = new Set<string>();
+
+    for (let a = 0; a < appCount && pool.length > 0; a++) {
+      let master = pick(pool);
+      let guard = 0;
+      while (usedMasterIds.has(master.id) && guard++ < 20) {
+        master = pick(pool);
+      }
+      if (usedMasterIds.has(master.id)) continue;
+      usedMasterIds.add(master.id);
+
+      const jointsSpent = job.minJoints + randomInt(0, 15);
+
+      try {
+        await client.jobApplication.create({
+          data: {
+            jobId: job.id,
+            masterId: master.id,
+            jointsSpent,
+            description: pick(APPLICATION_DESCRIPTIONS),
+            paymentType: 'FULL',
+            status: 'PENDING',
+          },
+        });
+        applicationsCreated++;
+      } catch {
+        // unique (jobId, masterId) — skip duplicate
+      }
+    }
+  }
+
+  const openCount = JOB_TEMPLATES.filter((t) => t.status === 'OPEN').length;
+  const backfilled = await backfillJobsMissingCategory(
+    client,
+    categoryIdBySlug,
+    fallbackCategoryId,
   );
+
+  console.log(
+    `✅ Demo jobs seeded: ${created} jobs (${openCount} OPEN with categoryId), ${applicationsCreated} applications` +
+      (backfilled > 0 ? `, backfilled ${backfilled} jobs without category` : ''),
+  );
+}
+
+/** Joburi vechi din DB (înainte de categoryId) — aliniere la categorii din seed. */
+async function backfillJobsMissingCategory(
+  client: PrismaClient,
+  categoryIdBySlug: Map<string, string>,
+  fallbackCategoryId: string,
+): Promise<number> {
+  const orphans = await client.job.findMany({
+    where: { categoryId: null },
+    select: { id: true, title: true },
+  });
+  if (orphans.length === 0) return 0;
+
+  const rules: { pattern: RegExp; slug: string }[] = [
+    { pattern: /iphone|telefon|pc|laptop|reparație.*ecran/i, slug: 'remont-telefonov-pk' },
+    { pattern: /spălat|masina de spălat|electrocasnic/i, slug: 'bytovaya-tehnika' },
+    { pattern: /țevi|sanitar|baie/i, slug: 'santehnika' },
+    { pattern: /plăci|plitka/i, slug: 'plitka' },
+    { pattern: /electric/i, slug: 'elektrika' },
+    { pattern: /vopsire|finisaj|tavan|laminat|oboi/i, slug: 'otdelochnye-raboty' },
+    { pattern: /condiționat|climat/i, slug: 'kondicionery-otoplenie' },
+    { pattern: /mobilier|bucătărie/i, slug: 'mebel' },
+    { pattern: /site|landing|it|seo|dezvoltare/i, slug: 'it-dezvoltare' },
+    { pattern: /video|foto/i, slug: 'foto-video' },
+    { pattern: /curățenie|уборк/i, slug: 'uborka' },
+    { pattern: /mutare|pereezd|переезд/i, slug: 'pereezdy' },
+    { pattern: /logo|design/i, slug: 'design-grafic' },
+    { pattern: /auto|ulei/i, slug: 'avto' },
+    { pattern: /solar|panouri/i, slug: 'panouri-solare' },
+  ];
+
+  let count = 0;
+  for (const job of orphans) {
+    const title = job.title.toLowerCase();
+    const rule = rules.find((r) => r.pattern.test(title));
+    const categoryId = rule
+      ? (categoryIdBySlug.get(rule.slug) ?? fallbackCategoryId)
+      : fallbackCategoryId;
+    await client.job.update({
+      where: { id: job.id },
+      data: { categoryId },
+    });
+    count++;
+  }
+  return count;
 }

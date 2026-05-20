@@ -27,6 +27,10 @@ export class QueryJobsDto {
   @IsOptional()
   cityId?: string;
 
+  @ApiProperty({ required: false, description: 'Filter by category ID' })
+  @IsOptional()
+  categoryId?: string;
+
   @ApiProperty({
     required: false,
     description: 'Recommended jobs for master (matches city + any city jobs)',
