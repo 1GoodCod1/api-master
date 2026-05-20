@@ -75,7 +75,7 @@ export class UsersManageService {
   /**
    * Переключить состояние верификации пользователя.
    * Сейчас при верификации только isVerified + pendingVerification.
-   * ПОЗЖЕ ВАЖНО! Ниже закомментирована автовыдача Premium на 1 месяц — раскомментировать при включении.
+   * ПОЗЖЕ ВАЖНО! Ниже закомментирована автовыдача Pro на 1 месяц — раскомментировать при включении.
    */
   async toggleVerify(id: string) {
     const user = await this.prisma.user.findUnique({

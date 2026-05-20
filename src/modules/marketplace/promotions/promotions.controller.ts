@@ -66,9 +66,9 @@ export class PromotionsController {
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles(UserRole.MASTER)
   @Verified(true)
-  @Plans(TariffType.PREMIUM)
+  @Plans(TariffType.PRO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a promotion (PREMIUM only)' })
+  @ApiOperation({ summary: 'Create a promotion (Pro only)' })
   async create(@Body() dto: CreatePromotionDto, @Req() req: RequestWithUser) {
     return this.promotionsService.createForUser(req.user, dto);
   }
@@ -77,9 +77,9 @@ export class PromotionsController {
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles(UserRole.MASTER)
   @Verified(true)
-  @Plans(TariffType.PREMIUM)
+  @Plans(TariffType.PRO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a promotion (PREMIUM only)' })
+  @ApiOperation({ summary: 'Update a promotion (Pro only)' })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdatePromotionDto,
@@ -92,9 +92,9 @@ export class PromotionsController {
   @UseGuards(JwtAuthGuard, RolesGuard, VerifiedGuard, PlansGuard)
   @Roles(UserRole.MASTER)
   @Verified(true)
-  @Plans(TariffType.PREMIUM)
+  @Plans(TariffType.PRO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a promotion (PREMIUM only)' })
+  @ApiOperation({ summary: 'Delete a promotion (Pro only)' })
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
     return this.promotionsService.removeForUser(id, req.user);
   }

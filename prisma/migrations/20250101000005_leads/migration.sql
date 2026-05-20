@@ -8,7 +8,6 @@ CREATE TABLE "leads" (
     "message" TEXT NOT NULL,
     "status" "LeadStatus" NOT NULL DEFAULT 'NEW',
     "spamScore" INTEGER NOT NULL DEFAULT 0,
-    "isPremium" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "leads_pkey" PRIMARY KEY ("id")

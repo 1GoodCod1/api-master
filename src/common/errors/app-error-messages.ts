@@ -132,13 +132,13 @@ export class AppErrorMessages {
   static readonly UPGRADE_NONE_PENDING = 'No pending upgrade found';
   static readonly UPGRADE_EXPIRED =
     'Pending upgrade has expired. Please try again.';
-  static readonly UPGRADE_NOT_VIP =
-    'Current tariff is not VIP. Cannot upgrade to PREMIUM.';
+  static readonly UPGRADE_NOT_PLUS =
+    'Current tariff is not Plus. Cannot upgrade to Pro.';
   static readonly UPGRADE_NO_PAID_TO_CANCEL =
     'No active paid tariff to cancel.';
   static readonly UPGRADE_TARIFF_EXPIRED = 'Tariff already expired.';
-  static readonly UPGRADE_VIP_PREMIUM_WINDOW =
-    'Upgrade to PREMIUM available only when VIP expires soon.';
+  static readonly UPGRADE_PLUS_PRO_WINDOW =
+    'Upgrade to Pro available only when Plus expires soon.';
 
   // --- Verification ---
   static readonly VERIFICATION_REQUEST_NOT_FOUND =
@@ -156,8 +156,7 @@ export class AppErrorMessages {
 
   // --- Export ---
   static readonly EXPORT_OWN_DATA_ONLY = 'You can only export your own data';
-  static readonly EXPORT_PREMIUM_ONLY =
-    'Export is only available for PREMIUM tariff';
+  static readonly EXPORT_PRO_ONLY = 'Export is only available for Pro tariff';
   static readonly JOB_NOT_FOUND_OR_EXPIRED = 'Job not found or expired';
   static readonly JOB_NOT_FOUND = 'Job not found';
   static readonly JOB_ACCESS_DENIED = 'Access denied to this job';
@@ -234,8 +233,8 @@ export class AppErrorMessages {
 
   // --- Promotions (RU strings as in коде) ---
   static readonly PROMOTION_NOT_FOUND = 'Promotion not found';
-  static readonly PROMOTION_PREMIUM_ONLY =
-    'Service promotions are available for PREMIUM plan only.';
+  static readonly PROMOTION_PRO_ONLY =
+    'Service promotions are available for Pro plan only.';
   static readonly PROMOTION_CONFLICT_SERVICE =
     'На эту услугу уже действует акция. Создайте акцию на другую услугу или дождитесь окончания текущей.';
   static readonly PROMOTION_FIXED_PRICE_ONLY =
@@ -280,8 +279,8 @@ export class AppErrorMessages {
     'Account verification required to add or update services. Please complete verification first.';
   static readonly WORK_HOURS_ORDER =
     'Work start hour must be less than work end hour';
-  static readonly AVAILABILITY_PREMIUM_ONLY =
-    'Availability status (Available/Busy) and max leads limit are PREMIUM features.';
+  static readonly AVAILABILITY_PRO_ONLY =
+    'Availability status (Available/Busy) and max leads limit are Pro features.';
 
   // --- Phone verification ---
   static readonly PHONE_CODE_INVALID = 'Invalid verification code';
@@ -297,8 +296,8 @@ export class AppErrorMessages {
     'Add a phone number to your profile before requesting a verification code.';
 
   // --- Telegram ---
-  static readonly TELEGRAM_PREMIUM_ONLY =
-    'Telegram connect is available for VIP and PREMIUM plans only';
+  static readonly TELEGRAM_PLUS_OR_PRO_ONLY =
+    'Telegram connect is available for Plus and Pro plans only';
   static readonly TELEGRAM_BOT_NOT_CONFIGURED =
     'Telegram bot is not configured';
 

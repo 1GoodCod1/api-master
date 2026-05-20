@@ -20,16 +20,16 @@ export class TasksTariffService {
   ) {}
 
   /**
-   * Auto-boost система для PREMIUM тарифа
+   * Auto-boost система для тарифа Pro
    * Пересчитывает приоритет мастеров на основе их активности
    */
   async autoBoostMasters() {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const premiumMasters = await this.prisma.master.findMany({
+    const proMasters = await this.prisma.master.findMany({
       where: {
-        tariffType: TariffType.PREMIUM,
+        tariffType: TariffType.PRO,
         tariffExpiresAt: { gt: now },
       },
       include: {
@@ -42,9 +42,9 @@ export class TasksTariffService {
       },
     });
 
-    this.logger.log(`Auto-boosting ${premiumMasters.length} PREMIUM masters`);
+    this.logger.log(`Auto-boosting ${proMasters.length} Pro masters`);
 
-    for (const master of premiumMasters) {
+    for (const master of proMasters) {
       const activityScore =
         master._count.leads * 0.3 +
         master._count.reviews * 0.2 +
@@ -57,13 +57,13 @@ export class TasksTariffService {
       }
     }
 
-    const lowActivityMasters = premiumMasters.filter(
+    const lowActivityMasters = proMasters.filter(
       (m) => m._count.leads === 0 && m._count.reviews === 0 && m.views < 10,
     );
 
     if (lowActivityMasters.length > 0) {
       this.logger.warn(
-        `${lowActivityMasters.length} PREMIUM masters have low activity. Consider sending engagement tips.`,
+        `${lowActivityMasters.length} Pro masters have low activity. Consider sending engagement tips.`,
       );
     }
   }
@@ -159,8 +159,8 @@ export class TasksTariffService {
       });
 
       const message = lastPayment
-        ? `Ваш запрос на обновление до PREMIUM истек (12 часов). Вы остаетесь на текущем тарифе ${master.tariffType}.`
-        : `Ваш запрос на обновление до PREMIUM истек (12 часов). Тариф изменен на BASIC.`;
+        ? `Ваш запрос на обновление до Pro истек (12 часов). Вы остаетесь на текущем тарифе ${master.tariffType}.`
+        : `Ваш запрос на обновление до Pro истек (12 часов). Тариф изменен на BASIC.`;
 
       if (
         (master as { notifyTariffSms?: boolean }).notifyTariffSms !== false &&

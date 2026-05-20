@@ -213,9 +213,9 @@ export class MastersAvailabilityService {
     if (!master)
       throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
-    const isPremium = getEffectiveTariff(master) === TariffType.PREMIUM;
-    if (!isPremium) {
-      throw AppErrors.forbidden(AppErrorMessages.AVAILABILITY_PREMIUM_ONLY);
+    const isPro = getEffectiveTariff(master) === TariffType.PRO;
+    if (!isPro) {
+      throw AppErrors.forbidden(AppErrorMessages.AVAILABILITY_PRO_ONLY);
     }
 
     const updateData: {

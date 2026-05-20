@@ -63,7 +63,7 @@ export { ACTIVE_BOOKING_STATUSES } from './booking-status.constants';
 
 export { SORT_ASC, SORT_DESC } from './sort-order.constants';
 
-export { isPremiumTariff, isVipOrPremiumTariff } from './tariff.constants';
+export { isProTariff, isPlusOrProTariff } from './tariff.constants';
 
 export { LEADS_EXPORT_COLUMNS } from './export.constants';
 

@@ -145,7 +145,6 @@ export class ExportLeadsService {
       lead.clientPhone,
       this.getClientEmail(lead),
       lead.message,
-      lead.isPremium ? 'Yes' : 'No',
       lead.spamScore.toString(),
       lead.files.length.toString(),
       categoryName,
@@ -252,11 +251,6 @@ export class ExportLeadsService {
     addInfoRow('Дата выгрузки', fmtDateTime(new Date()));
     addInfoRow('Всего заявок', leads.length);
 
-    const premiumCount = leads.filter((l) => l.isPremium).length;
-    if (premiumCount > 0) {
-      addInfoRow('Премиум заявок', `${premiumCount} из ${leads.length}`);
-    }
-
     if (leads.length > 0) {
       const times = leads.map((l) => l.createdAt.getTime());
       addInfoRow(
@@ -317,7 +311,6 @@ export class ExportLeadsService {
       { header: 'Телефон', key: 'clientPhone', width: 18 },
       { header: 'Email', key: 'clientEmail', width: 28 },
       { header: 'Сообщение', key: 'message', width: 50 },
-      { header: 'Премиум', key: 'isPremium', width: 12 },
       { header: 'Оценка спама', key: 'spamScore', width: 14 },
       { header: 'Файлов', key: 'filesCount', width: 10 },
     ];
@@ -362,7 +355,6 @@ export class ExportLeadsService {
         clientPhone: lead.clientPhone,
         clientEmail: this.getClientEmail(lead),
         message: lead.message,
-        isPremium: lead.isPremium ? 'Да' : 'Нет',
         spamScore: lead.spamScore,
         filesCount: lead.files.length,
       });
@@ -402,18 +394,6 @@ export class ExportLeadsService {
         horizontal: 'center',
         vertical: 'middle',
       };
-
-      // Подсветка премиум
-      if (lead.isPremium) {
-        const pc = row.getCell('isPremium');
-        pc.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFFEF3C7' },
-        };
-        pc.font = { bold: true, color: { argb: 'FFD97706' } };
-        pc.alignment = { horizontal: 'center', vertical: 'middle' };
-      }
 
       // Подсветка спам-оценки
       if (lead.spamScore > 0) {

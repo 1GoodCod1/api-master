@@ -65,7 +65,7 @@ export class AnalyticsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Get analytics for authenticated master (BASIC/VIP: 14 days, PREMIUM: 30 days)',
+      'Get analytics for authenticated master (BASIC/Plus: 14 days, Pro: 30 days)',
   })
   @ApiQuery({ name: 'days', required: false, type: Number })
   async getMyAnalytics(
@@ -78,10 +78,10 @@ export class AnalyticsController {
   @Get('my-analytics/advanced')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles(UserRole.MASTER)
-  @Plans(TariffType.PREMIUM)
+  @Plans(TariffType.PRO)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get advanced analytics for PREMIUM tariff (30 days max)',
+    summary: 'Get advanced analytics for Pro tariff (30 days max)',
   })
   @ApiQuery({
     name: 'days',

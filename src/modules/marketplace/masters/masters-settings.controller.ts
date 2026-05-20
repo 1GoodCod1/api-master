@@ -80,7 +80,7 @@ export class MastersSettingsController {
 
   @Patch('notifications')
   @ApiOperation({
-    summary: 'Update notification settings (Telegram, WhatsApp). Premium only.',
+    summary: 'Update notification settings (Telegram, WhatsApp). Plus or Pro only.',
   })
   async updateNotificationSettings(
     @GetUser() user: JwtUser,
@@ -95,7 +95,7 @@ export class MastersSettingsController {
   @Post('telegram-connect')
   @ApiOperation({
     summary:
-      'Create Telegram connect link (Premium only). Opens t.me/bot?start=connect_XXX',
+      'Create Telegram connect link (Plus or Pro only). Opens t.me/bot?start=connect_XXX',
   })
   async createTelegramConnectLink(@GetUser() user: JwtUser) {
     return this.telegramConnect.createConnectLink(user.id);

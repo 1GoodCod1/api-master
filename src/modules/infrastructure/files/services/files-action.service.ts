@@ -160,8 +160,8 @@ export class FilesActionService {
 
   private getPhotoLimitForTariff(t: TariffType): number {
     if (t === TariffType.BASIC) return 5;
-    if (t === TariffType.VIP) return 10;
-    return 15; // PREMIUM
+    if (t === TariffType.PLUS) return 10;
+    return 15; // PRO
   }
 
   private async addToMasterGalleryIfPossible(

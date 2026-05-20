@@ -53,7 +53,6 @@ export class LeadsCreateNotificationService {
         clientName: resolvedClientName || undefined,
         clientPhone: resolvedClientPhone,
         message,
-        isPremium: false,
       },
       notificationOptions,
     );

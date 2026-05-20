@@ -63,9 +63,9 @@ export class PortfolioController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles(UserRole.MASTER)
-  @Plans(TariffType.VIP)
+  @Plans(TariffType.PLUS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create portfolio item (VIP+ only)' })
+  @ApiOperation({ summary: 'Create portfolio item (Plus+ only)' })
   async create(@GetUser() user: JwtUser, @Body() dto: CreatePortfolioItemDto) {
     const masterId = user.masterProfile?.id;
     if (!masterId)
@@ -76,9 +76,9 @@ export class PortfolioController {
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles(UserRole.MASTER)
-  @Plans(TariffType.VIP)
+  @Plans(TariffType.PLUS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update portfolio item (VIP+ only)' })
+  @ApiOperation({ summary: 'Update portfolio item (Plus+ only)' })
   async update(
     @Param('id') id: string,
     @GetUser() user: JwtUser,
@@ -93,9 +93,9 @@ export class PortfolioController {
   @Patch('reorder')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles(UserRole.MASTER)
-  @Plans(TariffType.VIP)
+  @Plans(TariffType.PLUS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Reorder portfolio items (VIP+ only)' })
+  @ApiOperation({ summary: 'Reorder portfolio items (Plus+ only)' })
   async reorder(@GetUser() user: JwtUser, @Body() dto: ReorderPortfolioDto) {
     const masterId = user.masterProfile?.id;
     if (!masterId)
@@ -106,9 +106,9 @@ export class PortfolioController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PlansGuard)
   @Roles(UserRole.MASTER)
-  @Plans(TariffType.VIP)
+  @Plans(TariffType.PLUS)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete portfolio item (VIP+ only)' })
+  @ApiOperation({ summary: 'Delete portfolio item (Plus+ only)' })
   async remove(@Param('id') id: string, @GetUser() user: JwtUser) {
     const masterId = user.masterProfile?.id;
     if (!masterId)

@@ -12,7 +12,7 @@ import {
   AdvancedAnalyticsResponse,
 } from '../shared/types/analytics.types';
 import type { JwtUser } from '../../common/interfaces/jwt-user.interface';
-import { isPremiumTariff, isVipOrPremiumTariff } from '../../common/constants';
+import { isProTariff, isPlusOrProTariff } from '../../common/constants';
 import { AppErrors, AppErrorMessages } from '../../common/errors';
 
 @Injectable()
@@ -43,11 +43,11 @@ export class AnalyticsService {
 
     let days = requestedDays;
     if (user.role !== UserRole.ADMIN) {
-      const isPremium = this.isTariffActive(
+      const isPro = this.isTariffActive(
         master.tariffType,
         master.tariffExpiresAt,
       );
-      const maxDays = isPremium ? 30 : 14;
+      const maxDays = isPro ? 30 : 14;
       days = Math.min(requestedDays, maxDays);
     }
 
@@ -75,11 +75,11 @@ export class AnalyticsService {
       master.tariffType,
       master.tariffExpiresAt,
     );
-    const isPremium = isActive && isPremiumTariff(master.tariffType);
-    const maxDays = isPremium ? 30 : 14;
+    const isPro = isActive && isProTariff(master.tariffType);
+    const maxDays = isPro ? 30 : 14;
     const days = requestedDays ? Math.min(requestedDays, maxDays) : maxDays;
 
-    if (isPremium) {
+    if (isPro) {
       return this.masterAnalytics.getAdvancedMasterAnalytics(masterId, days);
     } else {
       return this.masterAnalytics.getMasterAnalytics(masterId, days);
@@ -87,7 +87,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Получение расширенной аналитики (только для PREMIUM)
+   * Получение расширенной аналитики (только для Pro)
    */
   async getMyAdvancedAnalytics(
     user: JwtUser,
@@ -131,7 +131,7 @@ export class AnalyticsService {
     expiresAt: Date | null,
   ): boolean {
     return !!(
-      isVipOrPremiumTariff(tariffType) &&
+      isPlusOrProTariff(tariffType) &&
       expiresAt &&
       new Date(expiresAt) > new Date()
     );

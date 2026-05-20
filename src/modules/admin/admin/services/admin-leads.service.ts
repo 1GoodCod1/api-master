@@ -127,22 +127,20 @@ export class AdminLeadsService {
       if (dateTo) where.createdAt.lte = dateTo;
     }
 
-    const [total, newCount, inProgressCount, closedCount, premiumCount] =
-      await Promise.all([
-        this.prisma.lead.count({ where }),
-        this.prisma.lead.count({
-          where: { ...where, status: LeadStatus.NEW },
-        }),
-        this.prisma.lead.count({
-          where: { ...where, status: LeadStatus.IN_PROGRESS },
-        }),
-        this.prisma.lead.count({
-          where: { ...where, status: LeadStatus.CLOSED },
-        }),
-        this.prisma.lead.count({ where: { ...where, isPremium: true } }),
-      ]);
+    const [total, newCount, inProgressCount, closedCount] = await Promise.all([
+      this.prisma.lead.count({ where }),
+      this.prisma.lead.count({
+        where: { ...where, status: LeadStatus.NEW },
+      }),
+      this.prisma.lead.count({
+        where: { ...where, status: LeadStatus.IN_PROGRESS },
+      }),
+      this.prisma.lead.count({
+        where: { ...where, status: LeadStatus.CLOSED },
+      }),
+    ]);
 
-    return { total, newCount, inProgressCount, closedCount, premiumCount };
+    return { total, newCount, inProgressCount, closedCount };
   }
 
   async getLeadsExport(filters?: {

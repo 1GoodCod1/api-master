@@ -107,8 +107,8 @@ export class PaymentsMiaService {
 
     const currentEffectiveTariff = getEffectiveTariff(master);
     if (
-      currentEffectiveTariff === TariffType.VIP &&
-      tariffType === TariffType.PREMIUM
+      currentEffectiveTariff === TariffType.PLUS &&
+      tariffType === TariffType.PRO
     ) {
       const canUpgrade =
         !master.tariffExpiresAt ||
@@ -116,7 +116,7 @@ export class PaymentsMiaService {
         new Date(master.tariffExpiresAt).getTime() - Date.now() <=
           2 * 24 * 60 * 60 * 1000;
       if (!canUpgrade)
-        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_VIP_PREMIUM_WINDOW);
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_PLUS_PRO_WINDOW);
     }
     if (master.pendingUpgradeTo)
       throw AppErrors.badRequest(AppErrorMessages.MIA_PENDING_UPGRADE);

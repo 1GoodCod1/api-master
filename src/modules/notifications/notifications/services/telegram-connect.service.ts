@@ -3,7 +3,7 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import {
-  isVipOrPremiumTariff,
+  isPlusOrProTariff,
   TELEGRAM_CONNECT_START_PREFIX,
   TELEGRAM_CONNECT_TOKEN_TTL_MINUTES,
   CONTROLLER_PATH,
@@ -90,7 +90,7 @@ export class TelegramConnectService implements OnModuleInit {
 
   /**
    * Create a one-time token and return the Telegram connect link.
-   * Premium (VIP/PREMIUM) masters only.
+   * Plus or Pro masters only.
    */
   async createConnectLink(userId: string): Promise<TelegramConnectLink> {
     const master = await this.prisma.master.findUnique({
@@ -100,9 +100,9 @@ export class TelegramConnectService implements OnModuleInit {
     if (!master)
       throw AppErrors.forbidden(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
-    const isPremium = isVipOrPremiumTariff(master.tariffType);
-    if (!isPremium) {
-      throw AppErrors.forbidden(AppErrorMessages.TELEGRAM_PREMIUM_ONLY);
+    const isPlusOrPro = isPlusOrProTariff(master.tariffType);
+    if (!isPlusOrPro) {
+      throw AppErrors.forbidden(AppErrorMessages.TELEGRAM_PLUS_OR_PRO_ONLY);
     }
 
     const botUsername = this.configService.get<string>('telegram.botUsername');

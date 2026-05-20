@@ -11,7 +11,7 @@ import { PromotionsValidationService } from './promotions-validation.service';
 
 /**
  * Сервис мутаций акций.
- * Отвечает за: создание, обновление, удаление; проверка тарифа PREMIUM; уведомления; инвалидация кэша.
+ * Отвечает за: создание, обновление, удаление; проверка тарифа Pro; уведомления; инвалидация кэша.
  */
 @Injectable()
 export class PromotionsActionService {
@@ -26,10 +26,10 @@ export class PromotionsActionService {
 
   /**
    * Создать новую акцию (мастер).
-   * Только PREMIUM. Проверки: только услуги с фикс. ценой; одна услуга — одна акция; «на все» только если есть куда применять.
+   * Только Pro. Проверки: только услуги с фикс. ценой; одна услуга — одна акция; «на все» только если есть куда применять.
    */
   async create(masterId: string, dto: CreatePromotionDto) {
-    await this.assertPremiumTariff(masterId);
+    await this.assertProTariff(masterId);
 
     const serviceTitle = dto.serviceTitle?.trim() || null;
     await this.validationService.assertCanCreateOrUpdatePromotion(
@@ -65,10 +65,10 @@ export class PromotionsActionService {
   }
 
   /**
-   * Обновить акцию (только PREMIUM)
+   * Обновить акцию (только Pro)
    */
   async update(id: string, masterId: string, dto: UpdatePromotionDto) {
-    await this.assertPremiumTariff(masterId);
+    await this.assertProTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
     if (!promotion)
@@ -110,10 +110,10 @@ export class PromotionsActionService {
   }
 
   /**
-   * Удалить акцию (только PREMIUM)
+   * Удалить акцию (только Pro)
    */
   async remove(id: string, masterId: string) {
-    await this.assertPremiumTariff(masterId);
+    await this.assertProTariff(masterId);
 
     const promotion = await this.prisma.promotion.findUnique({ where: { id } });
     if (!promotion)
@@ -126,13 +126,13 @@ export class PromotionsActionService {
     return { deleted: true };
   }
 
-  private async assertPremiumTariff(masterId: string): Promise<void> {
+  private async assertProTariff(masterId: string): Promise<void> {
     const master = await this.prisma.master.findUnique({
       where: { id: masterId },
       select: { tariffType: true, tariffExpiresAt: true },
     });
-    if (getEffectiveTariff(master) !== TariffType.PREMIUM) {
-      throw AppErrors.forbidden(AppErrorMessages.PROMOTION_PREMIUM_ONLY);
+    if (getEffectiveTariff(master) !== TariffType.PRO) {
+      throw AppErrors.forbidden(AppErrorMessages.PROMOTION_PRO_ONLY);
     }
   }
 

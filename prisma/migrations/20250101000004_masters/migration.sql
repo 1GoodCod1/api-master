@@ -22,7 +22,6 @@ CREATE TABLE "masters" (
     "profileLastEditedAt" TIMESTAMP(3),
     "pendingVerification" BOOLEAN NOT NULL DEFAULT false,
     "verificationSubmittedAt" TIMESTAMP(3),
-    "lifetimePremium" BOOLEAN NOT NULL DEFAULT false,
     "isOnline" BOOLEAN NOT NULL DEFAULT false,
     "lastActivityAt" TIMESTAMP(3),
     "isBusy" BOOLEAN NOT NULL DEFAULT false,

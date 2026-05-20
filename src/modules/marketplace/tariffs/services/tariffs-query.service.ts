@@ -84,7 +84,7 @@ export class TariffsQueryService {
   }
 
   /**
-   * Найти тариф по его типу (BASIC, VIP, PREMIUM)
+   * Найти тариф по его типу (BASIC, PLUS, PRO)
    * @param type Тип тарифа
    */
   async findByType(type: TariffType) {

@@ -105,7 +105,7 @@ export interface SystemAnalyticsResponse {
   };
 }
 
-// Расширенная аналитика для PREMIUM
+// Расширенная аналитика для Pro
 export interface ConversionMetrics {
   viewsToLeads: number;
   leadsToBookings: number;

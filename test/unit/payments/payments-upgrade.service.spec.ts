@@ -47,11 +47,10 @@ describe('PaymentsUpgradeService', () => {
     const oldDate = new Date(Date.now() - 13 * 60 * 60 * 1000);
     prisma.master.findUnique.mockResolvedValue({
       id: 'm1',
-      pendingUpgradeTo: 'PREMIUM',
+      pendingUpgradeTo: 'PRO',
       pendingUpgradeCreatedAt: oldDate,
-      tariffType: 'VIP',
+      tariffType: 'PLUS',
       tariffExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      lifetimePremium: false,
     } as never);
     prisma.master.update.mockResolvedValue({} as never);
 
@@ -66,14 +65,13 @@ describe('PaymentsUpgradeService', () => {
     expect(miaService.createTariffQrPayment).not.toHaveBeenCalled();
   });
 
-  it('creates PREMIUM payment for valid pending upgrade and resets pending fields', async () => {
+  it('creates Pro payment for valid pending upgrade and resets pending fields', async () => {
     prisma.master.findUnique.mockResolvedValue({
       id: 'm1',
-      pendingUpgradeTo: 'PREMIUM',
+      pendingUpgradeTo: 'PRO',
       pendingUpgradeCreatedAt: new Date(Date.now() - 60 * 60 * 1000),
-      tariffType: 'VIP',
+      tariffType: 'PLUS',
       tariffExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      lifetimePremium: false,
     } as never);
     miaService.createTariffQrPayment.mockResolvedValue({
       qrUrl: 'https://qr.test',
@@ -84,7 +82,7 @@ describe('PaymentsUpgradeService', () => {
     const result = await service.confirmPendingUpgrade('u1');
 
     expect(miaService.createTariffQrPayment).toHaveBeenCalledWith(
-      { masterId: 'm1', tariffType: 'PREMIUM' },
+      { masterId: 'm1', tariffType: 'PRO' },
       'u1',
     );
     expect(prisma.master.update).toHaveBeenCalledWith({

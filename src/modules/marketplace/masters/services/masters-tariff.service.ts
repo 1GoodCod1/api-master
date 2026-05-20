@@ -6,7 +6,7 @@ import {
   SUBSCRIPTION_TARIFF_TYPES,
   TariffType,
 } from '../../../../common/constants';
-import { isVipOrPremiumTariff } from '../../../../common/constants';
+import { isPlusOrProTariff } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SORT_DESC } from '../../../../common/constants';
 import { CacheService } from '../../../shared/cache/cache.service';
@@ -113,11 +113,11 @@ export class MastersTariffService {
       // Конвертируем строку в enum TariffType
       let tariffType: TariffType;
       switch (tariffTypeStr) {
-        case TariffType.VIP:
-          tariffType = TariffType.VIP;
+        case TariffType.PLUS:
+          tariffType = TariffType.PLUS;
           break;
-        case TariffType.PREMIUM:
-          tariffType = TariffType.PREMIUM;
+        case TariffType.PRO:
+          tariffType = TariffType.PRO;
           break;
         default:
           tariffType = TariffType.BASIC;
@@ -128,7 +128,7 @@ export class MastersTariffService {
         data: {
           tariffType,
           tariffExpiresAt: expiresAt,
-          isFeatured: isVipOrPremiumTariff(tariffType),
+          isFeatured: isPlusOrProTariff(tariffType),
         },
       });
 
@@ -148,7 +148,7 @@ export class MastersTariffService {
   }
 
   /**
-   * Продлить тариф на N дней. BASIC → даёт дни VIP; VIP/PREMIUM → добавляет дни к дате окончания.
+   * Продлить тариф на N дней. BASIC → даёт дни Plus; Plus/Pro → добавляет дни к дате окончания.
    */
   async extendTariffByDays(
     masterId: string,
@@ -179,7 +179,7 @@ export class MastersTariffService {
       let newExpiresAt: Date;
 
       if (master.tariffType === TariffType.BASIC || isExpired) {
-        newTariffType = TariffType.VIP;
+        newTariffType = TariffType.PLUS;
         newExpiresAt = new Date();
         newExpiresAt.setDate(newExpiresAt.getDate() + days);
       } else {
@@ -193,7 +193,7 @@ export class MastersTariffService {
         data: {
           tariffType: newTariffType,
           tariffExpiresAt: newExpiresAt,
-          isFeatured: isVipOrPremiumTariff(newTariffType),
+          isFeatured: isPlusOrProTariff(newTariffType),
         },
       });
 

@@ -3,7 +3,6 @@ export type AdminLeadsStats = {
   newCount: number;
   inProgressCount: number;
   closedCount: number;
-  premiumCount: number;
 };
 
 export type AdminReviewsStats = {

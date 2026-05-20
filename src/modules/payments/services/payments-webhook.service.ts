@@ -122,11 +122,11 @@ export class PaymentsWebhookService {
 
     let tariffType: TariffType;
     switch (tariffTypeStr) {
-      case TariffType.VIP:
-        tariffType = TariffType.VIP;
+      case TariffType.PLUS:
+        tariffType = TariffType.PLUS;
         break;
-      case TariffType.PREMIUM:
-        tariffType = TariffType.PREMIUM;
+      case TariffType.PRO:
+        tariffType = TariffType.PRO;
         break;
       default:
         tariffType = TariffType.BASIC;

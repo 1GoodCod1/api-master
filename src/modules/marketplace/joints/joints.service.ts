@@ -8,8 +8,8 @@ type PrismaTx = Prisma.TransactionClient | PrismaService;
 
 export const JOINTS_BY_TARIFF: Record<TariffType, number> = {
   [TariffType.BASIC]: 20,
-  [TariffType.VIP]: 100,
-  [TariffType.PREMIUM]: 200,
+  [TariffType.PLUS]: 100,
+  [TariffType.PRO]: 200,
 };
 
 @Injectable()

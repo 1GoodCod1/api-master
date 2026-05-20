@@ -3,7 +3,6 @@ export interface LeadNotificationData {
   clientName?: string;
   clientPhone?: string;
   leadId?: string;
-  isPremium?: boolean;
 }
 
 export interface PaymentConfirmationData {

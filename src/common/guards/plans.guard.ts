@@ -15,8 +15,8 @@ interface RequestUserWithProfile {
 
 const PLAN_RANK: Record<TariffType, number> = {
   BASIC: 1,
-  VIP: 2,
-  PREMIUM: 3,
+  PLUS: 2,
+  PRO: 3,
 };
 
 function getEffectivePlan(

@@ -417,7 +417,7 @@ api-master/
 | `marketplace/masters/` | Профили мастеров, поиск, портфолио |
 | `marketplace/categories/` | Категории услуг |
 | `marketplace/cities/` | Города |
-| `marketplace/tariffs/` | Тарифы (Free / Premium и т.д.) |
+| `marketplace/tariffs/` | Тарифы (Basic / Plus / Pro) |
 | `marketplace/leads/` | Заявки клиентов |
 | `marketplace/bookings/` | Бронирования |
 | `marketplace/reviews/` | Отзывы и рейтинги |

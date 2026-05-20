@@ -418,7 +418,7 @@ Modules live in `src/modules/`. **Functional** modules are connected in `app.mod
 | `marketplace/masters/` | Master profiles, search, portfolio |
 | `marketplace/categories/` | Service categories |
 | `marketplace/cities/` | Cities |
-| `marketplace/tariffs/` | Tariffs (Free / Premium, etc.) |
+| `marketplace/tariffs/` | Tariffs (Basic / Plus / Pro) |
 | `marketplace/leads/` | Client requests |
 | `marketplace/bookings/` | Bookings |
 | `marketplace/reviews/` | Reviews and ratings |

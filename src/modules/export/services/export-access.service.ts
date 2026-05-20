@@ -18,7 +18,7 @@ export class ExportAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Проверка прав доступа и наличия тарифа PREMIUM
+   * Проверка прав доступа и наличия тарифа Pro
    */
   async validateExportAccess(masterId: string, user: JwtUser): Promise<void> {
     try {
@@ -36,8 +36,8 @@ export class ExportAccessService {
       }
 
       const effectiveTariff = getEffectiveTariff(master);
-      if (effectiveTariff !== TariffType.PREMIUM) {
-        throw AppErrors.forbidden(AppErrorMessages.EXPORT_PREMIUM_ONLY);
+      if (effectiveTariff !== TariffType.PRO) {
+        throw AppErrors.forbidden(AppErrorMessages.EXPORT_PRO_ONLY);
       }
     } catch (err) {
       if (

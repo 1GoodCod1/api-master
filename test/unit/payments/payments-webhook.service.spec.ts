@@ -71,7 +71,7 @@ describe('PaymentsWebhookService', () => {
       id: 'p1',
       status: PaymentStatus.PENDING,
       metadata: { provider: 'OTHER' },
-      tariffType: 'VIP',
+      tariffType: 'PLUS',
       masterId: 'm1',
       amount: '100',
     } as never);
@@ -87,7 +87,7 @@ describe('PaymentsWebhookService', () => {
       id: 'p1',
       status: PaymentStatus.PENDING,
       metadata: { provider: 'MIA', days: 10 },
-      tariffType: 'VIP',
+      tariffType: 'PLUS',
       masterId: 'm1',
       amount: 100,
     } as never);
@@ -105,7 +105,7 @@ describe('PaymentsWebhookService', () => {
     expect(prisma.master.update).toHaveBeenCalledWith({
       where: { id: 'm1' },
       data: expect.objectContaining({
-        tariffType: 'VIP',
+        tariffType: 'PLUS',
         isFeatured: true,
         tariffCancelAtPeriodEnd: false,
         pendingUpgradeTo: null,
@@ -118,7 +118,7 @@ describe('PaymentsWebhookService', () => {
     expect(cache.invalidateMasterRelated).toHaveBeenCalledWith('m1');
     expect(notificationEvents.notifyPaymentSuccess).toHaveBeenCalledWith('u1', {
       paymentId: 'p1',
-      tariffType: 'VIP',
+      tariffType: 'PLUS',
       amount: '100',
     });
   });

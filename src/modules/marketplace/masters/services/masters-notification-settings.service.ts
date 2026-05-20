@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import { LeadNotifyChannel } from '../../../../common/constants';
-import { isVipOrPremiumTariff } from '../../../../common/constants';
+import { isPlusOrProTariff } from '../../../../common/constants';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import type { UpdateNotificationSettingsDto } from '../dto/update-notification-settings.dto';
 
@@ -41,7 +41,7 @@ export class MastersNotificationSettingsService {
     if (!master)
       throw AppErrors.notFound(AppErrorMessages.MASTER_PROFILE_NOT_FOUND);
 
-    const isPremium = isVipOrPremiumTariff(master.tariffType);
+    const isPlusOrPro = isPlusOrProTariff(master.tariffType);
     const data: {
       telegramChatId?: string | null;
       whatsappPhone?: string | null;
@@ -50,7 +50,7 @@ export class MastersNotificationSettingsService {
       notifyTariffInApp?: boolean;
     } = {};
 
-    if (isPremium) {
+    if (isPlusOrPro) {
       if (dto.telegramChatId !== undefined)
         data.telegramChatId = dto.telegramChatId;
       if (dto.whatsappPhone !== undefined)

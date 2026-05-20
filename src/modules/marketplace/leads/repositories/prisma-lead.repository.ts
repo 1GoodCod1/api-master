@@ -31,7 +31,6 @@ export class PrismaLeadRepository implements ILeadRepository {
     return this.prisma.lead.create({
       data: {
         ...rest,
-        isPremium: false,
         files: fileIds?.length
           ? {
               createMany: {

@@ -300,11 +300,11 @@ export async function seedDemoMastersClientsReviews(
     let tariffExpiresAt: Date | null = null;
     let isFeatured = false;
     if (tariffRoll < 22) {
-      tariffType = TariffType.PREMIUM;
+      tariffType = TariffType.PRO;
       tariffExpiresAt = in30d;
       isFeatured = randomInt(100) < 40;
     } else if (tariffRoll < 48) {
-      tariffType = TariffType.VIP;
+      tariffType = TariffType.PLUS;
       tariffExpiresAt = in30d;
     }
 
@@ -430,7 +430,6 @@ export async function seedDemoMastersClientsReviews(
           clientName,
           message: demoPick(DEMO_LEAD_MESSAGES),
           status,
-          isPremium: randomInt(100) < 12,
         },
       });
       bucket.push({

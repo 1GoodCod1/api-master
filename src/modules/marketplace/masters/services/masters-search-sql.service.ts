@@ -261,7 +261,7 @@ export class MastersSearchSqlService {
 
     return Prisma.sql`
       CASE
-        WHEN m."tariffType" = ${TariffType.PREMIUM}::"TariffType" AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} 
+        WHEN m."tariffType" = ${TariffType.PRO}::"TariffType" AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} 
           THEN 3.0 + LEAST(
             COALESCE((
               SELECT COUNT(*)::float * 0.3 
@@ -278,7 +278,7 @@ export class MastersSearchSqlService {
             LEAST(COALESCE(m."views", 0)::float / 100.0, 1.0) * 0.1,
             2.0
           )
-        WHEN m."tariffType" = ${TariffType.VIP}::"TariffType"   AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} THEN 2.0
+        WHEN m."tariffType" = ${TariffType.PLUS}::"TariffType"   AND m."tariffExpiresAt" IS NOT NULL AND m."tariffExpiresAt" > ${now} THEN 2.0
         ELSE 1.0
       END
     `;

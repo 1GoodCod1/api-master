@@ -54,12 +54,12 @@ export class VerificationService {
       this.queryService.getApprovedCount(),
     ]);
     const first100Limit = 100;
-    const willReceivePremium = approvedCount < first100Limit;
+    const willReceiveFreePlan = approvedCount < first100Limit;
     return {
       ...detail,
       approvedCount,
       first100Limit,
-      willReceivePremium,
+      willReceiveFreePlan,
       nextSlotNumber: approvedCount + 1,
     };
   }

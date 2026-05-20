@@ -146,7 +146,7 @@ export class NotificationsSenderService {
   }
 
   /**
-   * Уведомление о новом лиде: SMS на телефон мастера, Telegram и WhatsApp — по привязанным каналам (premium).
+   * Уведомление о новом лиде: SMS на телефон мастера, Telegram и WhatsApp — по привязанным каналам (Plus/Pro).
    */
   async sendLeadNotification(
     to: string | null | undefined,

@@ -25,7 +25,7 @@ export class PaymentsUpgradeService {
   ) {}
 
   /**
-   * Подтверждение отложенного апгрейда (Переход VIP -> PREMIUM)
+   * Подтверждение отложенного апгрейда (Переход Plus -> Pro)
    * @param userId ID пользователя-мастера
    */
   async confirmPendingUpgrade(userId: string) {
@@ -48,12 +48,12 @@ export class PaymentsUpgradeService {
         throw AppErrors.badRequest(AppErrorMessages.UPGRADE_EXPIRED);
       }
 
-      if (getEffectiveTariff(master) !== TariffType.VIP) {
+      if (getEffectiveTariff(master) !== TariffType.PLUS) {
         await this.resetPendingUpgrade(master.id);
-        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NOT_VIP);
+        throw AppErrors.badRequest(AppErrorMessages.UPGRADE_NOT_PLUS);
       }
 
-      // Создаём сессию оплаты через MIA для PREMIUM
+      // Создаём сессию оплаты через MIA для Pro
       const result = await this.miaService.createTariffQrPayment(
         { masterId: master.id, tariffType: master.pendingUpgradeTo },
         userId,

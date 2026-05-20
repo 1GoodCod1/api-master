@@ -9,7 +9,6 @@ export const LEADS_EXPORT_COLUMNS = [
   'Client Phone',
   'Client Email',
   'Message',
-  'Is Premium',
   'Spam Score',
   'Attachments Count',
   'Master Category',

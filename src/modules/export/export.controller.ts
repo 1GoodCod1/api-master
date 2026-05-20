@@ -37,9 +37,9 @@ export class ExportController {
   ) {}
 
   @Get('leads/csv/:masterId')
-  @ApiOperation({ summary: 'Export leads to CSV (PREMIUM only)' })
+  @ApiOperation({ summary: 'Export leads to CSV (Pro only)' })
   @ApiResponse({ status: 200, description: 'CSV file' })
-  @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
+  @ApiResponse({ status: 403, description: 'Pro tariff required' })
   async exportLeadsCSV(
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
@@ -49,9 +49,9 @@ export class ExportController {
   }
 
   @Get('leads/excel/:masterId')
-  @ApiOperation({ summary: 'Export leads to Excel (PREMIUM only)' })
+  @ApiOperation({ summary: 'Export leads to Excel (Pro only)' })
   @ApiResponse({ status: 200, description: 'XLSX file' })
-  @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
+  @ApiResponse({ status: 403, description: 'Pro tariff required' })
   async exportLeadsExcel(
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
@@ -71,7 +71,7 @@ export class ExportController {
     status: 202,
     description: 'Job queued. Poll /export/status/:jobId',
   })
-  @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
+  @ApiResponse({ status: 403, description: 'Pro tariff required' })
   async enqueueExport(
     @Param('type') type: string,
     @Param('masterId') masterId: string,
@@ -114,10 +114,10 @@ export class ExportController {
   @Get('analytics/pdf/:masterId')
   @ApiOperation({
     summary:
-      '[Legacy] Export analytics to PDF synchronously (PREMIUM only). Use /queue/pdf/:masterId instead.',
+      '[Legacy] Export analytics to PDF synchronously (Pro only). Use /queue/pdf/:masterId instead.',
   })
   @ApiResponse({ status: 200, description: 'PDF file' })
-  @ApiResponse({ status: 403, description: 'PREMIUM tariff required' })
+  @ApiResponse({ status: 403, description: 'Pro tariff required' })
   async exportAnalyticsPDF(
     @Param('masterId') masterId: string,
     @Req() req: RequestWithUser,
