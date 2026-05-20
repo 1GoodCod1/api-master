@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { JobStatus, JointsTransactionType, NotificationCategory, Prisma } from '@prisma/client';
+import {
+  JobStatus,
+  JointsTransactionType,
+  NotificationCategory,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';

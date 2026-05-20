@@ -6,7 +6,14 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { QueryJobsDto } from '../dto/query-jobs.dto';
 import { JobsCacheService } from './jobs-cache.service';
-import { JOB_INCLUDE_BASE, APPLICATION_INCLUDE, JOBS_LIST_TTL, JOB_BY_ID_TTL, LEADERBOARD_TTL, TOP_VISIBLE_RANK } from '../jobs.constants';
+import {
+  JOB_INCLUDE_BASE,
+  APPLICATION_INCLUDE,
+  JOBS_LIST_TTL,
+  JOB_BY_ID_TTL,
+  LEADERBOARD_TTL,
+  TOP_VISIBLE_RANK,
+} from '../jobs.constants';
 import { Cacheable } from '../../../shared/cache/cacheable.decorator';
 
 @Injectable()
@@ -238,7 +245,10 @@ export class JobsQueryService {
     };
   }
 
-  async getApplicationRank(jobId: string, applicationId: string): Promise<number> {
+  async getApplicationRank(
+    jobId: string,
+    applicationId: string,
+  ): Promise<number> {
     const target = await this.prisma.jobApplication.findUnique({
       where: { id: applicationId },
       select: { jointsSpent: true, createdAt: true },
