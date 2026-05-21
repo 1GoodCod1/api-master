@@ -167,6 +167,12 @@ export class AppErrorMessages {
     'Access denied to this application';
   static readonly JOB_APPLICATION_MIN_JOINTS =
     'Joints spent must meet the minimum required by the client';
+  static readonly JOB_APPLY_OWN_JOB =
+    'You cannot apply to your own job posting';
+  static readonly JOB_APPLY_SAME_COMPANY =
+    'You cannot apply to a request posted by your company';
+  static readonly JOB_APPLY_COMPANY_NOT_PROVIDER =
+    'Your company workspace is not configured for providing services';
   static readonly JOINTS_INSUFFICIENT = 'Insufficient joints balance';
   static readonly JOINTS_AMOUNT_INVALID = 'Joints amount must be positive';
 

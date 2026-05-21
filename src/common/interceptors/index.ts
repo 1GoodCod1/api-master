@@ -1,3 +1,4 @@
+export { CompanyContextInterceptor } from './company-context.interceptor';
 export { ActivityTrackerInterceptor } from './activity-tracker.interceptor';
 export { AuditInterceptor } from './audit.interceptor';
 export { CacheControlInterceptor } from './cache-control.interceptor';

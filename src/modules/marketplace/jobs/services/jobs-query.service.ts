@@ -6,6 +6,8 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { QueryJobsDto } from '../dto/query-jobs.dto';
 import { JobsCacheService } from './jobs-cache.service';
+import { JobsAccessService } from './jobs-access.service';
+import { JobLifecycleService } from './job-lifecycle.service';
 import {
   JOB_INCLUDE_BASE,
   APPLICATION_INCLUDE,
@@ -22,6 +24,8 @@ export class JobsQueryService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly jobsCache: JobsCacheService,
+    private readonly jobsAccess: JobsAccessService,
+    private readonly jobLifecycle: JobLifecycleService,
   ) {}
 
   async getJobs(dto: QueryJobsDto, user?: JwtUser) {
@@ -167,7 +171,11 @@ export class JobsQueryService {
     if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
 
     const isOwner = user?.id === job.clientId;
-    if (!isOwner && job.status === JobStatus.CLOSED) {
+    const canManageAsCompany =
+      user != null
+        ? await this.jobsAccess.canManageJobAsCustomer(user.id, job)
+        : false;
+    if (!isOwner && !canManageAsCompany && job.status === JobStatus.CLOSED) {
       throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
     }
 
@@ -181,8 +189,7 @@ export class JobsQueryService {
     });
 
     if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
-    if (job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(user.id, job);
 
     const applications = await this.prisma.jobApplication.findMany({
       where: { jobId },
@@ -196,7 +203,9 @@ export class JobsQueryService {
       isAnonymous: false,
     }));
 
-    return { job, applications: ranked };
+    const lifecycle = this.jobLifecycle.buildSnapshot(job, applications.length);
+
+    return { job, applications: ranked, lifecycle };
   }
 
   async getMyApplicationForJob(jobId: string, user: JwtUser) {

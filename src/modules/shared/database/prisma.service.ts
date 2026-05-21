@@ -5,11 +5,17 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { Pool, PoolClient } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { readReplicas } from '@prisma/extension-read-replicas';
 import { PRISMA_STATEMENT_TIMEOUT_MS } from '../../../common/constants';
+
+export type RlsContext = {
+  currentUserId?: string | null;
+  currentCompanyId?: string | null;
+  userRole?: string | null;
+};
 
 /**
  * Задаёт statement_timeout на уровне сессии через libpq options.
@@ -199,5 +205,21 @@ export class PrismaService
         }
       }),
     );
+  }
+
+  withRlsContext<T>(
+    ctx: RlsContext,
+    work: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        SELECT
+          set_config('app.current_user_id', ${ctx.currentUserId ?? ''}, true),
+          set_config('app.current_company_id', ${ctx.currentCompanyId ?? ''}, true),
+          set_config('app.user_role', ${ctx.userRole ?? ''}, true)
+      `;
+
+      return work(tx);
+    });
   }
 }

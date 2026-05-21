@@ -80,7 +80,8 @@ export class MastersSettingsController {
 
   @Patch('notifications')
   @ApiOperation({
-    summary: 'Update notification settings (Telegram, WhatsApp). Plus or Pro only.',
+    summary:
+      'Update notification settings (Telegram, WhatsApp). Plus or Pro only.',
   })
   async updateNotificationSettings(
     @GetUser() user: JwtUser,

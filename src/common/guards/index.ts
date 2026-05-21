@@ -1,3 +1,4 @@
+export { CompanyGuard } from './company.guard';
 export { AppThrottlerGuard } from './app-throttler.guard';
 export { CookieOriginGuard } from './cookie-origin.guard';
 export { JwtAuthGuard } from './jwt-auth.guard';

@@ -96,7 +96,7 @@ enum NotificationCategory {
 enum LeadNotifyChannel {
   TELEGRAM
   WHATSAPP
-  BOTH 
+  BOTH
   NONE
 }
 
@@ -172,6 +172,29 @@ enum ConsentType {
   AGE_CONFIRMATION
 }
 
+enum CompanyRole {
+  OWNER
+  MANAGER
+  MEMBER
+}
+
+enum CompanyMemberStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum CompanyMode {
+  CUSTOMER
+  PROVIDER
+  BOTH
+}
+
+enum CompanyServicePriceType {
+  FIXED
+  NEGOTIABLE
+}
+
 model UserConsent {
   id          String      @id @default(uuid())
   userId      String
@@ -221,7 +244,7 @@ model User {
   updatedAt         DateTime  @updatedAt
 
   masterProfile                   Master?
-  avatarFile                      File?  @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
+  avatarFile                      File?                            @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
   auditLogs                       AuditLog[]
   notifications                   Notification[]
   refreshToken                    RefreshToken[]
@@ -236,16 +259,21 @@ model User {
   phoneVerifications              PhoneVerification[]
   loginHistory                    LoginHistory[]
   masterAvailabilitySubscriptions MasterAvailabilitySubscription[]
-  conversations                   Conversation[] @relation("ClientConversations")
+  conversations                   Conversation[]                   @relation("ClientConversations")
   reviewVotes                     ReviewVote[]
   pushSubscriptions               PushSubscription[]
   digestSubscription              DigestSubscription?
-  referralCode                    ReferralCode? @relation("ReferralOwner")
-  referredBy                      Referral? @relation("ReferredBy")
+  referralCode                    ReferralCode?                    @relation("ReferralOwner")
+  referredBy                      Referral?                        @relation("ReferredBy")
   emailDripStatuses               EmailDripStatus[]
   consents                        UserConsent[]
   oauthAccounts                   OAuthAccount[]
-  jobs                            Job[] @relation("ClientJobs")
+  jobs                            Job[]                            @relation("ClientJobs")
+  ownedCompanies                  Company[]                        @relation("CompanyOwner")
+  companyMemberships              CompanyMember[]
+  companyInvitationsSent          CompanyInvitation[]              @relation("CompanyInvitationsSent")
+  companyReviewsAuthored          CompanyReview[]                  @relation("CompanyReviewsAuthored")
+  jobDocumentsUploaded            JobDocument[]                    @relation("JobDocumentsUploaded")
 
   @@index([avatarFileId])
   @@index([phoneVerified])
@@ -304,14 +332,13 @@ model Master {
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
 
-
   search_vector Unsupported("tsvector")?
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  avatarFile   File?               @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
-  city         City                @relation(fields: [cityId], references: [id])
-  category     Category            @relation(fields: [categoryId], references: [id])
-  tariffType   TariffType          @default(BASIC)
-  verification MasterVerification?
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarFile    File?                    @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
+  city          City                     @relation(fields: [cityId], references: [id])
+  category      Category                 @relation(fields: [categoryId], references: [id])
+  tariffType    TariffType               @default(BASIC)
+  verification  MasterVerification?
 
   leads                     Lead[]
   photos                    MasterPhoto[]
@@ -328,8 +355,9 @@ model Master {
   quickReplies              QuickReply[]
   telegramConnectTokens     TelegramConnectToken[]
   jobApplications           JobApplication[]
+  companyMembership         CompanyMember?
   jointsTransactions        JointsTransaction[]
-  jointsBalance             Int                @default(0)
+  jointsBalance             Int                              @default(0)
 
   @@index([cityId])
   @@index([categoryId])
@@ -443,9 +471,9 @@ model MasterVerification {
   updatedAt          DateTime           @updatedAt
 
   master        Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  documentFront File? @relation("VerificationDocumentFront", fields: [documentFrontId], references: [id], onDelete: SetNull)
-  documentBack  File? @relation("VerificationDocumentBack", fields: [documentBackId], references: [id], onDelete: SetNull)
-  selfie        File? @relation("VerificationSelfie", fields: [selfieId], references: [id], onDelete: SetNull)
+  documentFront File?  @relation("VerificationDocumentFront", fields: [documentFrontId], references: [id], onDelete: SetNull)
+  documentBack  File?  @relation("VerificationDocumentBack", fields: [documentBackId], references: [id], onDelete: SetNull)
+  selfie        File?  @relation("VerificationSelfie", fields: [selfieId], references: [id], onDelete: SetNull)
 
   @@index([masterId])
   @@index([status])
@@ -487,14 +515,18 @@ model File {
   leadFiles            LeadFile[]
   reviewFiles          ReviewFile[]
   userAvatars          User[]
-  verificationDocFront MasterVerification[] @relation("VerificationDocumentFront")
-  verificationDocBack  MasterVerification[] @relation("VerificationDocumentBack")
-  verificationSelfie   MasterVerification[] @relation("VerificationSelfie")
+  verificationDocFront MasterVerification[]  @relation("VerificationDocumentFront")
+  verificationDocBack  MasterVerification[]  @relation("VerificationDocumentBack")
+  verificationSelfie   MasterVerification[]  @relation("VerificationSelfie")
   messageFiles         MessageFile[]
-  portfolioBefore      PortfolioItem[]      @relation("PortfolioBefore")
-  portfolioAfter       PortfolioItem[]      @relation("PortfolioAfter")
-  jobPhotos            JobPhoto[]           @relation("JobPhotos")
+  portfolioBefore      PortfolioItem[]       @relation("PortfolioBefore")
+  portfolioAfter       PortfolioItem[]       @relation("PortfolioAfter")
+  jobPhotos            JobPhoto[]            @relation("JobPhotos")
   jobApplicationPhotos JobApplicationPhoto[] @relation("JobApplicationPhotos")
+  companyLogos         Company[]             @relation("CompanyLogo")
+  companyCovers        Company[]             @relation("CompanyCover")
+  companyPhotos        CompanyPhoto[]        @relation("CompanyPhotos")
+  jobDocuments         JobDocument[]         @relation("JobDocuments")
 
   @@index([mimetype])
   @@index([uploadedById])
@@ -517,8 +549,9 @@ model Category {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  masters Master[]
-  jobs    Job[]   @relation("JobCategory")
+  masters   Master[]
+  jobs      Job[]     @relation("JobCategory")
+  companies Company[]
 
   @@map("categories")
 }
@@ -532,10 +565,180 @@ model City {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  masters Master[]
-  jobs    Job[]   @relation("JobCity")
+  masters   Master[]
+  jobs      Job[]     @relation("JobCity")
+  companies Company[]
 
   @@map("cities")
+}
+
+model Company {
+  id           String      @id @default(uuid())
+  slug         String      @unique
+  ownerUserId  String
+  name         String
+  legalName    String
+  idno         String      @unique
+  legalAddress String
+  mode         CompanyMode @default(PROVIDER)
+  isTvaPayer   Boolean     @default(false)
+  tvaCode      String?
+  description  String?
+  cityId       String
+  categoryId   String?
+  logoFileId   String?
+  coverFileId  String?
+  rating       Float       @default(0.0)
+  totalReviews Int         @default(0)
+  teamSize     Int         @default(1)
+  isPublished  Boolean     @default(false)
+  isVerified   Boolean     @default(false)
+  contactPhone String?
+  contactEmail String?
+  billingEmail String? @db.VarChar(320)
+  billingPhone String? @db.VarChar(32)
+  bankName     String? @db.VarChar(160)
+  bankAccount  String? @db.VarChar(64)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  owner     User            @relation("CompanyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  city      City            @relation(fields: [cityId], references: [id])
+  category  Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  logoFile  File?           @relation("CompanyLogo", fields: [logoFileId], references: [id], onDelete: SetNull)
+  coverFile File?           @relation("CompanyCover", fields: [coverFileId], references: [id], onDelete: SetNull)
+  members   CompanyMember[]
+  jobs      Job[]
+  invitations CompanyInvitation[]
+  services  CompanyService[]
+  photos    CompanyPhoto[]
+  reviews   CompanyReview[]
+  jobReviews Review[] @relation("CompanyJobReviews")
+  subscription CompanySubscription?
+
+  @@index([ownerUserId])
+  @@index([cityId])
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([isVerified])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("companies")
+}
+
+model CompanyMember {
+  id        String              @id @default(uuid())
+  companyId String
+  userId    String
+  masterId  String?             @unique
+  role      CompanyRole         @default(MEMBER)
+  status    CompanyMemberStatus @default(ACTIVE)
+  joinedAt  DateTime            @default(now())
+  leftAt    DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  master  Master? @relation(fields: [masterId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, userId])
+  @@index([companyId])
+  @@index([userId])
+  @@index([status])
+  @@index([role])
+  @@map("company_members")
+}
+
+model CompanyInvitation {
+  id              String      @id @default(uuid())
+  companyId       String
+  email           String      @db.VarChar(320)
+  role            CompanyRole @default(MEMBER)
+  invitedByUserId String
+  token           String      @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("CompanyInvitationsSent", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("company_invitations")
+}
+
+model CompanyService {
+  id          String                  @id @default(uuid())
+  companyId   String
+  title       String                  @db.VarChar(200)
+  description String?                 @db.VarChar(1000)
+  priceType   CompanyServicePriceType @default(NEGOTIABLE)
+  price       Decimal?
+  currency    String                  @default("MDL") @db.VarChar(3)
+  sortOrder   Int                     @default(0)
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, isActive, sortOrder])
+  @@map("company_services")
+}
+
+model CompanyPhoto {
+  id        String   @id @default(uuid())
+  companyId String
+  fileId    String
+  caption   String?  @db.VarChar(300)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  file    File    @relation("CompanyPhotos", fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, order])
+  @@map("company_photos")
+}
+
+enum CompanySubscriptionPlan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum CompanySubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+model CompanySubscription {
+  id          String                    @id @default(uuid())
+  companyId   String                    @unique
+  plan        CompanySubscriptionPlan   @default(FREE)
+  status      CompanySubscriptionStatus @default(ACTIVE)
+  periodStart DateTime                  @default(now())
+  periodEnd   DateTime?
+  activatedBy String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([plan])
+  @@index([status])
+  @@map("company_subscriptions")
 }
 
 model Lead {
@@ -550,8 +753,8 @@ model Lead {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  master      Master     @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  client      User?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client User?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   files        LeadFile[]
   bookings     Booking[]
@@ -585,23 +788,27 @@ model LeadFile {
 }
 
 model Review {
-  id             String           @id @default(uuid())
-  masterId       String
-  clientPhone    String
-  clientName     String?
-  clientId       String?
-  leadId         String?          @unique
-  rating         Int
-  comment        String?
-  status         ReviewStatus     @default(PENDING)
-  moderatedBy    String?
-  moderatedAt    DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id          String       @id @default(uuid())
+  masterId    String
+  clientPhone String
+  clientName  String?
+  clientId    String?
+  leadId      String?      @unique
+  jobId       String?      @unique
+  companyId   String?
+  rating      Int
+  comment     String?
+  status      ReviewStatus @default(PENDING)
+  moderatedBy String?
+  moderatedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  master         Master           @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  client         User?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  lead           Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client User?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  job    Job?   @relation("JobMasterReviews", fields: [jobId], references: [id], onDelete: SetNull)
+  company Company? @relation("CompanyJobReviews", fields: [companyId], references: [id], onDelete: SetNull)
 
   reviewCriteria ReviewCriteria[]
   reviewFiles    ReviewFile[]
@@ -614,6 +821,8 @@ model Review {
   @@index([clientPhone])
   @@index([clientId])
   @@index([leadId])
+  @@index([jobId])
+  @@index([companyId])
   @@index([rating])
   @@index([status])
   @@index([createdAt])
@@ -628,8 +837,8 @@ model ReviewFile {
   fileId    String
   createdAt DateTime @default(now())
 
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, fileId])
   @@index([reviewId])
@@ -640,11 +849,11 @@ model ReviewFile {
 model ReviewCriteria {
   id        String   @id @default(uuid())
   reviewId  String
-  criteria  String 
+  criteria  String
   rating    Int
   createdAt DateTime @default(now())
 
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, criteria])
   @@index([reviewId])
@@ -653,16 +862,16 @@ model ReviewCriteria {
 }
 
 model Payment {
-  id         String        @id @default(uuid())
-  masterId   String
-  userId     String
-  amount     Decimal
-  currency   String        @default("MDL")
-  metadata   Json?
-  paidAt     DateTime?
-  expiresAt  DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id        String    @id @default(uuid())
+  masterId  String
+  userId    String
+  amount    Decimal
+  currency  String    @default("MDL")
+  metadata  Json?
+  paidAt    DateTime?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   master     Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -689,7 +898,7 @@ model MasterAnalytics {
   revenue      Decimal  @default(0)
   createdAt    DateTime @default(now())
 
-  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
 
   @@unique([masterId, date])
   @@index([masterId])
@@ -710,7 +919,7 @@ model AuditLog {
   userAgent  String?
   createdAt  DateTime @default(now())
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([action])
@@ -720,7 +929,7 @@ model AuditLog {
 }
 
 model Notification {
-  id        String  @id @default(uuid())
+  id        String                @id @default(uuid())
   userId    String?
   title     String?
   message   String
@@ -730,9 +939,9 @@ model Notification {
   sentAt    DateTime?
   readAt    DateTime?
   metadata  Json?
-  createdAt DateTime   @default(now())
+  createdAt DateTime              @default(now())
 
-  user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -774,7 +983,7 @@ model RefreshToken {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -789,7 +998,7 @@ model PasswordResetToken {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
@@ -846,9 +1055,9 @@ model Booking {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  client      User?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client User?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   reminders BookingReminder[]
 
@@ -874,7 +1083,7 @@ model BookingReminder {
   sentAt    DateTime?
   createdAt DateTime  @default(now())
 
-  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@unique([bookingId, type])
   @@index([bookingId])
@@ -899,9 +1108,9 @@ model Report {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  client      User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  master      Master        @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  lead        Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client User   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([masterId])
@@ -922,7 +1131,7 @@ model PhoneVerification {
   attempts   Int       @default(0)
   createdAt  DateTime  @default(now())
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([phone])
@@ -942,7 +1151,7 @@ model LoginHistory {
   failReason        String?
   createdAt         DateTime @default(now())
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([ipAddress])
@@ -1028,11 +1237,11 @@ model Conversation {
   updatedAt     DateTime  @updatedAt
   closedAt      DateTime?
 
-  lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  master        Master    @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  client        User?     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: SetNull)
+  lead   Lead?  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  client User?  @relation("ClientConversations", fields: [clientId], references: [id], onDelete: SetNull)
 
-  messages      Message[]
+  messages Message[]
 
   @@unique([masterId, clientId])
   @@index([masterId])
@@ -1046,17 +1255,17 @@ model Conversation {
 }
 
 model Message {
-  id              String        @id @default(uuid())
+  id              String     @id @default(uuid())
   conversationId  String
   senderId        String
   senderType      SenderType
-  content         String        @db.VarChar(2000)
-  isAutoresponder Boolean       @default(false)
+  content         String     @db.VarChar(2000)
+  isAutoresponder Boolean    @default(false)
   readAt          DateTime?
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime   @default(now())
 
-  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  files           MessageFile[]
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  files        MessageFile[]
 
   @@index([conversationId])
   @@index([senderId])
@@ -1072,8 +1281,8 @@ model MessageFile {
   fileId    String
   createdAt DateTime @default(now())
 
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file    File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, fileId])
   @@index([messageId])
@@ -1090,15 +1299,15 @@ model Promotion {
   masterId     String
   title        String
   description  String
-  discount     Int 
-  serviceTitle String? 
+  discount     Int
+  serviceTitle String?
   validFrom    DateTime
   validUntil   DateTime
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  master       Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  master Master @relation(fields: [masterId], references: [id], onDelete: Cascade)
 
   @@index([masterId])
   @@index([isActive])
@@ -1119,7 +1328,7 @@ model ReviewReply {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@index([reviewId])
   @@index([masterId])
@@ -1132,8 +1341,8 @@ model ReviewVote {
   userId    String
   createdAt DateTime @default(now())
 
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId])
   @@index([reviewId])
@@ -1154,7 +1363,8 @@ model PushSubscription {
   userAgent String?
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("push_subscriptions")
 }
@@ -1167,8 +1377,9 @@ model DigestSubscription {
   id           String   @id @default(uuid())
   userId       String   @unique
   subscribedAt DateTime @default(now())
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("digest_subscriptions")
 }
 
@@ -1213,7 +1424,7 @@ model ReferralCode {
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
 
-  user       User     @relation("ReferralOwner", fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation("ReferralOwner", fields: [userId], references: [id], onDelete: Cascade)
 
   referrals Referral[]
 
@@ -1223,16 +1434,16 @@ model ReferralCode {
 }
 
 model Referral {
-  id              String         @id @default(uuid())
+  id              String    @id @default(uuid())
   referralCodeId  String
-  referredUserId  String         @unique
-  rewardGranted   Boolean        @default(false)
+  referredUserId  String    @unique
+  rewardGranted   Boolean   @default(false)
   rewardGrantedAt DateTime?
-  createdAt       DateTime       @default(now())
+  createdAt       DateTime  @default(now())
 
-  status          ReferralStatus @default(PENDING)
-  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
-  referredUser    User           @relation("ReferredBy", fields: [referredUserId], references: [id], onDelete: Cascade)
+  status       ReferralStatus @default(PENDING)
+  referralCode ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  referredUser User           @relation("ReferredBy", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   @@index([referralCodeId])
   @@index([referredUserId])
@@ -1255,7 +1466,7 @@ model EmailDripStatus {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, chainType])
   @@index([userId])
@@ -1273,7 +1484,7 @@ model OAuthAccount {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])
   @@index([userId])
@@ -1314,36 +1525,49 @@ enum JointsTransactionType {
   REFUND
 }
 
+enum JobDocumentKind {
+  INVOICE
+  ACT
+  OTHER
+}
+
 model Job {
-  id                    String     @id @default(uuid())
+  id                    String    @id @default(uuid())
   clientId              String
+  companyId             String?
   cityId                String?
   categoryId            String?
-  title                 String     @db.VarChar(200)
-  description           String     @db.VarChar(3000)
+  title                 String    @db.VarChar(200)
+  description           String    @db.VarChar(3000)
   type                  JobType
   budget                Decimal?
   hourlyRate            Decimal?
-  minJoints             Int        @default(1)
-  status                JobStatus  @default(OPEN)
-  selectedApplicationId String?    @unique
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
+  minJoints             Int       @default(1)
+  status                JobStatus @default(OPEN)
+  selectedApplicationId String?   @unique
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  client              User               @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
-  city                City?              @relation("JobCity", fields: [cityId], references: [id], onDelete: SetNull)
-  category            Category?          @relation("JobCategory", fields: [categoryId], references: [id], onDelete: SetNull)
+  client              User             @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  company             Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  city                City?            @relation("JobCity", fields: [cityId], references: [id], onDelete: SetNull)
+  category            Category?        @relation("JobCategory", fields: [categoryId], references: [id], onDelete: SetNull)
   photos              JobPhoto[]
   applications        JobApplication[]
-  selectedApplication JobApplication?    @relation("SelectedApplication", fields: [selectedApplicationId], references: [id])
+  selectedApplication JobApplication?  @relation("SelectedApplication", fields: [selectedApplicationId], references: [id])
+  masterReviews       Review[]         @relation("JobMasterReviews")
+  companyReviews      CompanyReview[]
+  documents           JobDocument[]
 
   @@index([clientId])
+  @@index([companyId])
   @@index([status])
   @@index([type])
   @@index([cityId])
   @@index([categoryId])
   @@index([createdAt])
   @@index([clientId, status, createdAt])
+  @@index([companyId, status, createdAt])
   @@map("jobs")
 }
 
@@ -1363,23 +1587,23 @@ model JobPhoto {
 }
 
 model JobApplication {
-  id           String                 @id @default(uuid())
-  jobId        String
-  masterId     String
-  jointsSpent  Int
-  description  String                 @db.VarChar(3000)
-  paymentType  ApplicationPaymentType
-  deadline     Int?
-  milestones   Json?
-  status       ApplicationStatus      @default(PENDING)
-  viewedAt     DateTime?
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
+  id          String                 @id @default(uuid())
+  jobId       String
+  masterId    String
+  jointsSpent Int
+  description String                 @db.VarChar(3000)
+  paymentType ApplicationPaymentType
+  deadline    Int?
+  milestones  Json?
+  status      ApplicationStatus      @default(PENDING)
+  viewedAt    DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
-  job        Job                    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  master     Master                 @relation(fields: [masterId], references: [id], onDelete: Cascade)
-  photos     JobApplicationPhoto[]
-  selectedForJob Job?               @relation("SelectedApplication")
+  job            Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  master         Master                @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  photos         JobApplicationPhoto[]
+  selectedForJob Job?                  @relation("SelectedApplication")
 
   @@unique([jobId, masterId])
   @@index([jobId])
@@ -1422,4 +1646,49 @@ model JointsTransaction {
   @@index([createdAt])
   @@index([masterId, createdAt])
   @@map("joints_transactions")
+}
+
+model CompanyReview {
+  id           String       @id @default(uuid())
+  companyId    String
+  jobId        String       @unique
+  authorUserId String
+  rating       Int
+  comment      String?
+  status       ReviewStatus @default(PENDING)
+  moderatedBy  String?
+  moderatedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  author  User    @relation("CompanyReviewsAuthored", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([authorUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([companyId, status, createdAt])
+  @@map("company_reviews")
+}
+
+model JobDocument {
+  id               String          @id @default(uuid())
+  jobId            String
+  fileId           String
+  kind             JobDocumentKind @default(OTHER)
+  label            String?         @db.VarChar(200)
+  uploadedByUserId String
+  createdAt        DateTime        @default(now())
+
+  job        Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  file       File @relation("JobDocuments", fields: [fileId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation("JobDocumentsUploaded", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, fileId])
+  @@index([jobId])
+  @@index([fileId])
+  @@index([uploadedByUserId])
+  @@map("job_documents")
 }

@@ -8,6 +8,14 @@ export const JOB_INCLUDE_BASE = {
       avatarFile: { select: { path: true } },
     },
   },
+  company: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logoFile: { select: { path: true } },
+    },
+  },
   city: { select: { id: true, name: true } },
   category: {
     select: {
@@ -36,6 +44,22 @@ export const APPLICATION_INCLUDE = {
       },
       city: true,
       category: true,
+      companyMembership: {
+        where: {
+          leftAt: null,
+          status: 'ACTIVE',
+        },
+        include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logoFile: { select: { path: true } },
+            },
+          },
+        },
+      },
     },
   },
 } as const;

@@ -1,0 +1,4 @@
+CREATE TYPE "CompanyMode" AS ENUM ('CUSTOMER', 'PROVIDER', 'BOTH');
+
+ALTER TABLE "companies"
+ADD COLUMN "mode" "CompanyMode" NOT NULL DEFAULT 'PROVIDER';

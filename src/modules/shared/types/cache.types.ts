@@ -62,4 +62,5 @@ export interface CacheKeyBuilders {
   newMasters: (limit: number) => string;
   searchSuggest: (q: string, cityId: string | null) => string;
   searchFilters: () => string;
+  companyMemberships: (userId: string) => string;
 }

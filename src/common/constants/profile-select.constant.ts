@@ -30,4 +30,18 @@ export const USER_PROFILE_SELECT = {
       },
     },
   },
+  companyMemberships: {
+    where: {
+      leftAt: null,
+      status: 'ACTIVE',
+    },
+    orderBy: {
+      joinedAt: 'asc',
+    },
+    take: 1,
+    select: {
+      companyId: true,
+      role: true,
+    },
+  },
 } satisfies Prisma.UserSelect;

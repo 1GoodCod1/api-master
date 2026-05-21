@@ -22,6 +22,8 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { CreateJobApplicationDto } from './dto/create-job-application.dto';
 import { UpdateJobApplicationDto } from './dto/update-job-application.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
+import { CreateJobDocumentDto } from './dto/create-job-document.dto';
+import { CreateJobReviewDto } from '../../companies/dto/create-job-review.dto';
 import {
   JwtAuthGuard,
   OptionalJwtAuthGuard,
@@ -84,10 +86,11 @@ export class JobsController {
   }
 
   @Get(':id/applications')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get job with ranked applications (client only)' })
+  @ApiOperation({
+    summary: 'Get job with ranked applications (job owner or company member)',
+  })
   getApplications(@Param('id') id: string, @GetUser() user: JwtUser) {
     return this.jobsService.getJobWithApplications(id, user);
   }
@@ -121,10 +124,11 @@ export class JobsController {
   }
 
   @Patch('applications/:applicationId/view')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Mark application as viewed by client' })
+  @ApiOperation({
+    summary: 'Mark application as viewed (job owner or company member)',
+  })
   viewApplication(
     @Param('applicationId') applicationId: string,
     @GetUser() user: JwtUser,
@@ -133,10 +137,11 @@ export class JobsController {
   }
 
   @Patch(':id/select/:applicationId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Select a master for the job' })
+  @ApiOperation({
+    summary: 'Select a master for the job (job owner or company member)',
+  })
   selectMaster(
     @Param('id') id: string,
     @Param('applicationId') applicationId: string,
@@ -146,10 +151,11 @@ export class JobsController {
   }
 
   @Patch('applications/:applicationId/reject')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Reject an application' })
+  @ApiOperation({
+    summary: 'Reject an application (job owner or company member)',
+  })
   rejectApplication(
     @Param('applicationId') applicationId: string,
     @GetUser() user: JwtUser,
@@ -170,19 +176,23 @@ export class JobsController {
   }
 
   @Patch(':id/close')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Directly close an OPEN job (no master selected)' })
+  @ApiOperation({
+    summary:
+      'Directly close an OPEN job (job owner or company member, no master selected)',
+  })
   closeJobDirect(@Param('id') id: string, @GetUser() user: JwtUser) {
     return this.jobsService.closeJobDirect(id, user);
   }
 
   @Patch(':id/request-close')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.CLIENT)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Client requests to close job — notifies master' })
+  @ApiOperation({
+    summary:
+      'Request job close — notifies master (job owner or company member)',
+  })
   requestClose(@Param('id') id: string, @GetUser() user: JwtUser) {
     return this.jobsService.requestCloseJob(id, user);
   }
@@ -203,6 +213,52 @@ export class JobsController {
   @ApiOperation({ summary: 'Master rejects job close request' })
   rejectClose(@Param('id') id: string, @GetUser() user: JwtUser) {
     return this.jobsService.rejectCloseJob(id, user);
+  }
+
+  @Get(':id/documents')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List documents attached to a job' })
+  listDocuments(@Param('id') id: string, @GetUser() user: JwtUser) {
+    return this.jobsService.listJobDocuments(id, user);
+  }
+
+  @Post(':id/documents')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Attach a document to a job' })
+  addDocument(
+    @Param('id') id: string,
+    @Body() dto: CreateJobDocumentDto,
+    @GetUser() user: JwtUser,
+  ) {
+    return this.jobsService.addJobDocument(id, dto, user);
+  }
+
+  @Delete('documents/:documentId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a job document' })
+  deleteDocument(
+    @Param('documentId') documentId: string,
+    @GetUser() user: JwtUser,
+  ) {
+    return this.jobsService.deleteJobDocument(documentId, user);
+  }
+
+  @Post(':id/review-company')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MASTER)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Selected master reviews the company after job close',
+  })
+  reviewCompany(
+    @Param('id') id: string,
+    @Body() dto: CreateJobReviewDto,
+    @GetUser() user: JwtUser,
+  ) {
+    return this.jobsService.reviewCompanyForJob(id, dto, user);
   }
 
   @Get(':id/leaderboard')

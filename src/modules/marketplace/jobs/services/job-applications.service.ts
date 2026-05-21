@@ -14,6 +14,8 @@ import { JobsCacheService } from './jobs-cache.service';
 import { NotificationEventEmitter } from '../../../notifications/events';
 import { JointsService } from '../../joints/joints.service';
 import { JobsQueryService } from './jobs-query.service';
+import { JobsAccessService } from './jobs-access.service';
+import { JobLifecycleService } from './job-lifecycle.service';
 import { APPLICATION_INCLUDE, JOB_INCLUDE_BASE } from '../jobs.constants';
 
 @Injectable()
@@ -24,6 +26,8 @@ export class JobApplicationsService {
     private readonly notificationEvents: NotificationEventEmitter,
     private readonly jointsService: JointsService,
     private readonly jobsQuery: JobsQueryService,
+    private readonly jobsAccess: JobsAccessService,
+    private readonly jobLifecycle: JobLifecycleService,
   ) {}
 
   async applyToJob(jobId: string, dto: CreateJobApplicationDto, user: JwtUser) {
@@ -38,10 +42,23 @@ export class JobApplicationsService {
     if (!masterProfile.user.isVerified)
       throw AppErrors.forbidden(AppErrorMessages.GUARD_VERIFICATION_REQUIRED);
 
-    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        minJoints: true,
+        clientId: true,
+        companyId: true,
+        selectedApplicationId: true,
+      },
+    });
     if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
     if (job.status !== JobStatus.OPEN)
       throw AppErrors.badRequest(AppErrorMessages.JOB_NOT_OPEN);
+
+    await this.jobsAccess.assertCanApplyToJob(user.id, masterProfile.id, job);
 
     const existing = await this.prisma.jobApplication.findUnique({
       where: { jobId_masterId: { jobId, masterId: masterProfile.id } },
@@ -92,12 +109,20 @@ export class JobApplicationsService {
       return created;
     });
 
-    this.notificationEvents.notify({
-      userId: job.clientId,
+    await this.jobLifecycle.notifyStakeholders({
+      job: {
+        id: job.id,
+        title: job.title,
+        clientId: job.clientId,
+        companyId: job.companyId,
+        status: job.status,
+        selectedApplicationId: job.selectedApplicationId,
+      },
       category: NotificationCategory.JOB_APPLICATION_RECEIVED,
       title: 'New application',
       message: `A master applied to your job: "${job.title}"`,
-      metadata: { jobId, applicationId: application.id },
+      metadata: { applicationId: application.id },
+      excludeUserIds: [user.id],
     });
 
     await this.jobsCache.invalidateJobCaches(jobId);
@@ -234,8 +259,10 @@ export class JobApplicationsService {
 
     if (!application)
       throw AppErrors.notFound(AppErrorMessages.JOB_APPLICATION_NOT_FOUND);
-    if (application.job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_APPLICATION_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(
+      user.id,
+      application.job,
+    );
 
     if (!application.viewedAt) {
       await this.prisma.jobApplication.update({
@@ -267,8 +294,10 @@ export class JobApplicationsService {
     });
     if (application?.jobId !== jobId)
       throw AppErrors.notFound(AppErrorMessages.JOB_APPLICATION_NOT_FOUND);
-    if (application.job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(
+      user.id,
+      application.job,
+    );
 
     const losers = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.job.updateMany({
@@ -315,6 +344,22 @@ export class JobApplicationsService {
       });
     }
 
+    await this.jobLifecycle.notifyStakeholders({
+      job: {
+        id: application.job.id,
+        title: application.job.title,
+        clientId: application.job.clientId,
+        companyId: application.job.companyId,
+        status: JobStatus.FOUND,
+        selectedApplicationId: applicationId,
+      },
+      category: NotificationCategory.JOB_STATUS_CHANGED,
+      title: 'Master selected',
+      message: `A master was selected for "${application.job.title}"`,
+      metadata: { applicationId, status: 'FOUND' },
+      excludeUserIds: [application.master.userId, user.id],
+    });
+
     await this.jobsCache.invalidateJobCaches(jobId);
     return {
       success: true,
@@ -331,8 +376,10 @@ export class JobApplicationsService {
 
     if (!application)
       throw AppErrors.notFound(AppErrorMessages.JOB_APPLICATION_NOT_FOUND);
-    if (application.job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_APPLICATION_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(
+      user.id,
+      application.job,
+    );
     if (application.job.status !== JobStatus.OPEN)
       throw AppErrors.badRequest(AppErrorMessages.JOB_NOT_OPEN);
 

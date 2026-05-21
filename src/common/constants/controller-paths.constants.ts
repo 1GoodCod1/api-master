@@ -14,6 +14,7 @@ export const CONTROLLER_PATH = {
   cacheWarming: 'cache-warming',
   categories: 'categories',
   cities: 'cities',
+  companies: 'companies',
   consent: 'consent',
   conversations: 'conversations',
   digest: 'digest',

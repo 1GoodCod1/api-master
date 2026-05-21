@@ -529,6 +529,9 @@ export class CacheService {
     // Фильтры поиска (v2: slug/value для i18n)
     searchFilters: () =>
       this.buildKey(['cache', 'masters', 'search-filters', 'v2']),
+
+    companyMemberships: (userId: string) =>
+      this.buildKey(['cache', 'company', 'memberships', userId]),
   };
 
   /**
@@ -544,6 +547,7 @@ export class CacheService {
     tariffs: 86400, // 24 ч
     leads: 120, // 2 мин
     userProfile: 900, // 15 мин
+    companyContext: 120, // 2 мин
     analyticsDay: 600, // 10 мин
     analyticsWeek: 1800, // 30 мин
     analyticsMonth: 3600, // 1 ч

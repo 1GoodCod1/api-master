@@ -9,6 +9,10 @@ import { JobsQueryService } from './services/jobs-query.service';
 import { JobsCommandService } from './services/jobs-command.service';
 import { JobApplicationsService } from './services/job-applications.service';
 import { JobsCacheService } from './services/jobs-cache.service';
+import { JobDocumentsService } from './services/job-documents.service';
+import { JobCompanyReviewsService } from './services/job-company-reviews.service';
+import { CreateJobDocumentDto } from './dto/create-job-document.dto';
+import { CreateJobReviewDto } from '../../companies/dto/create-job-review.dto';
 
 /**
  * Facade pattern implementation for the Jobs Module.
@@ -21,6 +25,8 @@ export class JobsService {
     private readonly jobsCommand: JobsCommandService,
     private readonly jobApplications: JobApplicationsService,
     private readonly jobsCache: JobsCacheService,
+    private readonly jobDocuments: JobDocumentsService,
+    private readonly jobCompanyReviews: JobCompanyReviewsService,
   ) {}
 
   invalidateJobCaches(jobId?: string) {
@@ -98,5 +104,21 @@ export class JobsService {
   // ---------- leaderboard ----------
   getJobLeaderboard(jobId: string) {
     return this.jobsQuery.getJobLeaderboard(jobId);
+  }
+
+  listJobDocuments(jobId: string, user: JwtUser) {
+    return this.jobDocuments.listDocuments(jobId, user);
+  }
+
+  addJobDocument(jobId: string, dto: CreateJobDocumentDto, user: JwtUser) {
+    return this.jobDocuments.addDocument(jobId, dto, user);
+  }
+
+  deleteJobDocument(documentId: string, user: JwtUser) {
+    return this.jobDocuments.deleteDocument(documentId, user);
+  }
+
+  reviewCompanyForJob(jobId: string, dto: CreateJobReviewDto, user: JwtUser) {
+    return this.jobCompanyReviews.createCompanyReview(user, jobId, dto);
   }
 }

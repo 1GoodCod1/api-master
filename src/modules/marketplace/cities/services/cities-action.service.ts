@@ -26,6 +26,7 @@ function buildCitiesConfig(
           cache.keys.citiesAll(),
           cache.patterns.citiesAll(),
         ),
+        cache.del(cache.keys.searchFilters()),
         cache.invalidate(cache.patterns.searchMasters()),
       ]);
     },

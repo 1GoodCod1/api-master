@@ -13,6 +13,6 @@ import { ReviewsQueryService } from './services/reviews-query.service';
   imports: [PrismaModule, RedisModule, NotificationsModule],
   controllers: [ReviewsController],
   providers: [ReviewsService, ReviewsActionService, ReviewsQueryService],
-  exports: [ReviewsService],
+  exports: [ReviewsService, ReviewsActionService],
 })
 export class ReviewsModule {}

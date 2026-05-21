@@ -26,6 +26,7 @@ function buildCategoriesConfig(
           cache.keys.categoriesAll(),
           cache.patterns.categoriesAll(),
         ),
+        cache.del(cache.keys.searchFilters()),
         cache.invalidate(cache.patterns.categoriesStatistics()),
         cache.invalidate(cache.patterns.searchMasters()),
       ]);

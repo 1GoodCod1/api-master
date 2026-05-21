@@ -10,6 +10,8 @@ import { AppErrors, AppErrorMessages } from '../../../../common/errors';
 import type { JwtUser } from '../../../../common/interfaces/jwt-user.interface';
 import { CreateJobDto } from '../dto/create-job.dto';
 import { JobsCacheService } from './jobs-cache.service';
+import { JobsAccessService } from './jobs-access.service';
+import { JobLifecycleService } from './job-lifecycle.service';
 import { NotificationEventEmitter } from '../../../notifications/events';
 import { JOB_INCLUDE_BASE } from '../jobs.constants';
 
@@ -19,6 +21,8 @@ export class JobsCommandService {
     private readonly prisma: PrismaService,
     private readonly jobsCache: JobsCacheService,
     private readonly notificationEvents: NotificationEventEmitter,
+    private readonly jobsAccess: JobsAccessService,
+    private readonly jobLifecycle: JobLifecycleService,
   ) {}
 
   async createJob(dto: CreateJobDto, user: JwtUser) {
@@ -53,11 +57,16 @@ export class JobsCommandService {
   async closeJobDirect(jobId: string, user: JwtUser) {
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
-      select: { id: true, clientId: true, status: true, title: true },
+      select: {
+        id: true,
+        clientId: true,
+        companyId: true,
+        status: true,
+        title: true,
+      },
     });
     if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
-    if (job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(user.id, job);
     if (job.status !== JobStatus.OPEN) {
       throw AppErrors.badRequest(
         'Direct close only allowed for OPEN jobs without a selected master',
@@ -121,8 +130,7 @@ export class JobsCommandService {
       },
     });
     if (!job) throw AppErrors.notFound(AppErrorMessages.JOB_NOT_FOUND);
-    if (job.clientId !== user.id)
-      throw AppErrors.forbidden(AppErrorMessages.JOB_ACCESS_DENIED);
+    await this.jobsAccess.assertCanManageJobAsCustomer(user.id, job);
     if (job.status !== JobStatus.FOUND) {
       throw AppErrors.badRequest(
         'Can only request close for jobs with a selected master',
@@ -152,6 +160,22 @@ export class JobsCommandService {
         metadata: { jobId, status: 'PENDING_CLOSE' },
       });
     }
+
+    await this.jobLifecycle.notifyStakeholders({
+      job: {
+        id: job.id,
+        title: job.title,
+        clientId: job.clientId,
+        companyId: job.companyId,
+        status: JobStatus.PENDING_CLOSE,
+        selectedApplicationId: job.selectedApplicationId,
+      },
+      category: NotificationCategory.JOB_STATUS_CHANGED,
+      title: 'Close requested',
+      message: `Close was requested for "${job.title}". Waiting for master confirmation.`,
+      metadata: { status: 'PENDING_CLOSE' },
+      excludeUserIds: masterUserId ? [masterUserId] : undefined,
+    });
 
     await this.jobsCache.invalidateJobCaches(jobId);
     return updated;
@@ -212,12 +236,20 @@ export class JobsCommandService {
     }
 
     if (job.clientId) {
-      this.notificationEvents.notify({
-        userId: job.clientId,
+      await this.jobLifecycle.notifyStakeholders({
+        job: {
+          id: job.id,
+          title: job.title,
+          clientId: job.clientId,
+          companyId: job.companyId,
+          status: JobStatus.CLOSED,
+          selectedApplicationId: job.selectedApplicationId,
+        },
         category: NotificationCategory.JOB_STATUS_CHANGED,
         title: 'Job closed',
         message: `The master confirmed closing "${job.title}"`,
-        metadata: { jobId, status: 'CLOSED' },
+        metadata: { status: 'CLOSED' },
+        excludeUserIds: [user.id],
       });
     }
 
@@ -263,15 +295,21 @@ export class JobsCommandService {
       throw AppErrors.badRequest('Job status changed, please retry');
     }
 
-    if (job.clientId) {
-      this.notificationEvents.notify({
-        userId: job.clientId,
-        category: NotificationCategory.JOB_STATUS_CHANGED,
-        title: 'Close request rejected',
-        message: `The master rejected closing "${job.title}". Job is back to active.`,
-        metadata: { jobId, status: 'FOUND' },
-      });
-    }
+    await this.jobLifecycle.notifyStakeholders({
+      job: {
+        id: job.id,
+        title: job.title,
+        clientId: job.clientId,
+        companyId: job.companyId,
+        status: JobStatus.FOUND,
+        selectedApplicationId: job.selectedApplicationId,
+      },
+      category: NotificationCategory.JOB_STATUS_CHANGED,
+      title: 'Close request rejected',
+      message: `The master rejected closing "${job.title}". Job is back to active.`,
+      metadata: { status: 'FOUND' },
+      excludeUserIds: [user.id],
+    });
 
     const updated = await this.prisma.job.findUnique({
       where: { id: jobId },

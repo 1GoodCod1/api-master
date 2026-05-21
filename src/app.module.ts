@@ -15,6 +15,7 @@ import configuration, { API_GLOBAL_PREFIX, createBullOptions } from './config';
 import {
   ActivityTrackerInterceptor,
   AuditInterceptor,
+  CompanyContextInterceptor,
 } from './common/interceptors';
 import { AppThrottlerGuard, CookieOriginGuard } from './common/guards';
 import {
@@ -54,6 +55,8 @@ import { WebVitalsModule } from './modules/infrastructure/web-vitals/web-vitals.
 import { EmailModule } from './modules/email/email.module';
 import { ReferralsModule } from './modules/engagement/referrals/referrals.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
+import { CompaniesModule } from './modules/companies/companies.module';
+import { CompanyContextModule } from './common/company-context/company-context.module';
 
 @Module({
   providers: [
@@ -68,6 +71,10 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: ActivityTrackerInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CompanyContextInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
@@ -185,6 +192,8 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     WebVitalsModule,
     ReferralsModule,
     ComplianceModule,
+    CompanyContextModule,
+    CompaniesModule,
   ],
 })
 export class AppModule {}
