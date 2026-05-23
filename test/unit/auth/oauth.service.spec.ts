@@ -496,6 +496,9 @@ describe('OAuthService', () => {
                 .fn()
                 .mockResolvedValue({ id: 'm-1', slug: 'ivan-petrov' }),
             },
+            jointsTransaction: {
+              create: jest.fn().mockResolvedValue({}),
+            },
           };
           return fn(txMock);
         },
